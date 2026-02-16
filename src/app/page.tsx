@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Users, GraduationCap, Lock, ArrowRight, School } from 'lucide-react'
+import { adminSignUp } from './actions/auth'
 
 export default function LoginPage() {
   const [role, setRole] = useState<'teacher' | 'student' | null>(null)
@@ -22,7 +23,6 @@ export default function LoginPage() {
   // 학생 로그인 상태
   const [studentId, setStudentId] = useState('')
   const [sessionCode, setSessionCode] = useState('')
-  const [studentName, setStudentName] = useState('') // 최초 학생 등록 시 필요 시 사용
 
   const handleTeacherAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,18 +31,15 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              role: 'teacher',
-              name: teacherName || email.split('@')[0],
-            }
-          }
-        })
-        if (error) throw error
-        alert('회원가입 확인 메일을 확인해주세요!')
+        // 클라이언트 signUp 대신 서버 액션 호출 (이메일 인증 우회)
+        const result = await adminSignUp({ email, password, name: teacherName })
+
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+
+        alert(result.message)
+        setIsSignUp(false) // 로그인 화면으로 전환
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -64,9 +61,6 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      // Need a custom API endpoint/Edge Function to handle "Student ID + Session Code" login
-      // Simulating logic or calling a server action would be better here.
-      // For now, let's assume we have an API route /api/auth/student
       const res = await fetch('/api/auth/student', {
         method: 'POST',
         headers: {
@@ -78,8 +72,6 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '로그인 실패')
 
-      // The API should handle setting the session or returning a custom token
-      // If using Supabase Auth for students (anonymous or email-less), we might sign them in anonymously and update metadata
       router.push('/student')
     } catch (err: any) {
       setError(err.message)
