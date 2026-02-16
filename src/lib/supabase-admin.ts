@@ -5,8 +5,12 @@ const getSupabaseAdmin = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-        throw new Error('Supabase 설정이 누락되었습니다. (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)')
+    // 구체적인 누락 항목을 알려주도록 변경
+    if (!supabaseUrl) {
+        throw new Error('환경 변수 NEXT_PUBLIC_SUPABASE_URL이 누락되었습니다.')
+    }
+    if (!supabaseServiceRoleKey) {
+        throw new Error('환경 변수 SUPABASE_SERVICE_ROLE_KEY가 누락되었습니다.')
     }
 
     return createClient(supabaseUrl, supabaseServiceRoleKey, {
