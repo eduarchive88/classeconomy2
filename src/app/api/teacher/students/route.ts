@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-    const { students } = await request.json();
+    const { students, sessionCode } = await request.json();
     const supabase = createClient();
 
     // 1. Check auth
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const rosterData = students.map((s: any) => ({
         teacher_id: user.id,
         grade: s.grade,
-        class_info: s.class, // Mapped from 'class' in JSON
+        class_info: sessionCode || s.class, // 사용자가 입력한 세션코드를 최우선으로 저장
         number: s.number,
         name: s.name,
         allowance: s.allowance,

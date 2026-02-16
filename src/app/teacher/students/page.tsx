@@ -6,10 +6,36 @@ import * as XLSX from 'xlsx';
 import { Upload, UserPlus, Save, Trash2 } from 'lucide-react';
 
 export default function StudentManagement() {
-    const [students, setStudents] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]); // 저장된 학생 명단
+    const [uploadQueue, setUploadQueue] = useState<any[]>([]); // 업로드 대기 중인 학생 명단
     const [loading, setLoading] = useState(false);
     const [classInfo, setClassInfo] = useState({ grade: '', class: '', sessionCode: '' });
     const supabase = createClient();
+
+    // 기존 학생 명단 불러오기
+    const fetchStudents = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('student_roster')
+            .select('*')
+            .eq('teacher_id', user.id)
+            .order('grade', { ascending: true })
+            .order('class_info', { ascending: true })
+            .order('number', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching students:', error);
+        } else {
+            setStudents(data || []);
+        }
+    };
+
+    // 초기 로딩 시 데이터 가져오기
+    useState(() => {
+        fetchStudents();
+    });
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -33,7 +59,7 @@ export default function StudentManagement() {
                 allowance: row[4] || 0, // Default 0 if empty
             })).filter((s: any) => s.name); // Filter empty rows
 
-            setStudents(parsedStudents);
+            setUploadQueue(parsedStudents);
         };
         reader.readAsBinaryString(file);
     };
@@ -41,17 +67,17 @@ export default function StudentManagement() {
     const handleSave = async () => {
         setLoading(true);
         try {
-            // Send to API to create users/profiles
             const res = await fetch('/api/teacher/students', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ students, sessionCode: classInfo.sessionCode }),
+                body: JSON.stringify({ students: uploadQueue, sessionCode: classInfo.sessionCode }),
             });
 
             if (!res.ok) throw new Error((await res.json()).error);
 
             alert('학생들이 성공적으로 등록되었습니다.');
-            setStudents([]);
+            setUploadQueue([]);
+            fetchStudents(); // 명단 새로고침
         } catch (e: any) {
             alert('오류 발생: ' + e.message);
         } finally {
@@ -112,8 +138,10 @@ export default function StudentManagement() {
 
                 <div className="glass-panel p-6">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-semibold">등록 대기 명단 ({students.length}명)</h2>
-                        {students.length > 0 && (
+                        <h2 className="text-xl font-semibold">
+                            {uploadQueue.length > 0 ? `등록 대기 명단 (${uploadQueue.length}명)` : `현재 학생 명단 (${students.length}명)`}
+                        </h2>
+                        {uploadQueue.length > 0 && (
                             <button
                                 onClick={handleSave}
                                 disabled={loading}
@@ -137,19 +165,19 @@ export default function StudentManagement() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                {students.map((s, i) => (
+                                {(uploadQueue.length > 0 ? uploadQueue : students).map((s, i) => (
                                     <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                                         <td className="p-3">{s.grade}</td>
-                                        <td className="p-3">{s.class}</td>
+                                        <td className="p-3">{s.class_info || s.class}</td>
                                         <td className="p-3">{s.number}</td>
                                         <td className="p-3 font-medium">{s.name}</td>
                                         <td className="p-3">{s.allowance.toLocaleString()} 원</td>
                                     </tr>
                                 ))}
-                                {students.length === 0 && (
+                                {students.length === 0 && uploadQueue.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="p-8 text-center text-slate-400">
-                                            왼쪽에서 엑셀 파일을 업로드해주세요.
+                                            등록된 학생이 없습니다. 왼쪽에서 엑셀 파일을 업로드해주세요.
                                         </td>
                                     </tr>
                                 )}
