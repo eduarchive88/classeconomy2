@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
 import { Upload, UserPlus, Save, Trash2 } from 'lucide-react';
@@ -10,6 +10,7 @@ export default function StudentManagement() {
     const [uploadQueue, setUploadQueue] = useState<any[]>([]); // 업로드 대기 중인 학생 명단
     const [loading, setLoading] = useState(false);
     const [classInfo, setClassInfo] = useState({ grade: '', class: '', sessionCode: '' });
+    const [newStudent, setNewStudent] = useState({ grade: '', class: '', number: '', name: '', allowance: 30000 });
     const supabase = createClient();
 
     // 기존 학생 명단 불러오기
@@ -17,10 +18,18 @@ export default function StudentManagement() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const { data, error } = await supabase
+        const selectedClassId = localStorage.getItem('selected_class_id');
+
+        let query = supabase
             .from('student_roster')
             .select('*')
-            .eq('teacher_id', user.id)
+            .eq('teacher_id', user.id);
+
+        if (selectedClassId) {
+            query = query.eq('class_id', selectedClassId);
+        }
+
+        const { data, error } = await query
             .order('grade', { ascending: true })
             .order('class_info', { ascending: true })
             .order('number', { ascending: true });
@@ -87,34 +96,84 @@ export default function StudentManagement() {
 
     return (
         <div className="p-8 max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8 text-slate-800 dark:text-white">학생 관리</h1>
+            <h1 className="text-3xl font-bold mb-8 text-slate-800 dark:text-white">학생 명단 관리</h1>
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
                 <div className="space-y-6">
                     <div className="glass-panel p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                             <UserPlus className="w-5 h-5 text-blue-600" />
-                            학급 설정
+                            개별 학생 추가
                         </h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">접속 세션 코드</label>
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
                                 <input
                                     type="text"
-                                    className="w-full p-2 border rounded-lg"
-                                    placeholder="예: LOVE2024"
-                                    value={classInfo.sessionCode}
-                                    onChange={e => setClassInfo({ ...classInfo, sessionCode: e.target.value })}
+                                    placeholder="학년"
+                                    className="p-2 border rounded-lg text-sm"
+                                    value={newStudent.grade}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, grade: e.target.value })}
                                 />
-                                <p className="text-xs text-slate-500 mt-1">학생들이 접속할 때 사용할 코드입니다.</p>
+                                <input
+                                    type="text"
+                                    placeholder="반"
+                                    className="p-2 border rounded-lg text-sm"
+                                    value={newStudent.class}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, class: e.target.value })}
+                                />
                             </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="번호"
+                                    className="p-2 border rounded-lg text-sm"
+                                    value={newStudent.number}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, number: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="성명"
+                                    className="p-2 border rounded-lg text-sm"
+                                    value={newStudent.name}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, name: e.target.value })}
+                                />
+                            </div>
+                            <input
+                                type="number"
+                                placeholder="기본 주급"
+                                className="w-full p-2 border rounded-lg text-sm"
+                                value={newStudent.allowance}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, allowance: parseInt(e.target.value) })}
+                            />
+                            <button
+                                onClick={async () => {
+                                    if (!newStudent.name) return;
+                                    setLoading(true);
+                                    const selectedClassId = localStorage.getItem('selected_class_id');
+                                    const res = await fetch('/api/teacher/students', {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                            students: [newStudent],
+                                            class_id: selectedClassId
+                                        })
+                                    });
+                                    if (res.ok) {
+                                        fetchStudents();
+                                        setNewStudent({ grade: '', class: '', number: '', name: '', allowance: 30000 });
+                                    }
+                                    setLoading(false);
+                                }}
+                                className="w-full btn-primary bg-blue-600 hover:bg-blue-700 py-2 text-sm"
+                            >
+                                추가
+                            </button>
                         </div>
                     </div>
 
                     <div className="glass-panel p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                             <Upload className="w-5 h-5 text-emerald-600" />
-                            학생 일괄 등록
+                            엑셀 일괄 등록
                         </h2>
                         <div className="space-y-4">
                             <input
@@ -128,10 +187,6 @@ export default function StudentManagement() {
                   file:bg-blue-50 file:text-blue-700
                   hover:file:bg-blue-100"
                             />
-                            <div className="text-xs text-slate-500 space-y-1">
-                                <p>엑셀 양식: A열(학년), B열(반), C열(번호), D열(성명), E열(주급)</p>
-                                <a href="/sample_student_upload.xlsx" className="text-blue-600 underline">샘플 양식 다운로드</a>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -162,16 +217,34 @@ export default function StudentManagement() {
                                     <th className="p-3">번호</th>
                                     <th className="p-3">이름</th>
                                     <th className="p-3">주급</th>
+                                    <th className="p-3">작업</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {(uploadQueue.length > 0 ? uploadQueue : students).map((s, i) => (
-                                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800 group">
                                         <td className="p-3">{s.grade}</td>
                                         <td className="p-3">{s.class_info || s.class}</td>
                                         <td className="p-3">{s.number}</td>
                                         <td className="p-3 font-medium">{s.name}</td>
-                                        <td className="p-3">{s.allowance.toLocaleString()} 원</td>
+                                        <td className="p-3">{s.allowance ? s.allowance.toLocaleString() : 0} 원</td>
+                                        <td className="p-3">
+                                            {uploadQueue.length === 0 && (
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!confirm('정말 삭제하시겠습니까?')) return;
+                                                        await fetch('/api/teacher/students', {
+                                                            method: 'DELETE',
+                                                            body: JSON.stringify({ id: s.id })
+                                                        });
+                                                        fetchStudents();
+                                                    }}
+                                                    className="p-1 text-slate-300 hover:text-red-600 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                                 {students.length === 0 && uploadQueue.length === 0 && (

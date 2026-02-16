@@ -18,14 +18,9 @@ export default function FinanceManagement() {
     }, []);
 
     const fetchStudents = async () => {
-        // We should fetch from 'profiles' if they are registered, or 'student_roster'? 
-        // Ideally we want to give money to 'profiles' (actual accounts). 
-        // If they haven't signed up, they don't have a profile yet (unless we pre-created).
-        // The current flow relies on 'first login' to create profile.
-        // So we can only give money to 'registered' students.
-
-        // Let's fetch profiles where role is student.
-        const { data } = await supabase.from('profiles').select('*').eq('role', 'student');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from('student_roster').select('*').eq('teacher_id', user.id);
         if (data) setStudents(data);
     };
 
@@ -68,7 +63,7 @@ export default function FinanceManagement() {
 
     return (
         <div className="p-8 max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8">재정 관리 (상벌점)</h1>
+            <h1 className="text-3xl font-bold mb-8 text-slate-800 dark:text-white">재무/금융 관리</h1>
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
                 <div className="space-y-6">
