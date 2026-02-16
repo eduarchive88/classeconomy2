@@ -33,7 +33,10 @@ export default function TeacherDashboard() {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
             <div className="max-w-6xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold text-slate-800 dark:text-white">선생님 대시보드</h1>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">선생님 대시보드</h1>
+                        <p className="text-slate-500 mt-1">{user?.user_metadata?.name || '선생님'} 환영합니다</p>
+                    </div>
                     <button onClick={handleSignOut} className="flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors">
                         <LogOut className="w-4 h-4" />
                         로그아웃

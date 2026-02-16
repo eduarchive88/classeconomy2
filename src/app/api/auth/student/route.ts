@@ -19,12 +19,21 @@ export async function POST(request: Request) {
     }
 
     // 2. Find student in this teacher's roster
-    const { data: rosterEntry, error: rosterError } = await supabase
-        .from('student_roster')
-        .select('*')
-        .eq('teacher_id', teacher.id)
-        .eq('number', studentId) // Assuming input is the 'number' (e.g. 15 or 1101 depending on how they uploaded)
-        .single();
+    // Implement 10120 format parsing (G-CC-NN)
+    const idNum = parseInt(studentId);
+    let query = supabase.from('student_roster').select('*').eq('teacher_id', teacher.id);
+
+    if (studentId.length === 5) {
+        const grade = Math.floor(idNum / 10000);
+        const classInfo = Math.floor((idNum % 10000) / 100);
+        const number = idNum % 100;
+        query = query.eq('grade', grade).eq('class_info', classInfo).eq('number', number);
+    } else {
+        // Fallback for older format
+        query = query.eq('number', studentId);
+    }
+
+    const { data: rosterEntry, error: rosterError } = await query.single();
 
     if (rosterError || !rosterEntry) {
         return NextResponse.json({ error: '해당 학번/번호가 명단에 없습니다.' }, { status: 400 });

@@ -16,6 +16,7 @@ export default function LoginPage() {
   // Teacher Login State
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [teacherName, setTeacherName] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
 
   // Student Login State
@@ -36,7 +37,7 @@ export default function LoginPage() {
           options: {
             data: {
               role: 'teacher',
-              name: email.split('@')[0], // Default name
+              name: teacherName || email.split('@')[0],
             }
           }
         })
@@ -143,6 +144,19 @@ export default function LoginPage() {
               {role === 'teacher' ? (
                 <form onSubmit={handleTeacherAuth} className="space-y-4">
                   <h2 className="text-xl font-bold mb-4">{isSignUp ? '선생님 회원가입' : '선생님 로그인'}</h2>
+                  {isSignUp && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">이름</label>
+                      <input
+                        type="text"
+                        required
+                        value={teacherName}
+                        onChange={(e) => setTeacherName(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none bg-white/80"
+                        placeholder="홍길동"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">이메일</label>
                     <input
@@ -197,7 +211,7 @@ export default function LoginPage() {
                       value={studentId}
                       onChange={(e) => setStudentId(e.target.value)}
                       className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none bg-white/80"
-                      placeholder="예: 1101 (1학년 1반 1번)"
+                      placeholder="예: 10120 (1학년 1반 20번)"
                     />
                   </div>
                   <div>
