@@ -1,0 +1,12 @@
+{
+    "crons": [
+        {
+            "path": "/api/cron/market-sync",
+            "schedule": "0 0 * * *"
+        },
+        {
+            "path": "/api/cron/daily-quiz-reset",
+            "schedule": "0 8 * * *"
+        }
+    ]
+}
