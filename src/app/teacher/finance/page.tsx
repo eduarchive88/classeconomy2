@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Coins, AlertTriangle, check } from 'lucide-react';
+import { Coins, AlertTriangle, Check } from 'lucide-react';
 
 export default function FinanceManagement() {
     const [students, setStudents] = useState<any[]>([]);
