@@ -1,4 +1,4 @@
-
+/*
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import yahooFinance from 'yahoo-finance2';
@@ -68,4 +68,10 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ success: true, updated: updates.length });
+}
+*/
+
+import { NextResponse } from 'next/server';
+export async function GET() {
+    return NextResponse.json({ message: "Market sync is currently disabled for build stabilization." });
 }
