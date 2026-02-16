@@ -13,16 +13,16 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Teacher Login State
+  // 교사 로그인 상태
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [teacherName, setTeacherName] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
 
-  // Student Login State
+  // 학생 로그인 상태
   const [studentId, setStudentId] = useState('')
   const [sessionCode, setSessionCode] = useState('')
-  const [studentName, setStudentName] = useState('') // For first-time student setup if needed
+  const [studentName, setStudentName] = useState('') // 최초 학생 등록 시 필요 시 사용
 
   const handleTeacherAuth = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -18,8 +18,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '유효하지 않은 세션 코드입니다.' }, { status: 400 });
     }
 
-    // 2. Find student in this teacher's roster
-    // Implement 10120 format parsing (G-CC-NN)
+    // 2. 해당 교사의 명단에서 학생 찾기
+    // 10120 형식 파싱 (학년-반-번호)
     const idNum = parseInt(studentId);
     let query = supabase.from('student_roster').select('*').eq('teacher_id', teacher.id);
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '해당 학번/번호가 명단에 없습니다.' }, { status: 400 });
     }
 
-    // 3. Auto-generate credentials
+    // 3. 인증 정보 자동 생성
     const fakeEmail = `${sessionCode}_${studentId}@student.local`;
     const defaultPassword = `${sessionCode}_${studentId}`;
 
