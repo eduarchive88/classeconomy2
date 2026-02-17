@@ -558,6 +558,4 @@ export default function QuizManagement() {
         </div>
     )
 }
-        </div >
-    );
-}
+
