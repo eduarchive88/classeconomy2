@@ -9,12 +9,13 @@ export function createClient() {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase environment variables are missing');
+        console.error('Supabase environment variables are missing');
+        // throw new Error('Supabase environment variables are missing');
     }
 
     return createServerClient(
-        supabaseUrl,
-        supabaseKey,
+        supabaseUrl || '',
+        supabaseKey || '',
         {
             cookies: {
                 getAll() {
