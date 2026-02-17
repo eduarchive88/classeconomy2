@@ -15,9 +15,23 @@ export default function QuizManagement() {
     const supabase = createClient();
 
     useEffect(() => {
-        // Load API key from local storage or profile if possible?
-        const savedKey = localStorage.getItem('google_api_key');
-        if (savedKey) setApiKey(savedKey);
+        const fetchQuizzesAndKey = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // 부모 페이지/프로필의 API 키 사용
+                setApiKey(user.user_metadata?.google_api_key || '');
+            }
+
+            const selectedClassId = localStorage.getItem('selected_class_id');
+            const { data } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('class_id', selectedClassId)
+                .order('created_at', { ascending: false });
+
+            if (data) setQuizzes(data);
+        };
+        fetchQuizzesAndKey();
     }, []);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,15 +149,8 @@ export default function QuizManagement() {
                             AI 자동 생성
                         </h2>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Google API Key</label>
-                                <input
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={e => setApiKey(e.target.value)}
-                                    className="w-full p-2 border rounded-lg bg-white"
-                                    placeholder="AI_..."
-                                />
+                            <div className="p-3 bg-white rounded-lg border text-sm text-slate-600 mb-4">
+                                {apiKey ? '✅ 시스템 설정에서 등록된 API 키를 사용 중입니다.' : '❌ 시스템 설정에서 API 키를 먼저 등록해주세요.'}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">퀴즈 주제</label>

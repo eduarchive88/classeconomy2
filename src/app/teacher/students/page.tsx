@@ -28,11 +28,14 @@ export default function StudentManagement() {
 
         if (selectedClassId) {
             query = query.eq('class_id', selectedClassId);
+        } else {
+            // If no class is selected, show nothing to avoid confusion
+            setStudents([]);
+            return;
         }
 
         const { data, error } = await query
             .order('grade', { ascending: true })
-            .order('class_info', { ascending: true })
             .order('number', { ascending: true });
 
         if (error) {
@@ -174,6 +177,8 @@ export default function StudentManagement() {
                                     if (res.ok) {
                                         fetchStudents();
                                         setNewStudent({ grade: '', class: '', number: '', name: '', allowance: 30000 });
+                                    } else {
+                                        alert('추가 실패: ' + (await res.json()).error);
                                     }
                                     setLoading(false);
                                 }}
