@@ -12,8 +12,31 @@ export default function StudentManagement() {
     const [uploadQueue, setUploadQueue] = useState<any[]>([]); // 업로드 대기 중인 학생 명단
     const [loading, setLoading] = useState(false);
     const [classInfo, setClassInfo] = useState({ grade: '', class: '', sessionCode: '' });
-    const [newStudent, setNewStudent] = useState({ grade: '', class: '', number: '', name: '', allowance: 30000 });
+    const [newStudent, setNewStudent] = useState({ grade: '', class: '', number: '', name: '', allowance: 30000, password: '1234' });
     const supabase = createClient();
+
+    // 비밀번호 변경 핸들러
+    const handlePasswordChange = async (studentId: string, currentName: string) => {
+        const newPassword = prompt(`${currentName} 학생의 새로운 비밀번호를 입력하세요:`);
+        if (!newPassword) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/teacher/students', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: studentId, password: newPassword }),
+            });
+
+            if (!res.ok) throw new Error((await res.json()).error);
+            alert('비밀번호가 변경되었습니다.');
+            fetchStudents();
+        } catch (e: any) {
+            alert('비밀번호 변경 실패: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // 기존 학생 명단 불러오기
     const fetchStudents = async () => {
@@ -166,6 +189,13 @@ export default function StudentManagement() {
                                 value={newStudent.allowance}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, allowance: parseInt(e.target.value) })}
                             />
+                            <input
+                                type="text"
+                                placeholder="비밀번호 (기본: 1234)"
+                                className="w-full p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                                value={newStudent.password}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, password: e.target.value })}
+                            />
                             <button
                                 onClick={async () => {
                                     if (!newStudent.name) return;
@@ -180,7 +210,7 @@ export default function StudentManagement() {
                                     });
                                     if (res.ok) {
                                         fetchStudents();
-                                        setNewStudent({ grade: '', class: '', number: '', name: '', allowance: 30000 });
+                                        setNewStudent({ grade: '', class: '', number: '', name: '', allowance: 30000, password: '1234' });
                                     } else {
                                         alert('추가 실패: ' + (await res.json()).error);
                                     }
@@ -239,6 +269,7 @@ export default function StudentManagement() {
                                     <th className="p-3">반</th>
                                     <th className="p-3">번호</th>
                                     <th className="p-3">이름</th>
+                                    <th className="p-3">비밀번호</th>
                                     <th className="p-3">주급</th>
                                     <th className="p-3">작업</th>
                                 </tr>
@@ -250,6 +281,15 @@ export default function StudentManagement() {
                                         <td className="p-3">{s.class_info || s.class}</td>
                                         <td className="p-3">{s.number}</td>
                                         <td className="p-3 font-medium">{s.name}</td>
+                                        <td className="p-3">
+                                            <button
+                                                onClick={() => handlePasswordChange(s.id, s.name)}
+                                                className="text-blue-500 hover:underline text-xs"
+                                                title="클릭하여 비밀번호 변경"
+                                            >
+                                                {s.password || '설정안됨'}
+                                            </button>
+                                        </td>
                                         <td className="p-3">{s.allowance ? s.allowance.toLocaleString() : 0} 원</td>
                                         <td className="p-3">
                                             {uploadQueue.length === 0 && (

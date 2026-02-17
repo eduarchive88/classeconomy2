@@ -42,10 +42,9 @@ export async function POST(request: Request) {
 
     try {
         const genAI = new GoogleGenerativeAI(finalApiKey);
-        // 모델을 gemini-pro로 변경하여 안정성 확보 (gemini-1.5-flash가 불안정할 경우)
-        // 또는 gemini-1.5-flash를 유지하되 에러 핸들링 강화. 여기서는 요청대로 에러가 발생했으므로 gemini-pro로 변경.
+        // 모델을 gemini-1.5-flash로 변경하여 속도 및 비용 효율성 제고 (gemini-pro는 구버전)
         const model = genAI.getGenerativeModel({
-            model: "gemini-pro",
+            model: "gemini-1.5-flash",
             generationConfig: {
                 responseMimeType: "application/json",
             },

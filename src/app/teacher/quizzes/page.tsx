@@ -226,7 +226,7 @@ export default function QuizManagement() {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-6xl mx-auto">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto">
             <div className="flex items-center gap-4 mb-8">
                 <Link
                     href="/teacher"
@@ -243,10 +243,10 @@ export default function QuizManagement() {
                 </div>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-2">
-                {/* Left: Create/Upload */}
-                <div className="space-y-6">
-                    <div className="glass-panel p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                {/* Left: Create/Upload & Preview */}
+                <div className="space-y-6 lg:sticky lg:top-8">
+                    <div className="glass-panel p-6 shadow-lg">
                         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                             <Plus className="w-5 h-5 text-green-600" />
                             새 퀴즈 등록

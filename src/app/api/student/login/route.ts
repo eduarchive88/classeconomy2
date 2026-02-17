@@ -44,9 +44,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    // 비밀번호 검증 (DB에 password 컬럼이 없거나 null이면 통과 - 마이그레이션 과도기)
-    // 요청 바디의 password와 DB의 password 비교
-    if (student.password && student.password !== password) {
+    // 비밀번호 검증
+    // DB에 비밀번호가 없으면(null/empty) 초기 비밀번호 '1234'로 간주
+    const dbPassword = student.password || '1234';
+    if (dbPassword !== password) {
         return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 401 });
     }
 
