@@ -10,12 +10,15 @@ export default function RealEstateManagement() {
     const [students, setStudents] = useState<any[]>([]);
     const [seats, setSeats] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [rows, setRows] = useState(5);
-    const [cols, setCols] = useState(6);
-    const [mode, setMode] = useState<'assign' | 'price'>('assign'); // 'assign' | 'price'
+    const [mode, setMode] = useState<'assign' | 'price'>('assign');
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [priceInput, setPriceInput] = useState<number>(1000);
+    const [trades, setTrades] = useState<any[]>([]);
+    const [tradesLoading, setTradesLoading] = useState(false);
     const supabase = createClient();
+
+    const rows = 5;
+    const cols = 6;
 
     const fetchData = async () => {
         const selectedClassId = localStorage.getItem('selected_class_id');
@@ -35,6 +38,36 @@ export default function RealEstateManagement() {
             .select('*')
             .eq('class_id', selectedClassId);
         if (seatsData) setSeats(seatsData);
+
+        // Fetch pending trades
+        setTradesLoading(true);
+        const { data: tradesData } = await supabase
+            .from('seat_trades')
+            .select('*, seller:seller_id(name, number), buyer:buyer_id(name, number)')
+            .eq('class_id', selectedClassId)
+            .eq('status', 'pending');
+        if (tradesData) setTrades(tradesData);
+        setTradesLoading(false);
+    };
+
+    const handleTradeApproval = async (trade: any, approve: boolean) => {
+        setLoading(true);
+        try {
+            if (approve) {
+                // 1. Update seat owner
+                await supabase.from('seats').update({ student_id: trade.buyer_id }).eq('id', trade.seat_id);
+                // 2. Mark trade approved
+                await supabase.from('seat_trades').update({ status: 'approved' }).eq('id', trade.id);
+            } else {
+                await supabase.from('seat_trades').update({ status: 'rejected' }).eq('id', trade.id);
+            }
+            alert(approve ? '승인되었습니다.' : '거절되었습니다.');
+            fetchData();
+        } catch (e: any) {
+            alert('처리 실패: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -163,21 +196,48 @@ export default function RealEstateManagement() {
                         </h2>
 
                         {/* Mode Switch */}
-                        <div className="flex bg-slate-100 p-1 rounded-lg mb-6">
+                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg mb-6">
                             <button
                                 onClick={() => setMode('assign')}
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'assign' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
                             >
-                                학생 배정
+                                직접 배정
                             </button>
                             <button
                                 onClick={() => setMode('price')}
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'price' ? 'bg-white shadow text-amber-600' : 'text-slate-500'}`}
                             >
                                 <DollarSign className="w-4 h-4 inline mr-1" />
-                                가격/임대료 설정
+                                가격 설정/마켓
                             </button>
                         </div>
+
+                        {mode === 'price' && (
+                            <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-100">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            onChange={async (e) => {
+                                                const checked = e.target.checked;
+                                                const classId = localStorage.getItem('selected_class_id');
+                                                if (classId) {
+                                                    await supabase.from('classes').update({ is_auto_real_estate: checked }).eq('id', classId);
+                                                    alert(checked ? '자동 구매가 활성화되었습니다.' : '자동 구매가 비활성화되었습니다 (선생님 승인 필요).');
+                                                }
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                    </div>
+                                    <span className="text-sm font-bold text-amber-900 group-hover:text-amber-700 transition-colors">학생 즉시 구매 허용</span>
+                                </label>
+                                <p className="text-[11px] text-amber-600 mt-2">
+                                    * 켜짐: 학생이 빈 자리를 클릭하면 즉시 잔액이 차감되고 구매됩니다. <br />
+                                    * 꺼짐: 구매 요청만 생성되며 선생님이 승인해야 합니다.
+                                </p>
+                            </div>
+                        )}
 
                         {mode === 'assign' ? (
                             <div className="space-y-2">
@@ -230,6 +290,44 @@ export default function RealEstateManagement() {
                                     * 앞줄부터 3000원, 2500원... 순으로 자동 책정됩니다.
                                 </p>
                             </div>
+                        )}
+                    </div>
+
+                    {/* Pending Trades */}
+                    <div className="glass-panel p-6 border-amber-200 bg-amber-50/30">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-amber-600" />
+                            승인 대기 중인 거래 ({trades.length})
+                        </h2>
+                        {tradesLoading ? (
+                            <div className="py-4 text-center text-slate-400">불러오는 중...</div>
+                        ) : trades.length > 0 ? (
+                            <div className="space-y-3">
+                                {trades.map((t) => (
+                                    <div key={t.id} className="bg-white p-3 rounded-lg border shadow-sm">
+                                        <div className="text-sm mb-2">
+                                            <span className="font-bold text-blue-600">{t.buyer?.name}</span> 학생이
+                                            <span className="font-bold text-amber-600"> {t.price.toLocaleString()}원</span>에 구매 요청
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleTradeApproval(t, true)}
+                                                className="flex-1 py-1 bg-green-600 text-white text-xs font-bold rounded"
+                                            >
+                                                승인
+                                            </button>
+                                            <button
+                                                onClick={() => handleTradeApproval(t, false)}
+                                                className="flex-1 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded"
+                                            >
+                                                거절
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-center py-4 text-slate-400 text-sm">대기 중인 거래가 없습니다.</p>
                         )}
                     </div>
                 </div>

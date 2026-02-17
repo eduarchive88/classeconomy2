@@ -123,16 +123,16 @@ export default function StudentDashboard() {
                         <ArrowRight className="w-5 h-5 ml-auto text-slate-300 group-hover:text-purple-500" />
                     </Link>
 
-                    {/* Disabled Transfer for now */}
-                    <div className="p-6 rounded-2xl bg-white border-2 border-dashed border-slate-200 opacity-60 flex items-center gap-4 cursor-not-allowed">
-                        <div className="p-3 rounded-xl bg-slate-100 text-slate-400">
-                            <Send className="w-6 h-6" />
+                    <Link href="/student/real-estate" className="p-6 rounded-2xl bg-white border-2 border-transparent hover:border-amber-500 transition-all flex items-center gap-4 group shadow-sm hover:shadow-md">
+                        <div className="p-3 rounded-xl bg-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                            <MapPin className="w-6 h-6" />
                         </div>
                         <div className="text-left flex-1">
-                            <h4 className="font-bold text-slate-400">송금하기</h4>
-                            <p className="text-sm text-slate-400">준비 중</p>
+                            <h4 className="font-bold text-slate-900">자리/부동산</h4>
+                            <p className="text-sm text-slate-500">내 자리를 구매하고 확인하기</p>
                         </div>
-                    </div>
+                        <ArrowRight className="w-5 h-5 ml-auto text-slate-300 group-hover:text-amber-500" />
+                    </Link>
                 </div>
             </div>
         </div>

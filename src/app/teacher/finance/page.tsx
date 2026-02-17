@@ -69,26 +69,22 @@ export default function FinanceManagement() {
 
             setLoading(true);
             try {
-                // For finance (allowance/fine), we need matched profile IDs
-                const studentProfileIds = selectedStudents
-                    .map(id => students.find(s => s.id === id)?.profile_id)
-                    .filter(id => !!id);
-
-                if (studentProfileIds.length === 0) {
-                    throw new Error('선택된 학생 중 로그인을 완료한 학생이 없어 수당/벌금 처리가 불가합니다. (학생이 먼저 로그인을 해야 계좌가 생성됩니다)');
-                }
+                const rosterIds = selectedStudents;
 
                 const res = await fetch('/api/teacher/finance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        studentIds: studentProfileIds,
+                        studentIds: rosterIds, // Use roster IDs directly
                         amount,
                         type,
                         description: reason
                     }),
                 });
-                if (!res.ok) throw new Error((await res.json()).error);
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || '처리 실패');
+                }
 
                 alert('처리되었습니다.');
                 setAmount(0);

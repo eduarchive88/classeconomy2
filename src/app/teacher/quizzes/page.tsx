@@ -108,8 +108,10 @@ export default function QuizManagement() {
             // Validate and format
             const formatted = data.map((item: any) => ({
                 question: item['문제'] || item['question'],
-                answer: item['정답'] || item['answer'], // O/X
-                explanation: item['해설'] || item['explanation']
+                options: item['보기'] ? item['보기'].split(',') : (item['options'] || []), // Comma separated or array
+                answer: item['정답'] || item['answer'],
+                explanation: item['해설'] || item['explanation'],
+                reward: item['상금'] || item['reward'] || 500
             })).filter(q => q.question && q.answer);
 
             setGeneratedQuizzes([...generatedQuizzes, ...formatted]);
@@ -136,7 +138,8 @@ export default function QuizManagement() {
             난이도: ${difficulty}
             
             형식은 반드시 다음 JSON 배열 포맷만 출력해줘 (Markdown 코드블럭 없이):
-            [{"question": "지문", "answer": "O 또는 X", "explanation": "해설"}]`;
+            [{"question": "지문", "options": ["보기1", "보기2", "보기3", "보기4"], "answer": 1, "explanation": "해설"}]
+            (answer는 1~4 사이의 정수여야 함)`;
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
@@ -164,7 +167,7 @@ export default function QuizManagement() {
         try {
             const payload = {
                 quizzes: generatedQuizzes,
-                classId: selectedClassId
+                class_id: selectedClassId // Correct field name for API
             };
 
             const response = await fetch('/api/teacher/quizzes', {
