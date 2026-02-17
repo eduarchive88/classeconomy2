@@ -68,10 +68,14 @@ export default function FinanceManagement() {
         try {
             if (type === 'salary_update') {
                 // Update allowance in student_roster
+                const names = selectedStudents
+                    .map(id => students.find(s => s.id === id)?.name)
+                    .filter((name): name is string => !!name);
+
                 const { error: updateError } = await supabase
                     .from('student_roster')
                     .update({ allowance: amount })
-                    .in('name', selectedStudents.map(id => students.find(s => s.id === id)?.name))
+                    .in('name', names)
                     .eq('class_id', localStorage.getItem('selected_class_id'));
 
                 if (updateError) throw updateError;
@@ -230,7 +234,5 @@ export default function FinanceManagement() {
                     )}
                 </div>
             </div>
-        </div>
-        </div >
-    );
+            );
 }
