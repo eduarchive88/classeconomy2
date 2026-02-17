@@ -42,9 +42,9 @@ export async function POST(request: Request) {
 
     try {
         const genAI = new GoogleGenerativeAI(finalApiKey);
-        // 모델을 gemini-1.5-flash로 변경하여 속도 및 비용 효율성 제고
+        // 모델을 gemini-2.5-flash로 변경하여 속도 및 성능 최적화
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             generationConfig: {
                 responseMimeType: "application/json",
             },
