@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Settings, Plus, Trash2, Key, Info, Save, ArrowLeft, Sun } from 'lucide-react';
 import Link from 'next/link';
-import { ThemeToggle } from '@/components/theme-toggle';
+// import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function SettingsPage() {
     const [apiKey, setApiKey] = useState('');
