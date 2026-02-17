@@ -117,56 +117,104 @@ export default function QuizManagement() {
             const wb = XLSX.read(bstr, { type: 'binary' });
             const wsname = wb.SheetNames[0];
             const ws = wb.Sheets[wsname];
+
+            // Strategy 1: Attempt to parse by headers
             const data = XLSX.utils.sheet_to_json(ws);
 
-            // Validate and format
-            const formatted = data.map((item: any) => {
-                // Helper to find value by multiple keys (case-insensitive)
-                const findValue = (keys: string[]) => {
-                    for (const key of keys) {
-                        if (item[key] !== undefined) return item[key];
-                        // Try exact match first, then lowercase
-                        const lowerKey = Object.keys(item).find(k => k.toLowerCase() === key.toLowerCase());
-                        if (lowerKey) return item[lowerKey];
-                    }
-                    return undefined;
-                };
+            // Helper to find value by multiple keys (case-insensitive)
+            const findValue = (item: any, keys: string[]) => {
+                for (const key of keys) {
+                    if (item[key] !== undefined) return item[key];
+                    const lowerKey = Object.keys(item).find(k => k.toLowerCase() === key.toLowerCase());
+                    if (lowerKey) return item[lowerKey];
+                }
+                return undefined;
+            };
 
-                const question = findValue(['문제', '질문', 'question', 'q']);
-                const rawOptions = findValue(['보기', '선택지', 'options', 'opt']);
-                const answer = findValue(['정답', '답', 'answer', 'a']);
-                const explanation = findValue(['해설', '설명', 'explanation', 'exp']);
-                const reward = findValue(['상금', '포인트', 'reward', 'point']) || 500;
+            let formatted: any[] = data.map((item: any) => {
+                const question = findValue(item, ['문제', '질문', 'question', 'q']);
+                const rawOptions = findValue(item, ['보기', '선택지', 'options', 'opt']);
+                const answer = findValue(item, ['정답', '답', 'answer', 'a']);
+                const explanation = findValue(item, ['해설', '설명', 'explanation', 'exp']);
+                const reward = findValue(item, ['상금', '포인트', 'reward', 'point']);
+
+                const opt1 = findValue(item, ['보기1', 'option1', 'opt1', '1']);
+                const opt2 = findValue(item, ['보기2', 'option2', 'opt2', '2']);
+                const opt3 = findValue(item, ['보기3', 'option3', 'opt3', '3']);
+                const opt4 = findValue(item, ['보기4', 'option4', 'opt4', '4']);
 
                 let options: string[] = [];
                 if (typeof rawOptions === 'string') {
-                    // Handle "1. A, 2. B" or "A,B,C,D" or "A\nB\nC"
                     options = rawOptions.split(/,|\n|\r\n/).map(s => s.trim()).filter(Boolean);
-                } else if (Array.isArray(rawOptions)) {
-                    options = rawOptions;
-                } else {
-                    // Try to find columns like "보기1", "보기2", "option1", etc.
-                    const opt1 = findValue(['보기1', 'option1', 'opt1', '1']);
-                    const opt2 = findValue(['보기2', 'option2', 'opt2', '2']);
-                    const opt3 = findValue(['보기3', 'option3', 'opt3', '3']);
-                    const opt4 = findValue(['보기4', 'option4', 'opt4', '4']);
-                    if (opt1 || opt2) options = [opt1, opt2, opt3, opt4].filter(Boolean);
+                } else if (opt1 || opt2) {
+                    options = [opt1, opt2, opt3, opt4].filter(Boolean).map(String);
                 }
 
                 return {
                     question,
-                    options, // Should be array of strings
-                    answer: Number(answer), // Ensure number
+                    options,
+                    answer,
                     explanation,
-                    reward: Number(reward)
+                    reward: reward || 500
                 };
-            }).filter(q => q.question && q.answer && q.options && q.options.length > 0);
+            }).filter((q: any) => q.question && q.options && q.options.length > 0);
 
-            if (data.length > 0 && formatted.length === 0) {
-                alert('엑셀 파일에서 유효한 퀴즈를 찾지 못했습니다.\n컬럼명(문제, 보기, 정답, 해설)을 확인해주세요.');
-            } else if (formatted.length > 0) {
+            // Strategy 2: Fallback to strict column index (Header: 1)
+            // A=Question, B-E=Options, F=Answer, G=Reward
+            if (formatted.length === 0) {
+                const dataArray = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+
+                // Skip header if first row resembles header
+                const firstRow = dataArray[0];
+                const isHeader = firstRow && (
+                    String(firstRow[0]).includes('문제') ||
+                    String(firstRow[0]).toLowerCase().includes('question') ||
+                    String(firstRow[0]) === 'A'
+                );
+                const startIndex = isHeader ? 1 : 0;
+
+                for (let i = startIndex; i < dataArray.length; i++) {
+                    const row = dataArray[i];
+                    if (!row || row.length < 2) continue;
+
+                    // 0: Question, 1-4: Opts, 5: Ans, 6: Rwd
+                    const qText = row[0];
+                    if (!qText) continue;
+
+                    const opts = [row[1], row[2], row[3], row[4]].filter(Boolean).map(String);
+                    if (opts.length < 2) continue;
+
+                    const ansRaw = row[5];
+                    const rwd = row[6] || 500;
+
+                    let ansNum = 1;
+                    if (typeof ansRaw === 'number') {
+                        ansNum = ansRaw;
+                    } else if (typeof ansRaw === 'string') {
+                        const parsed = parseInt(ansRaw);
+                        if (!isNaN(parsed)) {
+                            ansNum = parsed;
+                        } else {
+                            const idx = opts.findIndex(o => o.trim() === ansRaw.trim());
+                            if (idx !== -1) ansNum = idx + 1;
+                        }
+                    }
+
+                    formatted.push({
+                        question: qText,
+                        options: opts,
+                        answer: ansNum,
+                        explanation: '',
+                        reward: Number(rwd)
+                    });
+                }
+            }
+
+            if (formatted.length === 0) {
+                alert('엑셀 파일에서 유효한 퀴즈를 찾지 못했습니다.\nA열:문제, B~E열:보기, F열:정답, G열:상금 형식을 확인해주세요.');
+            } else {
                 alert(`${formatted.length}개의 퀴즈를 불러왔습니다.`);
-                setGeneratedQuizzes([...generatedQuizzes, ...formatted]);
+                setGeneratedQuizzes((prev: any) => [...prev, ...formatted]);
             }
         };
         reader.readAsBinaryString(file);
@@ -311,11 +359,11 @@ export default function QuizManagement() {
                                     accept=".xlsx, .xls"
                                     onChange={handleFileUpload}
                                     className="block w-full text-sm text-slate-500
-                                    file:mr-4 file:py-2 file:px-4
-                                    file:rounded-full file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-blue-50 file:text-blue-700
-                                    hover:file:bg-blue-100"
+                                        file:mr-4 file:py-2 file:px-4
+                                        file:rounded-full file:border-0
+                                        file:text-sm file:font-semibold
+                                        file:bg-blue-50 file:text-blue-700
+                                        hover:file:bg-blue-100"
                                 />
                                 <p className="text-xs text-slate-400 mt-1">컬럼: 문제, 정답(O/X), 해설</p>
                             </div>
