@@ -1,108 +1,141 @@
-
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
+import yahooFinance from 'yahoo-finance2';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-    const { symbol, amount, action } = await request.json(); // amount is Quantity of stocks
+    const { action, studentId, symbol, quantity } = await request.json();
     const supabase = createClient();
+    const adminSupabase = createAdminClient();
 
-    // 1. Check Auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!studentId || !symbol || !quantity || quantity <= 0) {
+        return NextResponse.json({ error: 'Invalid trade details' }, { status: 400 });
     }
 
-    // 2. Get Current Price
-    const { data: marketData, error: marketError } = await supabase
-        .from('market_data')
-        .select('price')
-        .eq('symbol', symbol)
-        .single();
-
-    if (marketError || !marketData) {
-        return NextResponse.json({ error: 'Market data not found for ' + symbol }, { status: 404 });
-    }
-
-    const price = Number(marketData.price);
-    const totalCost = price * amount;
-
-    // 3. Process Trade
-    if (action === 'buy') {
-        // Check Balance
-        const { data: profile } = await supabase.from('profiles').select('money').eq('id', user.id).single();
-        if (!profile || profile.money < totalCost) {
-            return NextResponse.json({ error: '잔액이 부족합니다.' }, { status: 400 });
+    try {
+        // 1. Get Current Price
+        const quote = await yahooFinance.quote(symbol);
+        const currentPrice = quote.regularMarketPrice;
+        if (!currentPrice) {
+            return NextResponse.json({ error: 'Price not available' }, { status: 500 });
         }
 
-        // Check Asset for Average Price Calculation
-        const { data: asset } = await supabase
-            .from('assets')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('symbol', symbol)
+        const totalCost = Math.floor(currentPrice * quantity); // Floor for integer currency? or allow float? Let's assume integer currency for simplicity, but price is float.
+        // Assuming balance is integer, but investments can track precision.
+        // Let's ceil the cost to be safe for currency.
+        const cost = Math.ceil(currentPrice * quantity);
+
+        // 2. Get Student Balance
+        const { data: student, error: studentError } = await supabase
+            .from('student_roster')
+            .select('balance')
+            .eq('id', studentId)
             .single();
 
-        let newAmount = amount;
-        let newAvgPrice = price;
+        if (studentError || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
 
-        if (asset) {
-            const currentTotalValue = asset.amount * asset.average_price;
-            const newTotalValue = currentTotalValue + totalCost;
-            newAmount = Number(asset.amount) + Number(amount);
-            newAvgPrice = newTotalValue / newAmount;
+        if (action === 'buy') {
+            if (student.balance < cost) {
+                return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+            }
+
+            // Deduct Balance
+            await adminSupabase.from('student_roster').update({ balance: student.balance - cost }).eq('id', studentId);
+
+            // Fetch existing investment
+            const { data: existing } = await supabase
+                .from('investments')
+                .select('*')
+                .eq('student_id', studentId)
+                .eq('symbol', symbol)
+                .single();
+
+            if (existing) {
+                // Update average price
+                const newTotalQuantity = existing.quantity + quantity;
+                const newAveragePrice = ((existing.average_price * existing.quantity) + (currentPrice * quantity)) / newTotalQuantity;
+
+                await adminSupabase.from('investments').update({
+                    quantity: newTotalQuantity,
+                    average_price: newAveragePrice,
+                    updated_at: new Date().toISOString()
+                }).eq('id', existing.id);
+            } else {
+                // Insert new
+                await adminSupabase.from('investments').insert({
+                    student_id: studentId,
+                    symbol: symbol,
+                    quantity: quantity,
+                    average_price: currentPrice
+                });
+            }
+
+            // Log Transaction
+            await adminSupabase.from('transactions').insert({
+                student_id: studentId,
+                type: 'investment_buy',
+                amount: -cost,
+                description: `Bought ${quantity} ${symbol} @ ${currentPrice}`
+            });
+
+            return NextResponse.json({ success: true, message: `Bought ${symbol}` });
+
+        } else if (action === 'sell') {
+            // Check possession
+            const { data: existing } = await supabase
+                .from('investments')
+                .select('*')
+                .eq('student_id', studentId)
+                .eq('symbol', symbol)
+                .single();
+
+            if (!existing || existing.quantity < quantity) {
+                return NextResponse.json({ error: 'Insufficient quantity' }, { status: 400 });
+            }
+
+            // Calculate profit/loss for logging (optional)
+            const revenue = Math.floor(currentPrice * quantity);
+
+            // Update Investment
+            const newQuantity = existing.quantity - quantity;
+            if (newQuantity <= 0) {
+                // Or keep with 0 quantity? Let's delete for cleanliness or keep with 0?
+                // Let's delete if 0 to avoid clutter, or update to 0. 
+                // Updating to 0 preserves average price history? No, average price assumes holding.
+                // Let's allow partial sell.
+                if (Math.abs(newQuantity) < 0.000001) { // Float safety
+                    await adminSupabase.from('investments').delete().eq('id', existing.id);
+                } else {
+                    await adminSupabase.from('investments').update({
+                        quantity: newQuantity,
+                        updated_at: new Date().toISOString()
+                        // Average price doesn't change on sell
+                    }).eq('id', existing.id);
+                }
+            } else {
+                await adminSupabase.from('investments').update({
+                    quantity: newQuantity,
+                    updated_at: new Date().toISOString()
+                }).eq('id', existing.id);
+            }
+
+            // Add Balance
+            await adminSupabase.from('student_roster').update({ balance: student.balance + revenue }).eq('id', studentId);
+
+            // Log Transaction
+            await adminSupabase.from('transactions').insert({
+                student_id: studentId,
+                type: 'investment_sell',
+                amount: revenue,
+                description: `Sold ${quantity} ${symbol} @ ${currentPrice}`
+            });
+
+            return NextResponse.json({ success: true, message: `Sold ${symbol}` });
         }
 
-        // Transaction (Deduct Money)
-        const { error: txError } = await supabase.from('transactions').insert({
-            from_id: user.id, // User pays
-            to_id: null, // To system/market
-            amount: totalCost,
-            type: 'investment_buy',
-            description: `${symbol} ${amount}주 매수`
-        });
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
-        if (txError) return NextResponse.json({ error: txError.message }, { status: 500 });
-
-        // Update Asset
-        await supabase.from('assets').upsert({
-            user_id: user.id,
-            symbol,
-            amount: newAmount,
-            average_price: newAvgPrice
-        }, { onConflict: 'user_id, symbol' });
-
-    } else if (action === 'sell') {
-        // Check Asset
-        const { data: asset } = await supabase
-            .from('assets')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('symbol', symbol)
-            .single();
-
-        if (!asset || asset.amount < amount) {
-            return NextResponse.json({ error: '보유 수량이 부족합니다.' }, { status: 400 });
-        }
-
-        // Transaction (Gain Money)
-        const { error: txError } = await supabase.from('transactions').insert({
-            from_id: null,
-            to_id: user.id, // User gets money
-            amount: totalCost,
-            type: 'investment_sell',
-            description: `${symbol} ${amount}주 매도`
-        });
-
-        if (txError) return NextResponse.json({ error: txError.message }, { status: 500 });
-
-        // Update Asset
-        const remaining = Number(asset.amount) - Number(amount);
-        if (remaining > 0) {
-            await supabase.from('assets').update({ amount: remaining }).eq('id', asset.id);
-        } else {
-            await supabase.from('assets').delete().eq('id', asset.id);
-        }
+    } catch (error) {
+        console.error('Trade Error:', error);
+        return NextResponse.json({ error: 'Trade failed' }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, price });
 }

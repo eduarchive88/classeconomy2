@@ -28,11 +28,33 @@ export function createClient() {
                         )
                     } catch {
                         // The `setAll` method was called from a Server Component.
-                        // This can be ignored if you have middleware refreshing
-                        // user sessions.
                     }
                 },
             },
         }
     )
+}
+
+/**
+ * RLS 정책을 우회하여 관리자 권한으로 작업을 수행하는 클라이언트
+ * 유의: 반드시 서버 측 API 라우트에서만 사용해야 함
+ */
+export function createAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Admin client failed: Service Role Key is missing');
+    }
+
+    return createServerClient(
+        supabaseUrl || '',
+        supabaseServiceKey || '',
+        {
+            cookies: {
+                getAll() { return [] },
+                setAll() { },
+            },
+        }
+    );
 }

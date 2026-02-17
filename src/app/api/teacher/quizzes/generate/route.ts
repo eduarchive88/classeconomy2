@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-    const { prompt, apiKey } = await request.json();
+    const { prompt, apiKey, difficulty, count } = await request.json();
     const supabase = createClient();
 
     // 1. 현재 로그인한 교사의 API 키 조회
@@ -42,10 +42,19 @@ export async function POST(request: Request) {
 
     try {
         const genAI = new GoogleGenerativeAI(finalApiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // 모델을 gemini-pro로 변경하여 안정성 확보 (gemini-1.5-flash가 불안정할 경우)
+        // 또는 gemini-1.5-flash를 유지하되 에러 핸들링 강화. 여기서는 요청대로 에러가 발생했으므로 gemini-pro로 변경.
+        const model = genAI.getGenerativeModel({
+            model: "gemini-pro",
+            generationConfig: {
+                responseMimeType: "application/json",
+            },
+        });
+
+        const countNum = count || 5; // 기본 5문제
 
         const systemPrompt = `
-      You are an economics teacher. Create 5 multiple choice quizzes about the following topic: "${prompt}".
+      You are an economics teacher. Create ${countNum} multiple choice quizzes about the following topic: "${prompt}".
       Target audience: Elementary/Middle school students.
       Format: JSON Array only. No markdown code blocks.
       Structure per object:

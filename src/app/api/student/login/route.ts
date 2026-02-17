@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 
 export async function POST(request: Request) {
-    const { sessionCode, studentId } = await request.json();
+    const { sessionCode, studentId, password } = await request.json();
     const supabase = createClient();
 
     // 1. 세션코드로 학급 찾기
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     const { data: student, error: studentError } = await supabase
         .from('student_roster')
         .select('id, name, grade, class_info, number, balance')
+        .select('id, name, grade, class_info, number, balance, password') // password 컬럼 추가
         .eq('class_id', classData.id)
         .eq('grade', grade)
         .eq('class_info', classInfo)
@@ -40,7 +41,13 @@ export async function POST(request: Request) {
         .maybeSingle();
 
     if (studentError || !student) {
-        return NextResponse.json({ error: '해당 학번의 학생을 찾을 수 없습니다.' }, { status: 404 });
+        return NextResponse.json({ error: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    // 비밀번호 검증 (DB에 password 컬럼이 없거나 null이면 통과 - 마이그레이션 과도기)
+    // 요청 바디의 password와 DB의 password 비교
+    if (student.password && student.password !== password) {
+        return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 401 });
     }
 
     // 4. 세션 토큰 생성 (간단한 방식)
