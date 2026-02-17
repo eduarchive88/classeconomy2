@@ -125,8 +125,14 @@ export default function QuizManagement() {
             const findValue = (item: any, keys: string[]) => {
                 for (const key of keys) {
                     if (item[key] !== undefined) return item[key];
+                    // Exact match case-insensitive
                     const lowerKey = Object.keys(item).find(k => k.toLowerCase() === key.toLowerCase());
                     if (lowerKey) return item[lowerKey];
+                    // Partial match for specific Korean keys
+                    if (key === '정답' || key === '문제') {
+                        const partialKey = Object.keys(item).find(k => k.includes(key));
+                        if (partialKey) return item[partialKey];
+                    }
                 }
                 return undefined;
             };
@@ -134,7 +140,8 @@ export default function QuizManagement() {
             let formatted: any[] = data.map((item: any) => {
                 const question = findValue(item, ['문제', '질문', 'question', 'q']);
                 const rawOptions = findValue(item, ['보기', '선택지', 'options', 'opt']);
-                const answer = findValue(item, ['정답', '답', 'answer', 'a']);
+                // Added '정답(O/X)' explicitly or via partial match logic
+                const answer = findValue(item, ['정답', '답', 'answer', 'a', '정답(O/X)']);
                 const explanation = findValue(item, ['해설', '설명', 'explanation', 'exp']);
                 const reward = findValue(item, ['상금', '포인트', 'reward', 'point']);
 
@@ -157,7 +164,7 @@ export default function QuizManagement() {
                     explanation,
                     reward: reward || 500
                 };
-            }).filter((q: any) => q.question && q.options && q.options.length > 0);
+            }).filter((q: any) => q.question && q.options && q.options.length > 0 && q.answer); // Ensure answer exists
 
             // Strategy 2: Fallback to strict column index (Header: 1)
             // A=Question, B-E=Options, F=Answer, G=Reward
@@ -211,7 +218,7 @@ export default function QuizManagement() {
             }
 
             if (formatted.length === 0) {
-                alert('엑셀 파일에서 유효한 퀴즈를 찾지 못했습니다.\nA열:문제, B~E열:보기, F열:정답, G열:상금 형식을 확인해주세요.');
+                alert('엑셀 파일에서 유효한 퀴즈를 찾지 못했습니다.\n\n[지원 형식]\n1. 헤더 인식: 문제, 보기, 정답, 상금\n2. 컬럼 고정: A열(문제), B~E열(보기), F열(정답), G열(상금)');
             } else {
                 alert(`${formatted.length}개의 퀴즈를 불러왔습니다.`);
                 setGeneratedQuizzes((prev: any) => [...prev, ...formatted]);
@@ -365,7 +372,7 @@ export default function QuizManagement() {
                                         file:bg-blue-50 file:text-blue-700
                                         hover:file:bg-blue-100"
                                 />
-                                <p className="text-xs text-slate-400 mt-1">컬럼: 문제, 정답(O/X), 해설</p>
+                                <p className="text-xs text-slate-400 mt-1">컬럼: 문제, 보기1~4, 정답, 상금 (A~G열)</p>
                             </div>
 
                             <div className="relative">
