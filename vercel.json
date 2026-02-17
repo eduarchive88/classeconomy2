@@ -7,6 +7,10 @@
         {
             "path": "/api/cron/daily-quiz-reset",
             "schedule": "0 8 * * *"
+        },
+        {
+            "path": "/api/cron/weekly-salary",
+            "schedule": "0 23 * * 0"
         }
     ]
 }
