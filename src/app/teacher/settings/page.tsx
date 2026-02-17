@@ -20,8 +20,13 @@ export default function SettingsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setUser(user);
-                // Load API key from metadata
-                setApiKey(user.user_metadata?.google_api_key || '');
+
+                // Load API key from teacher_settings table
+                const res = await fetch('/api/teacher/settings');
+                const settingsData = await res.json();
+                if (settingsData.google_ai_api_key) {
+                    setApiKey(settingsData.google_ai_api_key);
+                }
 
                 // Load classes
                 const { data } = await supabase
@@ -39,11 +44,18 @@ export default function SettingsPage() {
     const handleSaveApiKey = async () => {
         setLoading(true);
         try {
-            const { error } = await supabase.auth.updateUser({
-                data: { google_api_key: apiKey }
+            const res = await fetch('/api/teacher/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ google_ai_api_key: apiKey })
             });
-            if (error) throw error;
-            alert('API 키가 저장되었습니다.');
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'API 키 저장 실패');
+            }
+
+            alert(data.message || 'API 키가 저장되었습니다.');
         } catch (e: any) {
             alert('오류: ' + e.message);
         } finally {

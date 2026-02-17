@@ -1,15 +1,43 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
     const { prompt, apiKey } = await request.json();
+    const supabase = createClient();
 
-    // 환경변수에서 API 키 우선 사용, 없으면 사용자 입력 API 키 사용
-    const finalApiKey = process.env.GOOGLE_AI_API_KEY || apiKey;
+    // 1. 현재 로그인한 교사의 API 키 조회
+    let finalApiKey = null;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        const { data: settings } = await supabase
+            .from('teacher_settings')
+            .select('google_ai_api_key')
+            .eq('teacher_id', user.id)
+            .maybeSingle();
+
+        // 교사 설정에 API 키가 있으면 우선 사용
+        if (settings?.google_ai_api_key) {
+            finalApiKey = settings.google_ai_api_key;
+        }
+    }
+
+    // 2. 폴백: 환경변수
+    if (!finalApiKey) {
+        finalApiKey = process.env.GOOGLE_AI_API_KEY;
+    }
+
+    // 3. 폴백: 사용자 입력 API 키
+    if (!finalApiKey) {
+        finalApiKey = apiKey;
+    }
 
     if (!finalApiKey) {
-        return NextResponse.json({ error: 'API Key is missing. Please set GOOGLE_AI_API_KEY environment variable or provide an API key.' }, { status: 400 });
+        return NextResponse.json({
+            error: 'API 키가 필요합니다. 시스템 설정에서 API 키를 등록하거나 직접 입력해주세요.'
+        }, { status: 400 });
     }
 
     try {
