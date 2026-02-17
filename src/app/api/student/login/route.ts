@@ -22,14 +22,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '학번은 5자리 숫자여야 합니다. (예: 20201 = 2학년 2반 1번)' }, { status: 400 });
     }
 
-    const grade = parseInt(studentId.charAt(0)); // 첫 번째 자리: 학년
-    const classInfo = parseInt(studentId.substring(1, 3)); // 2-3번째 자리: 반
-    const number = parseInt(studentId.substring(3, 5)); // 4-5번째 자리: 번호
+    // DB 컬럼이 text 타입이므로 문자열로 비교 (앞자리 0 제거)
+    const grade = String(parseInt(studentId.charAt(0))); // "2"
+    const classInfo = String(parseInt(studentId.substring(1, 3))); // "2" (02 → 2)
+    const number = String(parseInt(studentId.substring(3, 5))); // "1" (01 → 1)
 
-    // 3. 학생 찾기
+    console.log(`Student login attempt: grade=${grade}, class_info=${classInfo}, number=${number}, class_id=${classData.id}`);
+
+    // 3. 학생 찾기 (balance 컬럼 사용, DB 스키마에 맞춤)
     const { data: student, error: studentError } = await supabase
         .from('student_roster')
-        .select('id, name, grade, class_info, number, currency')
+        .select('id, name, grade, class_info, number, balance')
         .eq('class_id', classData.id)
         .eq('grade', grade)
         .eq('class_info', classInfo)
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
             grade: student.grade,
             class_info: student.class_info,
             number: student.number,
-            currency: student.currency,
+            balance: student.balance || 0,
             class_id: classData.id,
             class_name: classData.name,
         },

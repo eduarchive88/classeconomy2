@@ -25,9 +25,10 @@ export async function POST(request: Request) {
     for (const studentId of studentIds) {
         try {
             // Fetch current balance
+            // balance 컬럼으로 잔액 조회 (DB 스키마에 맞춤)
             const { data: roster, error: rosterError } = await supabase
                 .from('student_roster')
-                .select('currency, name')
+                .select('balance, name')
                 .eq('id', studentId)
                 .single();
 
@@ -45,12 +46,13 @@ export async function POST(request: Request) {
                 amountChange = -amount;
             }
 
-            const newBalance = (roster.currency || 0) + amountChange;
+            const newBalance = (roster.balance || 0) + amountChange;
 
             // Update Balance
+            // balance 컬럼으로 잔액 업데이트
             const { error: updateError } = await supabase
                 .from('student_roster')
-                .update({ currency: newBalance })
+                .update({ balance: newBalance })
                 .eq('id', studentId);
 
             if (updateError) {
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
                 continue;
             }
 
-            console.log(`Successfully updated student ${roster.name} (${studentId}): ${roster.currency} → ${newBalance}`);
+            console.log(`Successfully updated student ${roster.name} (${studentId}): ${roster.balance} → ${newBalance}`);
             successCount++;
 
             // Prepare Transaction Log

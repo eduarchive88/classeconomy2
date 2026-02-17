@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// GoogleGenerativeAI는 서버 API 라우트에서 사용하므로 클라이언트에서 제거
 import { Loader2, Plus, Upload, Wand2, Save, Trash2, FileText, BarChart2, X, RefreshCw, Users, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
@@ -132,20 +132,12 @@ export default function QuizManagement() {
         reader.readAsBinaryString(file);
     };
 
+    // AI 퀴즈 생성 - 서버 API 라우트를 통해 생성 (교사 설정 API 키 자동 사용)
     const generateAIQuizzes = async () => {
         if (!topic) return alert('주제를 입력해주세요.');
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // API 키를 메타데이터에서 가져옴 (settings에서 google_api_key로 저장됨)
-        const apiKey = user.user_metadata?.google_api_key;
-        if (!apiKey) return alert('설정에서 Gemini API Key를 먼저 등록해주세요.');
 
         setLoading(true);
         try {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
             const prompt = `초등학생 대상의 경제 퀴즈를 5개 만들어줘.
             주제: ${topic}
             난이도: ${difficulty}
@@ -154,15 +146,19 @@ export default function QuizManagement() {
             [{"question": "지문", "options": ["보기1", "보기2", "보기3", "보기4"], "answer": 1, "explanation": "해설"}]
             (answer는 1~4 사이의 정수여야 함)`;
 
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+            // 서버 API 라우트 호출 (교사 설정의 API 키가 자동으로 사용됨)
+            const res = await fetch('/api/teacher/quizzes/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+            });
 
-            // Clean text
-            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            const quizzes = JSON.parse(jsonStr);
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'AI 퀴즈 생성 실패');
+            }
 
-            setGeneratedQuizzes([...generatedQuizzes, ...quizzes]);
+            setGeneratedQuizzes([...generatedQuizzes, ...data.quizzes]);
         } catch (e: any) {
             alert('생성 실패: ' + e.message);
         } finally {
@@ -402,8 +398,8 @@ export default function QuizManagement() {
                                                     <div
                                                         key={idx}
                                                         className={`text-sm px-3 py-2 rounded-lg flex items-center gap-2 ${quiz.answer === (idx + 1)
-                                                                ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200 font-medium'
-                                                                : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                                            ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200 font-medium'
+                                                            : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                                                             }`}
                                                     >
                                                         {quiz.answer === (idx + 1) && (
