@@ -483,80 +483,77 @@ export default function QuizManagement() {
                     </div>
                 </div>
             )}
+
+            {/* Manual Creation Modal */}
+            {showManualModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">퀴즈 직접 만들기</h3>
+                            <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                        </div>
+                        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                            <div>
+                                <label className="block text-sm font-bold mb-1">문제</label>
+                                <textarea
+                                    className="w-full p-2 border rounded-lg"
+                                    rows={2}
+                                    value={manualQuiz.question}
+                                    onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
+                                    placeholder="문제를 입력하세요"
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 gap-2">
+                                <label className="block text-sm font-bold mb-1">보기</label>
+                                {[1, 2, 3, 4].map(num => (
+                                    <input
+                                        key={num}
+                                        type="text"
+                                        placeholder={`보기 ${num}`}
+                                        className="w-full p-2 border rounded-lg text-sm"
+                                        value={(manualQuiz as any)[`option${num}`]}
+                                        onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
+                                    />
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold mb-1">정답 번호</label>
+                                    <select
+                                        className="w-full p-2 border rounded-lg"
+                                        value={manualQuiz.answer}
+                                        onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
+                                    >
+                                        {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold mb-1">상금</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-2 border rounded-lg"
+                                        value={manualQuiz.reward}
+                                        onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold mb-1">해설</label>
+                                <textarea
+                                    className="w-full p-2 border rounded-lg"
+                                    rows={2}
+                                    value={manualQuiz.explanation}
+                                    onChange={e => setManualQuiz({ ...manualQuiz, explanation: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button onClick={() => setShowManualModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
+                            <button onClick={handleManualSubmit} className="btn-primary px-6">추가하기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
-
-{/* Manual Creation Modal */ }
-{
-    showManualModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold">퀴즈 직접 만들기</h3>
-                    <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
-                </div>
-                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                    <div>
-                        <label className="block text-sm font-bold mb-1">문제</label>
-                        <textarea
-                            className="w-full p-2 border rounded-lg"
-                            rows={2}
-                            value={manualQuiz.question}
-                            onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
-                            placeholder="문제를 입력하세요"
-                        />
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                        <label className="block text-sm font-bold">보기</label>
-                        {[1, 2, 3, 4].map(num => (
-                            <input
-                                key={num}
-                                type="text"
-                                placeholder={`보기 ${num}`}
-                                className="w-full p-2 border rounded-lg text-sm"
-                                value={(manualQuiz as any)[`option${num}`]}
-                                onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
-                            />
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-bold mb-1">정답 번호</label>
-                            <select
-                                className="w-full p-2 border rounded-lg"
-                                value={manualQuiz.answer}
-                                onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
-                            >
-                                {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold mb-1">상금</label>
-                            <input
-                                type="number"
-                                className="w-full p-2 border rounded-lg"
-                                value={manualQuiz.reward}
-                                onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold mb-1">해설</label>
-                        <textarea
-                            className="w-full p-2 border rounded-lg"
-                            rows={2}
-                            value={manualQuiz.explanation}
-                            onChange={e => setManualQuiz({ ...manualQuiz, explanation: e.target.value })}
-                        />
-                    </div>
-                </div>
-                <div className="mt-6 flex justify-end gap-2">
-                    <button onClick={() => setShowManualModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
-                    <button onClick={handleManualSubmit} className="btn-primary px-6">추가하기</button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
