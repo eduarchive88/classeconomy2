@@ -448,150 +448,149 @@ export default function QuizManagement() {
                     )}
                 </div>
             </div>
+
+            {/* Stats Modal */}
+            {
+                selectedQuiz && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedQuiz(null)}>
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 통계</h3>
+                                <button onClick={() => setSelectedQuiz(null)} className="text-slate-400 hover:text-slate-600">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="mb-6 bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
+                                <p className="font-medium text-lg mb-2 text-slate-800 dark:text-white">Q. {selectedQuiz.question}</p>
+                                <div className="flex gap-2 text-sm text-slate-600">
+                                    <span>정답: {selectedQuiz.answer}</span>
+                                    <span>|</span>
+                                    <span>{selectedQuiz.explanation}</span>
+                                </div>
+                            </div>
+
+                            {statsLoading ? (
+                                <div className="flex justify-center py-8">
+                                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                                </div>
+                            ) : stats ? (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-center">
+                                            <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">총 배포 횟수</div>
+                                            <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">{stats.distributionCount}회</div>
+                                        </div>
+                                        <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center">
+                                            <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">문제 푼 학생</div>
+                                            <div className="text-2xl font-bold text-green-900 dark:text-green-200">{stats.solvers?.length || 0}명</div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-bold mb-3 flex items-center gap-2">
+                                            <Users className="w-4 h-4 text-slate-500" />
+                                            풀이 기록
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {stats.solvers && stats.solvers.length > 0 ? (
+                                                stats.solvers.map((s: any, i: number) => (
+                                                    <div key={i} className="flex justify-between items-center p-3 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
+                                                        <div>
+                                                            <span className="font-medium mr-2">{s.student_roster?.number}번 {s.student_roster?.name}</span>
+                                                            <span className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${s.is_correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                            {s.is_correct ? '정답' : '오답'}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-center text-slate-400 py-4">아직 문제를 푼 학생이 없습니다.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-red-500">데이터를 불러오지 못했습니다.</div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Manual Creation Modal */}
+            {
+                showManualModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 직접 만들기</h3>
+                                <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                            </div>
+                            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                                <div>
+                                    <label className="block text-sm font-bold mb-1 text-slate-800 dark:text-slate-200">문제</label>
+                                    <textarea
+                                        className="w-full p-2 border rounded-lg"
+                                        rows={2}
+                                        value={manualQuiz.question}
+                                        onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
+                                        placeholder="문제를 입력하세요"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <label className="block text-sm font-bold mb-1">보기</label>
+                                    {[1, 2, 3, 4].map(num => (
+                                        <input
+                                            key={num}
+                                            type="text"
+                                            placeholder={`보기 ${num}`}
+                                            className="w-full p-2 border rounded-lg text-sm"
+                                            value={(manualQuiz as any)[`option${num}`]}
+                                            onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold mb-1">정답 번호</label>
+                                        <select
+                                            className="w-full p-2 border rounded-lg"
+                                            value={manualQuiz.answer}
+                                            onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
+                                        >
+                                            {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold mb-1">상금</label>
+                                        <input
+                                            type="number"
+                                            className="w-full p-2 border rounded-lg"
+                                            value={manualQuiz.reward}
+                                            onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold mb-1">해설</label>
+                                    <textarea
+                                        className="w-full p-2 border rounded-lg"
+                                        rows={2}
+                                        value={manualQuiz.explanation}
+                                        onChange={e => setManualQuiz({ ...manualQuiz, explanation: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-6 flex justify-end gap-2">
+                                <button onClick={() => setShowManualModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
+                                <button onClick={handleManualSubmit} className="btn-primary px-6">추가하기</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div>
-
-            {/* Stats Modal */ }
-    {
-        selectedQuiz && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedQuiz(null)}>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 통계</h3>
-                        <button onClick={() => setSelectedQuiz(null)} className="text-slate-400 hover:text-slate-600">
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-
-                    <div className="mb-6 bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
-                        <p className="font-medium text-lg mb-2 text-slate-800 dark:text-white">Q. {selectedQuiz.question}</p>
-                        <div className="flex gap-2 text-sm text-slate-600">
-                            <span>정답: {selectedQuiz.answer}</span>
-                            <span>|</span>
-                            <span>{selectedQuiz.explanation}</span>
-                        </div>
-                    </div>
-
-                    {statsLoading ? (
-                        <div className="flex justify-center py-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                        </div>
-                    ) : stats ? (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-center">
-                                    <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">총 배포 횟수</div>
-                                    <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">{stats.distributionCount}회</div>
-                                </div>
-                                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center">
-                                    <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">문제 푼 학생</div>
-                                    <div className="text-2xl font-bold text-green-900 dark:text-green-200">{stats.solvers?.length || 0}명</div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 className="font-bold mb-3 flex items-center gap-2">
-                                    <Users className="w-4 h-4 text-slate-500" />
-                                    풀이 기록
-                                </h4>
-                                <div className="space-y-2">
-                                    {stats.solvers && stats.solvers.length > 0 ? (
-                                        stats.solvers.map((s: any, i: number) => (
-                                            <div key={i} className="flex justify-between items-center p-3 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
-                                                <div>
-                                                    <span className="font-medium mr-2">{s.student_roster?.number}번 {s.student_roster?.name}</span>
-                                                    <span className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString()}</span>
-                                                </div>
-                                                <span className={`px-2 py-1 rounded text-xs font-bold ${s.is_correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                    {s.is_correct ? '정답' : '오답'}
-                                                </span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-center text-slate-400 py-4">아직 문제를 푼 학생이 없습니다.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-8 text-red-500">데이터를 불러오지 못했습니다.</div>
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-    {/* Manual Creation Modal */ }
-    {
-        showManualModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 직접 만들기</h3>
-                        <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
-                    </div>
-                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                        <div>
-                            <label className="block text-sm font-bold mb-1 text-slate-800 dark:text-slate-200">문제</label>
-                            <textarea
-                                className="w-full p-2 border rounded-lg"
-                                rows={2}
-                                value={manualQuiz.question}
-                                onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
-                                placeholder="문제를 입력하세요"
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 gap-2">
-                            <label className="block text-sm font-bold mb-1">보기</label>
-                            {[1, 2, 3, 4].map(num => (
-                                <input
-                                    key={num}
-                                    type="text"
-                                    placeholder={`보기 ${num}`}
-                                    className="w-full p-2 border rounded-lg text-sm"
-                                    value={(manualQuiz as any)[`option${num}`]}
-                                    onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
-                                />
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold mb-1">정답 번호</label>
-                                <select
-                                    className="w-full p-2 border rounded-lg"
-                                    value={manualQuiz.answer}
-                                    onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
-                                >
-                                    {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold mb-1">상금</label>
-                                <input
-                                    type="number"
-                                    className="w-full p-2 border rounded-lg"
-                                    value={manualQuiz.reward}
-                                    onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold mb-1">해설</label>
-                            <textarea
-                                className="w-full p-2 border rounded-lg"
-                                rows={2}
-                                value={manualQuiz.explanation}
-                                onChange={e => setManualQuiz({ ...manualQuiz, explanation: e.target.value })}
-                            />
-                        </div>
-                    </div>
-                    <div className="mt-6 flex justify-end gap-2">
-                        <button onClick={() => setShowManualModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
-                        <button onClick={handleManualSubmit} className="btn-primary px-6">추가하기</button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-        </div >
-    )
+    );
 }
