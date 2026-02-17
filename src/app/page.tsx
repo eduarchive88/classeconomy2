@@ -91,14 +91,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-slate-900 dark:to-slate-800">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8 animate-slide-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg mb-4">
-            <School className="w-8 h-8 text-white" />
+        <div className="text-center mb-12 animate-slide-in">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-xl mb-6 transform hover:scale-105 transition-transform duration-300">
+            <School className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-            학급 경제 나라
+          <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 mb-3 tracking-tight">
+            ClassEconomy
           </h1>
-          <p className="text-slate-500 mt-2">우리 반의 작은 경제 사회</p>
+          <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 font-medium">학급 관리 프로그램</p>
         </div>
 
         <div className="glass-panel p-8 animate-slide-in" style={{ animationDelay: '0.1s' }}>

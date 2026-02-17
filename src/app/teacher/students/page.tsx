@@ -87,14 +87,15 @@ export default function StudentManagement() {
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
             // Parse Logic based on user requirements:
-            // A: Grade, B: Class, C: Number, D: Name, E: Weekly Allowance
+            // A: Grade, B: Class, C: Number, D: Name, E: Weekly Allowance, F: Password (Optional)
             const parsedStudents = data.slice(1).map((row: any) => ({
                 grade: row[0],
                 class: row[1],
                 number: row[2],
                 name: row[3],
-                allowance: row[4] || 0, // Default 0 if empty
-            })).filter((s: any) => s.name); // Filter empty rows
+                allowance: row[4] || 0,
+                password: row[5] || '1234', // Default to '1234' if empty
+            })).filter((s: any) => s.name);
 
             setUploadQueue(parsedStudents);
         };
