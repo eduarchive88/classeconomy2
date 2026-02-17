@@ -120,15 +120,54 @@ export default function QuizManagement() {
             const data = XLSX.utils.sheet_to_json(ws);
 
             // Validate and format
-            const formatted = data.map((item: any) => ({
-                question: item['문제'] || item['question'],
-                options: item['보기'] ? item['보기'].split(',') : (item['options'] || []), // Comma separated or array
-                answer: item['정답'] || item['answer'],
-                explanation: item['해설'] || item['explanation'],
-                reward: item['상금'] || item['reward'] || 500
-            })).filter(q => q.question && q.answer);
+            const formatted = data.map((item: any) => {
+                // Helper to find value by multiple keys (case-insensitive)
+                const findValue = (keys: string[]) => {
+                    for (const key of keys) {
+                        if (item[key] !== undefined) return item[key];
+                        // Try exact match first, then lowercase
+                        const lowerKey = Object.keys(item).find(k => k.toLowerCase() === key.toLowerCase());
+                        if (lowerKey) return item[lowerKey];
+                    }
+                    return undefined;
+                };
 
-            setGeneratedQuizzes([...generatedQuizzes, ...formatted]);
+                const question = findValue(['문제', '질문', 'question', 'q']);
+                const rawOptions = findValue(['보기', '선택지', 'options', 'opt']);
+                const answer = findValue(['정답', '답', 'answer', 'a']);
+                const explanation = findValue(['해설', '설명', 'explanation', 'exp']);
+                const reward = findValue(['상금', '포인트', 'reward', 'point']) || 500;
+
+                let options: string[] = [];
+                if (typeof rawOptions === 'string') {
+                    // Handle "1. A, 2. B" or "A,B,C,D" or "A\nB\nC"
+                    options = rawOptions.split(/,|\n|\r\n/).map(s => s.trim()).filter(Boolean);
+                } else if (Array.isArray(rawOptions)) {
+                    options = rawOptions;
+                } else {
+                    // Try to find columns like "보기1", "보기2", "option1", etc.
+                    const opt1 = findValue(['보기1', 'option1', 'opt1', '1']);
+                    const opt2 = findValue(['보기2', 'option2', 'opt2', '2']);
+                    const opt3 = findValue(['보기3', 'option3', 'opt3', '3']);
+                    const opt4 = findValue(['보기4', 'option4', 'opt4', '4']);
+                    if (opt1 || opt2) options = [opt1, opt2, opt3, opt4].filter(Boolean);
+                }
+
+                return {
+                    question,
+                    options, // Should be array of strings
+                    answer: Number(answer), // Ensure number
+                    explanation,
+                    reward: Number(reward)
+                };
+            }).filter(q => q.question && q.answer && q.options && q.options.length > 0);
+
+            if (data.length > 0 && formatted.length === 0) {
+                alert('엑셀 파일에서 유효한 퀴즈를 찾지 못했습니다.\n컬럼명(문제, 보기, 정답, 해설)을 확인해주세요.');
+            } else if (formatted.length > 0) {
+                alert(`${formatted.length}개의 퀴즈를 불러왔습니다.`);
+                setGeneratedQuizzes([...generatedQuizzes, ...formatted]);
+            }
         };
         reader.readAsBinaryString(file);
     };
@@ -352,21 +391,37 @@ export default function QuizManagement() {
                                 저장하기
                             </button>
                         </div>
-                        <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                             {generatedQuizzes.map((q, i) => (
-                                <div key={i} className="bg-white dark:bg-slate-800 p-3 rounded-lg border dark:border-slate-700 shadow-sm relative group">
+                                <div key={i} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative group hover:border-blue-300 transition-all">
                                     <button
                                         onClick={() => removeGenerated(i)}
-                                        className="absolute top-2 right-2 text-slate-300 hover:text-red-500"
+                                        className="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-1"
+                                        title="삭제"
                                     >
-                                        <X className="w-4 h-4" />
+                                        <X className="w-5 h-5" />
                                     </button>
-                                    <p className="font-medium pr-6">Q. {q.question}</p>
-                                    <div className="flex gap-2 mt-2 text-sm">
-                                        <span className={`font-bold ${q.answer === 'O' ? 'text-blue-600' : 'text-red-600'}`}>
-                                            A. {q.answer}
+                                    <p className="font-bold text-lg text-slate-800 dark:text-slate-100 pr-8 mb-3">Q. {q.question}</p>
+
+                                    <div className="grid grid-cols-1 gap-2 mb-3">
+                                        {q.options && q.options.map((opt: string, idx: number) => (
+                                            <div key={idx} className={`text-sm px-3 py-2 rounded-lg border ${q.answer === (idx + 1)
+                                                ? 'bg-blue-50 border-blue-200 text-blue-800 font-bold'
+                                                : 'bg-slate-50 border-slate-100 text-slate-600'
+                                                }`}>
+                                                <span className="mr-2">{idx + 1}.</span> {opt}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-sm bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                        <span className="font-bold text-blue-600 whitespace-nowrap">
+                                            정답: {q.answer}번
                                         </span>
-                                        <span className="text-slate-500">| {q.explanation}</span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className="text-slate-600 dark:text-slate-300 text-xs">
+                                            {q.explanation}
+                                        </span>
                                     </div>
                                 </div>
                             ))}

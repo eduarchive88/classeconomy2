@@ -17,6 +17,7 @@ export async function POST(request: Request) {
         .single();
 
     if (classError || !classData) {
+        console.warn(`Login failed: Invalid session code '${sessionCode}'`);
         return NextResponse.json({ error: '유효하지 않은 세션코드입니다.' }, { status: 400 });
     }
 
@@ -32,25 +33,39 @@ export async function POST(request: Request) {
 
     console.log(`Student login attempt: grade=${grade}, class_info=${classInfo}, number=${number}, class_id=${classData.id}`);
 
-    // 3. 학생 찾기 (balance 컬럼 사용, DB 스키마에 맞춤)
-    const { data: student, error: studentError } = await supabase
+    // 3. 학생 찾기 (로스터 전체 조회 후 필터링 - "02" vs "2" 등의 포맷 불일치 해결을 위해)
+    const { data: roster, error: rosterError } = await supabase
         .from('student_roster')
-        .select('id, name, grade, class_info, number, balance')
-        .select('id, name, grade, class_info, number, balance, password') // password 컬럼 추가
-        .eq('class_id', classData.id)
-        .eq('grade', grade)
-        .eq('class_info', classInfo)
-        .eq('number', number)
-        .maybeSingle();
+        .select('id, name, grade, class_info, number, balance, password')
+        .eq('class_id', classData.id);
 
-    if (studentError || !student) {
-        return NextResponse.json({ error: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    if (rosterError || !roster) {
+        console.error('Login Error: Failed to fetch roster', rosterError);
+        return NextResponse.json({ error: '학급 명단을 불러올 수 없습니다.' }, { status: 500 });
+    }
+
+    // JS에서 유연하게 비교 (모두 문자열로 변환하여 앞자리 0 제거 후 비교)
+    const normalize = (val: any) => String(val).replace(/^0+/, '');
+
+    const targetGrade = normalize(grade);
+    const targetClassInfo = normalize(classInfo);
+    const targetNumber = normalize(number);
+
+    const student = roster.find(s =>
+        normalize(s.grade) === targetGrade &&
+        normalize(s.class_info) === targetClassInfo &&
+        normalize(s.number) === targetNumber
+    );
+
+    if (!student) {
+        console.log(`Student not found in roster. Parsed: ${targetGrade}-${targetClassInfo}-${targetNumber}, ClassId: ${classData.id}`);
+        return NextResponse.json({ error: '해당 학번의 학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     }
 
     // 비밀번호 검증
     // DB에 비밀번호가 없으면(null/empty) 초기 비밀번호 '1234'로 간주
     const dbPassword = student.password || '1234';
-    if (dbPassword !== password) {
+    if (String(dbPassword) !== String(password)) { // Ensure string comparison
         return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 401 });
     }
 
@@ -59,7 +74,6 @@ export async function POST(request: Request) {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24시간 후
 
     // 5. 세션 정보를 로컬스토리지에 저장하도록 클라이언트에 반환
-    // (Supabase Auth를 사용하지 않으므로 서버에서 세션을 관리하지 않음)
     return NextResponse.json({
         success: true,
         student: {
