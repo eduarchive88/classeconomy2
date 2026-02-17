@@ -22,7 +22,7 @@ export default function FinanceManagement() {
         fetchStudents();
     }, []);
 
-    // 학생 목록 불러오기 - currency 필드 사용으로 통일
+    // 학생 목록 불러오기 - balance 필드 사용으로 통일
     const fetchStudents = async () => {
         const selectedClassId = localStorage.getItem('selected_class_id');
         if (!selectedClassId) return;
@@ -38,10 +38,10 @@ export default function FinanceManagement() {
             return;
         }
 
-        // currency 필드를 잔액으로 직접 사용 (finance API와 동일)
+        // balance 필드를 잔액으로 직접 사용 (finance API와 동일)
         const mapped = (roster || []).map(r => ({
             ...r,
-            money: r.currency || 0,  // currency 필드를 money로 매핑
+            money: r.balance || 0,  // balance 필드를 money로 매핑
         }));
 
         setStudents(mapped);

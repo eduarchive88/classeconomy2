@@ -3,14 +3,17 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 
 export async function POST(request: Request) {
-    const { sessionCode, studentId, password } = await request.json();
+    const body = await request.json();
+    const sessionCode = body.sessionCode?.trim();
+    const studentId = body.studentId;
+    const password = body.password;
     const supabase = createClient();
 
     // 1. 세션코드로 학급 찾기
     const { data: classData, error: classError } = await supabase
         .from('classes')
         .select('id, name')
-        .eq('session_code', sessionCode)
+        .ilike('session_code', sessionCode)
         .single();
 
     if (classError || !classData) {

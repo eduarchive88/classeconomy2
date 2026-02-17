@@ -21,11 +21,11 @@ export default function StudentBank() {
     const [withdrawLoading, setWithdrawLoading] = useState<string | null>(null);
 
     useEffect(() => {
-        const stored = localStorage.getItem('student_info');
+        const stored = localStorage.getItem('student_session');
         if (stored) {
             const parsed = JSON.parse(stored);
-            setStudentId(parsed.id);
-            fetchData(parsed.id);
+            setStudentId(parsed.student.id);
+            fetchData(parsed.student.id);
         }
     }, []);
 
@@ -187,8 +187,8 @@ export default function StudentBank() {
                 <button
                     onClick={() => setActiveTab('overview')}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${activeTab === 'overview'
-                            ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                 >
                     내역
@@ -196,8 +196,8 @@ export default function StudentBank() {
                 <button
                     onClick={() => setActiveTab('transfer')}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${activeTab === 'transfer'
-                            ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                 >
                     송금하기
@@ -205,8 +205,8 @@ export default function StudentBank() {
                 <button
                     onClick={() => setActiveTab('savings')}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${activeTab === 'savings'
-                            ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                 >
                     저축하기
@@ -376,8 +376,8 @@ export default function StudentBank() {
                                                             onClick={() => handleWithdraw(acc.id)}
                                                             disabled={!isMature || withdrawLoading === acc.id}
                                                             className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${!isMature
-                                                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                                    : 'bg-green-500 hover:bg-green-600 text-white shadow-sm'
+                                                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                                : 'bg-green-500 hover:bg-green-600 text-white shadow-sm'
                                                                 }`}
                                                         >
                                                             {withdrawLoading === acc.id ? '처리 중...' : '출금하기'}

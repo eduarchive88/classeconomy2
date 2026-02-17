@@ -36,14 +36,14 @@ export default function StudentDashboard() {
                 // 최신 잔액 조회
                 const { data: roster } = await supabase
                     .from('student_roster')
-                    .select('currency')
+                    .select('balance')
                     .eq('id', session.student.id)
                     .single();
 
                 if (roster) {
-                    setBalance(roster.currency || 0);
+                    setBalance(roster.balance || 0);
                     // 세션에 저장된 잔액도 업데이트
-                    session.student.currency = roster.currency || 0;
+                    session.student.balance = roster.balance || 0;
                     localStorage.setItem('student_session', JSON.stringify(session));
                 }
             } catch (error) {

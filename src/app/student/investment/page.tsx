@@ -29,9 +29,9 @@ export default function InvestmentPage() {
     // For now, let's just show trade interface. Portfolio viewing can be added later or via bank API enhancement.
 
     useEffect(() => {
-        const stored = localStorage.getItem('student_info');
+        const stored = localStorage.getItem('student_session');
         if (stored) {
-            setStudentId(JSON.parse(stored).id);
+            setStudentId(JSON.parse(stored).student.id);
         }
         fetchQuotes();
         fetchNews();
@@ -264,8 +264,8 @@ export default function InvestmentPage() {
                                     type="submit"
                                     disabled={tradeLoading}
                                     className={`flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/30 ${tradeAction === 'buy'
-                                            ? 'bg-red-500 hover:bg-red-600'
-                                            : 'bg-blue-500 hover:bg-blue-600'
+                                        ? 'bg-red-500 hover:bg-red-600'
+                                        : 'bg-blue-500 hover:bg-blue-600'
                                         }`}
                                 >
                                     {tradeLoading ? '처리 중...' : (tradeAction === 'buy' ? '매수하기' : '매도하기')}

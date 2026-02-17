@@ -18,9 +18,9 @@ export default function StudentSettings() {
 
     useEffect(() => {
         setMounted(true);
-        const stored = localStorage.getItem('student_info');
+        const stored = localStorage.getItem('student_session');
         if (stored) {
-            setStudent(JSON.parse(stored));
+            setStudent(JSON.parse(stored).student);
         }
     }, []);
 
@@ -84,8 +84,8 @@ export default function StudentSettings() {
                         <button
                             onClick={() => setTheme('light')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all ${theme === 'light'
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
                                 }`}
                         >
                             <div className="flex flex-col items-center gap-2">
@@ -96,8 +96,8 @@ export default function StudentSettings() {
                         <button
                             onClick={() => setTheme('dark')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all ${theme === 'dark'
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
                                 }`}
                         >
                             <div className="flex flex-col items-center gap-2">

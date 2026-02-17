@@ -68,7 +68,7 @@ export default function StudentRealEstate() {
 
                 // Update balance
                 const { error: balError } = await supabase.from('student_roster')
-                    .update({ currency: roster.currency - seat.price })
+                    .update({ balance: roster.balance - seat.price })
                     .eq('id', roster.id);
                 if (balError) throw balError;
 

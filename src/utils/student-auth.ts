@@ -12,7 +12,7 @@ export async function getStudentFromAuth(supabase: SupabaseClient, user: any) {
     // Fallback logic
     const email = user.email || '';
     const sessionCode = email.split('_')[0];
-    const { data: cls } = await supabase.from('classes').select('id').eq('session_code', sessionCode).single();
+    const { data: cls } = await supabase.from('classes').select('id').ilike('session_code', sessionCode).maybeSingle();
 
     if (cls) {
         classId = cls.id;
