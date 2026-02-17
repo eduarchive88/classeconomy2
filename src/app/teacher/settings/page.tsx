@@ -125,7 +125,17 @@ export default function SettingsPage() {
                     </h2>
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Google Gemini API Key</label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-medium">Google Gemini API Key</label>
+                                <a
+                                    href="https://aistudio.google.com/app/apikey"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline"
+                                >
+                                    API 키 발급받기 →
+                                </a>
+                            </div>
                             <div className="flex gap-2">
                                 <input
                                     type="password"

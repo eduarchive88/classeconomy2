@@ -144,6 +144,17 @@ export default function TeacherDashboard() {
                             <p className="text-slate-500 text-sm">오늘의 퀴즈를 등록하고 AI로 문제를 생성합니다.</p>
                         </Link>
 
+                        <Link href="/teacher/real-estate" className="card group hover:border-amber-500 transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                                    <Settings className="w-6 h-6" />
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-amber-500" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-1">부동산/자리 관리</h2>
+                            <p className="text-slate-500 text-sm">교실 자리 배치 및 임대료/매매가를 관리합니다.</p>
+                        </Link>
+
                         <Link href="/teacher/settings" className="card group hover:border-slate-500 transition-all">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="p-3 rounded-lg bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white transition-colors">
