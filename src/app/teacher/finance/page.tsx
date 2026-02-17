@@ -155,12 +155,11 @@ export default function FinanceManagement() {
                             <div className="p-4 bg-blue-50 rounded-xl text-blue-700 text-sm mb-4">
                                 <p className="font-bold mb-1">💡 주급 자동 지급</p>
                                 <p>지정한 금액이 매주 월요일 오전 8시에 학생들에게 자동으로 지급됩니다.</p>
-                                <input type="hidden" value={() => { if (type !== 'salary_update') setType('salary_update'); return ''; }} />
                             </div>
                         )}
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">{activeTab === 'salary' ? '변경할 주급 금액' : '금액'}</label>
+                            <label className="block text-sm font-medium mb-1 mt-4">{activeTab === 'salary' ? '변경할 주급 금액' : '금액'}</label>
                             <input
                                 type="number"
                                 value={amount}
@@ -175,7 +174,7 @@ export default function FinanceManagement() {
 
                         {activeTab === 'finance' && (
                             <div>
-                                <label className="block text-sm font-medium mb-1">사유</label>
+                                <label className="block text-sm font-medium mb-1 mt-4">사유</label>
                                 <input
                                     type="text"
                                     value={reason}
@@ -188,51 +187,52 @@ export default function FinanceManagement() {
 
                         <button
                             onClick={handleSubmit}
-                            className={`w-full btn-primary ${type === 'fine' ? 'bg-red-600 hover:bg-red-700' : activeTab === 'salary' ? 'bg-indigo-600' : ''}`}
+                            className={`w-full btn-primary mt-6 ${type === 'fine' ? 'bg-red-600 hover:bg-red-700' : activeTab === 'salary' ? 'bg-indigo-600' : ''}`}
                             disabled={loading}
                         >
                             {loading ? '처리중...' : (activeTab === 'salary' ? '주급 일괄 수정' : type === 'special_allowance' ? '지급하기' : '부과하기')}
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <div className="glass-panel p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold">학생 목록 ({students.length})</h2>
-                    <button
-                        onClick={() => setSelectedStudents(students.map(s => s.id))}
-                        className="text-sm text-blue-600 hover:underline"
-                    >
-                        전체 선택
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {students.map((student) => (
-                        <div
-                            key={student.id}
-                            onClick={() => toggleStudent(student.id)}
-                            className={`p-4 rounded-xl border cursor-pointer transition-all ${selectedStudents.includes(student.id) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-slate-50'}`}
+                <div className="glass-panel p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-semibold">학생 목록 ({students.length})</h2>
+                        <button
+                            onClick={() => setSelectedStudents(students.map(s => s.id))}
+                            className="text-sm text-blue-600 hover:underline"
                         >
-                            <div className="flex justify-between items-start mb-2">
-                                <span className="font-bold text-lg">{student.name}</span>
-                                <span className="text-xs text-slate-500">{student.number}번</span>
+                            전체 선택
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {students.map((student) => (
+                            <div
+                                key={student.id}
+                                onClick={() => toggleStudent(student.id)}
+                                className={`p-4 rounded-xl border cursor-pointer transition-all ${selectedStudents.includes(student.id) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-slate-50'}`}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="font-bold text-lg">{student.name}</span>
+                                    <span className="text-xs text-slate-500">{student.number}번</span>
+                                </div>
+                                <div className="text-sm text-slate-600">
+                                    잔액: {student.money?.toLocaleString()}원
+                                </div>
+                                <div className="text-xs text-blue-500 mt-1">
+                                    설정된 주급: {student.allowance?.toLocaleString()}원
+                                </div>
                             </div>
-                            <div className="text-sm text-slate-600">
-                                잔액: {student.money?.toLocaleString()}원
+                        ))}
+                        {students.length === 0 && (
+                            <div className="col-span-full text-center py-8 text-slate-400">
+                                등록된 학생(접속 완료한 학생)이 없습니다.
                             </div>
-                            <div className="text-xs text-blue-500 mt-1">
-                                설정된 주급: {student.allowance?.toLocaleString()}원
-                            </div>
-                        </div>
-                    ))}
-                    {students.length === 0 && (
-                        <div className="col-span-full text-center py-8 text-slate-400">
-                            등록된 학생(접속 완료한 학생)이 없습니다.
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
-            );
+        </div>
+    );
 }
