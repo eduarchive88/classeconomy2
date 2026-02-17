@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 :root {
-  /* Dynamic Color Palette */
+  /* Light Theme Colors */
   --primary: #4f46e5;
   --primary-light: #818cf8;
   --primary-dark: #3730a3;
@@ -19,7 +19,7 @@
   --text-muted: #64748b;
   --border: #e2e8f0;
 
-  /* Glassmorphism */
+  /* Glassmorphism - Light */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
@@ -29,16 +29,16 @@
   --transition-medium: 0.4s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --surface: #1e293b;
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
-    --border: #334155;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-  }
+/* 다크모드: class 기반 (next-themes attribute="class") */
+.dark {
+  --background: #0f172a;
+  --surface: #1e293b;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --glass-bg: rgba(30, 41, 59, 0.8);
+  --glass-border: rgba(100, 116, 139, 0.3);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 body {
@@ -48,6 +48,7 @@ body {
   transition: background-color var(--transition-medium), color var(--transition-medium);
 }
 
+/* 글래스 패널 - 다크모드 지원 */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -73,6 +74,7 @@ body {
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
+/* 카드 - 다크모드 지원 */
 .card {
   background: var(--surface);
   border-radius: 1rem;
@@ -80,11 +82,16 @@ body {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border);
   transition: transform var(--transition-fast);
+  color: var(--text-main);
 }
 
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes slideIn {

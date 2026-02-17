@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Home, Users, Plus, Save, Trash2, ArrowLeft, Grid, MapPin, DollarSign, Wand2 } from 'lucide-react';
+import { Home, Users, Plus, Save, Trash2, ArrowLeft, Grid, MapPin, DollarSign, Wand2, Minus } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -15,16 +15,16 @@ export default function RealEstateManagement() {
     const [priceInput, setPriceInput] = useState<number>(1000);
     const [trades, setTrades] = useState<any[]>([]);
     const [tradesLoading, setTradesLoading] = useState(false);
+    // 행/열 동적 조절
+    const [rows, setRows] = useState(5);
+    const [cols, setCols] = useState(6);
     const supabase = createClient();
-
-    const rows = 5;
-    const cols = 6;
 
     const fetchData = async () => {
         const selectedClassId = localStorage.getItem('selected_class_id');
         if (!selectedClassId) return;
 
-        // Fetch students
+        // 학생 목록 불러오기
         const { data: studentsData } = await supabase
             .from('student_roster')
             .select('*')
@@ -32,14 +32,23 @@ export default function RealEstateManagement() {
             .order('number', { ascending: true });
         if (studentsData) setStudents(studentsData);
 
-        // Fetch seats
+        // 자리 데이터 불러오기
         const { data: seatsData } = await supabase
             .from('seats')
             .select('*')
             .eq('class_id', selectedClassId);
-        if (seatsData) setSeats(seatsData);
+        if (seatsData) {
+            setSeats(seatsData);
+            // 기존 자리 데이터에서 최대 행/열 추출
+            if (seatsData.length > 0) {
+                const maxRow = Math.max(...seatsData.map(s => s.row_idx)) + 1;
+                const maxCol = Math.max(...seatsData.map(s => s.col_idx)) + 1;
+                setRows(Math.max(rows, maxRow));
+                setCols(Math.max(cols, maxCol));
+            }
+        }
 
-        // Fetch pending trades
+        // 승인 대기 거래 불러오기
         setTradesLoading(true);
         const { data: tradesData } = await supabase
             .from('seat_trades')
@@ -50,13 +59,12 @@ export default function RealEstateManagement() {
         setTradesLoading(false);
     };
 
+    // 거래 승인/거절 처리
     const handleTradeApproval = async (trade: any, approve: boolean) => {
         setLoading(true);
         try {
             if (approve) {
-                // 1. Update seat owner
                 await supabase.from('seats').update({ student_id: trade.buyer_id }).eq('id', trade.seat_id);
-                // 2. Mark trade approved
                 await supabase.from('seat_trades').update({ status: 'approved' }).eq('id', trade.id);
             } else {
                 await supabase.from('seat_trades').update({ status: 'rejected' }).eq('id', trade.id);
@@ -74,6 +82,7 @@ export default function RealEstateManagement() {
         fetchData();
     }, []);
 
+    // 자리 저장(배정 또는 가격 설정)
     const handleSaveSeat = async (row: number, col: number) => {
         const selectedClassId = localStorage.getItem('selected_class_id');
         if (!selectedClassId) return;
@@ -91,10 +100,8 @@ export default function RealEstateManagement() {
                 if (selectedStudentId === 'unassign') {
                     updateData.student_id = null;
                 } else if (selectedStudentId) {
-                    // Check if student is already assigned to another seat
                     const previousSeat = seats.find(s => s.student_id === selectedStudentId && (s.row_idx !== row || s.col_idx !== col));
                     if (previousSeat) {
-                        // Clear previous seat
                         await supabase
                             .from('seats')
                             .update({ student_id: null })
@@ -102,15 +109,11 @@ export default function RealEstateManagement() {
                     }
                     updateData.student_id = selectedStudentId;
                 } else {
-                    // Do nothing if no student selected
                     setLoading(false);
                     return;
                 }
             } else if (mode === 'price') {
                 updateData.price = priceInput;
-                // Preserve existing student if update doesn't specify it? 
-                // Upsert will overwrite. Need to be careful.
-                // If existing seat, keep student_id.
                 if (existingSeat) {
                     updateData.student_id = existingSeat.student_id;
                 }
@@ -129,6 +132,7 @@ export default function RealEstateManagement() {
         }
     };
 
+    // 기본 가격 자동 적용 (인플레이션 규칙)
     const applyDefaultPrices = async () => {
         if (!confirm('현재 자리 가격을 모두 초기화하고 인플레이션 규칙((총 자산 * 60%) / 학생 수)을 적용하시겠습니까?')) return;
 
@@ -137,62 +141,39 @@ export default function RealEstateManagement() {
 
         setLoading(true);
         try {
-            // 1. Calculate Total Assets (Currency + Stock + etc? For now, Currency only as per request "Attributes")
-            // Actually request says "Total Student Assets". I'll use 'currency' from student_roster.
-            // If currency column missing, fallback to 0.
             const { data: roster } = await supabase
                 .from('student_roster')
                 .select('currency, allowance')
                 .eq('class_id', selectedClassId);
 
             const totalAssets = roster?.reduce((sum, s) => sum + (s.currency || 0), 0) || 0;
-            const studentCount = roster?.length || 1; // Avoid divide by zero
+            const studentCount = roster?.length || 1;
 
-            // Formula: (Total Assets * 0.6) / Student Count
             const basePrice = Math.floor((totalAssets * 0.6) / studentCount);
-            // Ensure a minimum price just in case
             const finalBasePrice = Math.max(100, basePrice);
 
             const updates = [];
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    // Apply variation based on row (front row more expensive?)
-                    // Let's keep the row variation logic but scale it around basePrice?
-                    // Or just use basePrice as the average?
-                    // User said: "Default rule price varies". 
-                    // Let's make front rows +10%, back rows -10% around basePrice?
-                    // Or keep the simple subtraction logic but starting from basePrice.
-                    // Let's use basePrice as the *average* seat price.
-
-                    // Simple logic: Base Price is for the middle row. Front +X, Back -X.
-                    // Center row index = rows/2 = 2.5
-                    // Price = Base + (2 - r) * (Base * 0.1)
-
-                    const variation = Math.floor(finalBasePrice * 0.1); // 10% variation per row
-                    const rowFactor = 2 - r; // Row 0: +2, Row 1: +1, Row 2: 0, Row 3: -1, Row 4: -2
+                    const variation = Math.floor(finalBasePrice * 0.1);
+                    const rowFactor = Math.floor(rows / 2) - r;
                     const price = Math.max(100, finalBasePrice + (rowFactor * variation));
 
                     updates.push({
                         class_id: selectedClassId,
                         row_idx: r,
                         col_idx: c,
-                        price: Math.floor(price / 10) * 10 // Round to nearest 10
+                        price: Math.floor(price / 10) * 10
                     });
                 }
             }
-
-            // This might overwrite students if we use upsert without student_id...
-            // Need to merge with existing seats or be careful.
-            // Better to iterate existing seats map? 
-            // For simplicity, let's keep students if possible, or just accept reset risk? 
-            // Proper way: fetch current seats, merge.
 
             const { data: currentSeats } = await supabase.from('seats').select('*').eq('class_id', selectedClassId);
             const enrichedUpdates = updates.map(u => {
                 const existing = currentSeats?.find(s => s.row_idx === u.row_idx && s.col_idx === u.col_idx);
                 return {
                     ...u,
-                    student_id: existing?.student_id || null // Preserve student
+                    student_id: existing?.student_id || null
                 };
             });
 
@@ -228,24 +209,52 @@ export default function RealEstateManagement() {
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
                 <div className="space-y-6">
-                    {/* Control Panel */}
+                    {/* 설정 패널 */}
                     <div className="glass-panel p-6">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
                             <Grid className="w-5 h-5 text-amber-600" />
                             설정
                         </h2>
 
-                        {/* Mode Switch */}
+                        {/* 행/열 조절 UI */}
+                        <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <p className="text-sm font-medium mb-3 text-slate-700 dark:text-slate-300">자리 배치 (행 × 열)</p>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">행</span>
+                                    <button onClick={() => setRows(Math.max(1, rows - 1))} className="p-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                                        <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="font-bold text-lg w-6 text-center text-slate-800 dark:text-white">{rows}</span>
+                                    <button onClick={() => setRows(rows + 1)} className="p-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                                        <Plus className="w-3 h-3" />
+                                    </button>
+                                </div>
+                                <span className="text-slate-400">×</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">열</span>
+                                    <button onClick={() => setCols(Math.max(1, cols - 1))} className="p-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                                        <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="font-bold text-lg w-6 text-center text-slate-800 dark:text-white">{cols}</span>
+                                    <button onClick={() => setCols(cols + 1)} className="p-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                                        <Plus className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 모드 전환 */}
                         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg mb-6">
                             <button
                                 onClick={() => setMode('assign')}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'assign' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'assign' ? 'bg-white dark:bg-slate-700 shadow text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
                             >
                                 직접 배정
                             </button>
                             <button
                                 onClick={() => setMode('price')}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'price' ? 'bg-white shadow text-amber-600' : 'text-slate-500'}`}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'price' ? 'bg-white dark:bg-slate-700 shadow text-amber-600' : 'text-slate-500 dark:text-slate-400'}`}
                             >
                                 <DollarSign className="w-4 h-4 inline mr-1" />
                                 가격 설정/마켓
@@ -253,7 +262,7 @@ export default function RealEstateManagement() {
                         </div>
 
                         {mode === 'price' && (
-                            <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-100">
+                            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
                                 <label className="flex items-center gap-3 cursor-pointer group">
                                     <div className="relative">
                                         <input
@@ -270,9 +279,9 @@ export default function RealEstateManagement() {
                                         />
                                         <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                                     </div>
-                                    <span className="text-sm font-bold text-amber-900 group-hover:text-amber-700 transition-colors">학생 즉시 구매 허용</span>
+                                    <span className="text-sm font-bold text-amber-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors">학생 즉시 구매 허용</span>
                                 </label>
-                                <p className="text-[11px] text-amber-600 mt-2">
+                                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">
                                     * 켜짐: 학생이 빈 자리를 클릭하면 즉시 잔액이 차감되고 구매됩니다. <br />
                                     * 꺼짐: 구매 요청만 생성되며 선생님이 승인해야 합니다.
                                 </p>
@@ -281,11 +290,11 @@ export default function RealEstateManagement() {
 
                         {mode === 'assign' ? (
                             <div className="space-y-2">
-                                <p className="text-sm text-slate-500 mb-2">배정할 학생을 선택하고 자리를 클릭하세요.</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">배정할 학생을 선택하고 자리를 클릭하세요.</p>
                                 <div className="max-h-[300px] overflow-y-auto space-y-1">
                                     <button
                                         onClick={() => setSelectedStudentId('unassign')}
-                                        className={`w-full p-2 text-left rounded-lg text-sm transition-colors flex items-center gap-2 ${selectedStudentId === 'unassign' ? 'bg-red-50 text-red-600 border border-red-200' : 'hover:bg-slate-50'}`}
+                                        className={`w-full p-2 text-left rounded-lg text-sm transition-colors flex items-center gap-2 ${selectedStudentId === 'unassign' ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                         자리 비우기 (배정 해제)
@@ -296,10 +305,10 @@ export default function RealEstateManagement() {
                                             <button
                                                 key={s.id}
                                                 onClick={() => setSelectedStudentId(s.id)}
-                                                className={`w-full p-2 text-left rounded-lg text-sm transition-colors flex justify-between ${selectedStudentId === s.id ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'hover:bg-slate-50'}`}
+                                                className={`w-full p-2 text-left rounded-lg text-sm transition-colors flex justify-between ${selectedStudentId === s.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
                                             >
                                                 <span>{s.number}. {s.name}</span>
-                                                {isAssigned && <span className="text-xs text-slate-400 bg-slate-100 px-1 rounded">배정됨</span>}
+                                                {isAssigned && <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-1 rounded">배정됨</span>}
                                             </button>
                                         );
                                     })}
@@ -308,34 +317,34 @@ export default function RealEstateManagement() {
                         ) : (
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">설정할 가격 (원)</label>
+                                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">설정할 가격 (원)</label>
                                     <input
                                         type="number"
                                         value={priceInput}
                                         onChange={(e) => setPriceInput(Number(e.target.value))}
-                                        className="w-full p-2 border rounded-lg"
+                                        className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                         step={100}
                                     />
-                                    <p className="text-xs text-slate-500 mt-1">이 가격을 입력하고 자리를 클릭하면 가격이 변경됩니다.</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">이 가격을 입력하고 자리를 클릭하면 가격이 변경됩니다.</p>
                                 </div>
-                                <hr />
+                                <hr className="border-slate-200 dark:border-slate-700" />
                                 <button
                                     onClick={applyDefaultPrices}
-                                    className="w-full btn-secondary text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-2"
+                                    className="w-full py-2 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
                                 >
                                     <Wand2 className="w-4 h-4" />
                                     기본 규칙 자동 적용
                                 </button>
-                                <p className="text-xs text-slate-400">
-                                    * 앞줄부터 3000원, 2500원... 순으로 자동 책정됩니다.
+                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                    * 인플레이션 규칙으로 자동 책정됩니다. (총 자산의 60% / 학생 수)
                                 </p>
                             </div>
                         )}
                     </div>
 
-                    {/* Pending Trades */}
-                    <div className="glass-panel p-6 border-amber-200 bg-amber-50/30">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    {/* 승인 대기 거래 */}
+                    <div className="glass-panel p-6 border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
                             <Users className="w-5 h-5 text-amber-600" />
                             승인 대기 중인 거래 ({trades.length})
                         </h2>
@@ -344,21 +353,21 @@ export default function RealEstateManagement() {
                         ) : trades.length > 0 ? (
                             <div className="space-y-3">
                                 {trades.map((t) => (
-                                    <div key={t.id} className="bg-white p-3 rounded-lg border shadow-sm">
-                                        <div className="text-sm mb-2">
-                                            <span className="font-bold text-blue-600">{t.buyer?.name}</span> 학생이
-                                            <span className="font-bold text-amber-600"> {t.price.toLocaleString()}원</span>에 구매 요청
+                                    <div key={t.id} className="bg-white dark:bg-slate-800 p-3 rounded-lg border dark:border-slate-700 shadow-sm">
+                                        <div className="text-sm mb-2 text-slate-700 dark:text-slate-300">
+                                            <span className="font-bold text-blue-600 dark:text-blue-400">{t.buyer?.name}</span> 학생이
+                                            <span className="font-bold text-amber-600 dark:text-amber-400"> {t.price.toLocaleString()}원</span>에 구매 요청
                                         </div>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleTradeApproval(t, true)}
-                                                className="flex-1 py-1 bg-green-600 text-white text-xs font-bold rounded"
+                                                className="flex-1 py-1 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700 transition-colors"
                                             >
                                                 승인
                                             </button>
                                             <button
                                                 onClick={() => handleTradeApproval(t, false)}
-                                                className="flex-1 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded"
+                                                className="flex-1 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
                                             >
                                                 거절
                                             </button>
@@ -367,18 +376,19 @@ export default function RealEstateManagement() {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-center py-4 text-slate-400 text-sm">대기 중인 거래가 없습니다.</p>
+                            <p className="text-center py-4 text-slate-400 dark:text-slate-500 text-sm">대기 중인 거래가 없습니다.</p>
                         )}
                     </div>
                 </div>
 
+                {/* 자리 배치도 */}
                 <div className="glass-panel p-6 overflow-x-auto">
                     <div className="flex justify-between items-center mb-6">
-                        <div className="flex gap-4 text-sm text-slate-500">
-                            <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white border rounded shadow-sm"></div> 빈 자리</span>
-                            <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-50 border border-blue-200 rounded shadow-sm"></div> 배정됨</span>
+                        <div className="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
+                            <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded shadow-sm"></div> 빈 자리</span>
+                            <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded shadow-sm"></div> 배정됨</span>
                         </div>
-                        <div className="px-4 py-1 bg-slate-800 text-white rounded text-xs font-bold shadow-md">
+                        <div className="px-4 py-1 bg-slate-800 dark:bg-slate-600 text-white rounded text-xs font-bold shadow-md">
                             칠판 (BOARD)
                         </div>
                     </div>
@@ -396,28 +406,28 @@ export default function RealEstateManagement() {
                                         className={`
                                             aspect-square rounded-xl border-2 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative overflow-hidden
                                             ${seat?.student_id
-                                                ? 'bg-blue-50 border-blue-200 shadow-sm hover:shadow-md hover:border-blue-400'
-                                                : 'bg-white border-slate-100 hover:border-slate-300'
+                                                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500'
+                                                : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500'
                                             }
-                                            ${mode === 'price' ? 'hover:bg-amber-50 hover:border-amber-300' : ''}
+                                            ${mode === 'price' ? 'hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-300 dark:hover:border-amber-600' : ''}
                                         `}
                                     >
-                                        <div className="text-xs font-bold text-slate-400 absolute top-1 left-2">
+                                        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 absolute top-1 left-2">
                                             {r + 1}-{c + 1}
                                         </div>
 
                                         {student ? (
-                                            <div className="font-bold text-slate-800 break-keep leading-tight">
-                                                <div className="text-xs text-slate-500 font-normal mb-0.5">{student.number}번</div>
+                                            <div className="font-bold text-slate-800 dark:text-white break-keep leading-tight">
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 font-normal mb-0.5">{student.number}번</div>
                                                 {student.name}
                                             </div>
                                         ) : (
-                                            <div className="text-slate-300 text-xs">
+                                            <div className="text-slate-300 dark:text-slate-600 text-xs">
                                                 빈 자리
                                             </div>
                                         )}
 
-                                        <div className="absolute bottom-1 right-2 text-xs font-mono text-amber-600 font-semibold bg-amber-50 px-1 rounded">
+                                        <div className="absolute bottom-1 right-2 text-xs font-mono text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/30 px-1 rounded">
                                             {seat?.price?.toLocaleString() || 0}
                                         </div>
                                     </div>

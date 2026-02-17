@@ -158,7 +158,7 @@ export default function SettingsPage() {
                                     type="password"
                                     value={apiKey}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
-                                    className="flex-1 p-2 border rounded-lg"
+                                    className="flex-1 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                     placeholder="AI_..."
                                 />
                                 <button
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                                     저장
                                 </button>
                             </div>
-                            <p className="text-xs text-slate-500 mt-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                                 * 입력하신 키는 선생님 계정 정보에 안전하게 저장되며, 퀴즈 생성 시 사용됩니다.
                             </p>
                         </div>
@@ -184,24 +184,24 @@ export default function SettingsPage() {
                         학급 추가 및 관리
                     </h2>
 
-                    <div className="grid gap-4 md:grid-cols-2 mb-6 p-4 bg-slate-50 rounded-xl">
+                    <div className="grid gap-4 md:grid-cols-2 mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
-                            <label className="block text-sm font-medium mb-1">학급 명칭</label>
+                            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">학급 명칭</label>
                             <input
                                 type="text"
                                 value={newClassName}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClassName(e.target.value)}
-                                className="w-full p-2 border rounded-lg bg-white"
+                                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white"
                                 placeholder="예: 1학년 3반"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">접속 세션 코드 (중복 불가)</label>
+                            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">접속 세션 코드 (중복 불가)</label>
                             <input
                                 type="text"
                                 value={newSessionCode}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewSessionCode(e.target.value)}
-                                className="w-full p-2 border rounded-lg bg-white"
+                                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white"
                                 placeholder="예: classy103"
                             />
                         </div>
@@ -215,23 +215,23 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="font-medium text-slate-700">운영 중인 학급 ({classes.length})</h3>
+                        <h3 className="font-medium text-slate-700 dark:text-slate-300">운영 중인 학급 ({classes.length})</h3>
                         {classes.map(c => (
-                            <div key={c.id} className="flex justify-between items-center p-4 border rounded-xl hover:bg-slate-50 transition-colors">
+                            <div key={c.id} className="flex justify-between items-center p-4 border dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                 <div>
-                                    <div className="font-bold">{c.name}</div>
-                                    <div className="text-sm text-slate-500">코드: <code className="bg-slate-200 px-1 rounded">{c.session_code}</code></div>
+                                    <div className="font-bold text-slate-800 dark:text-white">{c.name}</div>
+                                    <div className="text-sm text-slate-500 dark:text-slate-400">코드: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">{c.session_code}</code></div>
                                 </div>
                                 <button
                                     onClick={() => handleDeleteClass(c.id)}
-                                    className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                                    className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                                 >
                                     <Trash2 className="w-5 h-5" />
                                 </button>
                             </div>
                         ))}
                         {classes.length === 0 && (
-                            <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl border-dashed border-2">
+                            <div className="text-center py-8 text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl border-dashed border-2 dark:border-slate-700">
                                 <Info className="w-8 h-8 mx-auto mb-2 opacity-20" />
                                 등록된 학급이 없습니다.
                             </div>
@@ -240,7 +240,7 @@ export default function SettingsPage() {
                 </section>
 
                 <div className="flex justify-start">
-                    <Link href="/teacher" className="text-slate-500 hover:underline text-sm">
+                    <Link href="/teacher" className="text-slate-500 dark:text-slate-400 hover:underline text-sm">
                         ← 대시보드로 돌아가기
                     </Link>
                 </div>

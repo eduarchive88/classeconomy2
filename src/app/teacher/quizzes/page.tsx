@@ -137,8 +137,8 @@ export default function QuizManagement() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Fetch API Key from metadata
-        const apiKey = user.user_metadata?.gemini_api_key;
+        // API 키를 메타데이터에서 가져옴 (settings에서 google_api_key로 저장됨)
+        const apiKey = user.user_metadata?.google_api_key;
         if (!apiKey) return alert('설정에서 Gemini API Key를 먼저 등록해주세요.');
 
         setLoading(true);
@@ -335,9 +335,9 @@ export default function QuizManagement() {
 
                     {/* Preview Generated */}
                     {generatedQuizzes.length > 0 && (
-                        <div className="glass-panel p-6 border-2 border-blue-100">
+                        <div className="glass-panel p-6 border-2 border-blue-100 dark:border-blue-800">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-blue-800">생성된 퀴즈 ({generatedQuizzes.length}개)</h3>
+                                <h3 className="font-bold text-blue-800 dark:text-blue-300">생성된 퀴즈 ({generatedQuizzes.length}개)</h3>
                                 <button
                                     onClick={saveQuizzes}
                                     disabled={saving}
@@ -349,7 +349,7 @@ export default function QuizManagement() {
                             </div>
                             <div className="space-y-3 max-h-[400px] overflow-y-auto">
                                 {generatedQuizzes.map((q, i) => (
-                                    <div key={i} className="bg-white p-3 rounded-lg border shadow-sm relative group">
+                                    <div key={i} className="bg-white dark:bg-slate-800 p-3 rounded-lg border dark:border-slate-700 shadow-sm relative group">
                                         <button
                                             onClick={() => removeGenerated(i)}
                                             className="absolute top-2 right-2 text-slate-300 hover:text-red-500"
@@ -381,10 +381,10 @@ export default function QuizManagement() {
                         {quizzes.map((quiz) => (
                             <div key={quiz.id}
                                 onClick={() => handleShowStats(quiz)}
-                                className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+                                className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group"
                             >
                                 <div className="flex justify-between items-start mb-2">
-                                    <p className="font-medium text-slate-800 flex-1 pr-4">Q. {quiz.question}</p>
+                                    <p className="font-medium text-slate-800 dark:text-slate-200 flex-1 pr-4">Q. {quiz.question}</p>
                                     <button
                                         onClick={(e) => handleDeleteQuiz(quiz.id, e)}
                                         className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -400,7 +400,7 @@ export default function QuizManagement() {
                                         </span>
                                         <span className="text-slate-400 truncate max-w-[200px]">{quiz.explanation}</span>
                                     </div>
-                                    <div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded flex items-center gap-1">
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700 px-2 py-1 rounded flex items-center gap-1">
                                         <BarChart2 className="w-3 h-3" />
                                         통계 보기
                                     </div>
@@ -408,7 +408,7 @@ export default function QuizManagement() {
                             </div>
                         ))}
                         {quizzes.length === 0 && (
-                            <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed">
+                            <div className="text-center py-12 text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed dark:border-slate-700">
                                 등록된 퀴즈가 없습니다.
                             </div>
                         )}
@@ -419,16 +419,16 @@ export default function QuizManagement() {
             {/* Stats Modal */}
             {selectedQuiz && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedQuiz(null)}>
-                    <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold">퀴즈 통계</h3>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 통계</h3>
                             <button onClick={() => setSelectedQuiz(null)} className="text-slate-400 hover:text-slate-600">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
 
-                        <div className="mb-6 bg-slate-50 p-4 rounded-xl">
-                            <p className="font-medium text-lg mb-2">Q. {selectedQuiz.question}</p>
+                        <div className="mb-6 bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
+                            <p className="font-medium text-lg mb-2 text-slate-800 dark:text-white">Q. {selectedQuiz.question}</p>
                             <div className="flex gap-2 text-sm text-slate-600">
                                 <span>정답: {selectedQuiz.answer}</span>
                                 <span>|</span>
@@ -443,13 +443,13 @@ export default function QuizManagement() {
                         ) : stats ? (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-blue-50 p-4 rounded-xl text-center">
-                                        <div className="text-sm text-blue-600 font-medium mb-1">총 배포 횟수</div>
-                                        <div className="text-2xl font-bold text-blue-900">{stats.distributionCount}회</div>
+                                    <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-center">
+                                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">총 배포 횟수</div>
+                                        <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">{stats.distributionCount}회</div>
                                     </div>
-                                    <div className="bg-green-50 p-4 rounded-xl text-center">
-                                        <div className="text-sm text-green-600 font-medium mb-1">문제 푼 학생</div>
-                                        <div className="text-2xl font-bold text-green-900">{stats.solvers?.length || 0}명</div>
+                                    <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center">
+                                        <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">문제 푼 학생</div>
+                                        <div className="text-2xl font-bold text-green-900 dark:text-green-200">{stats.solvers?.length || 0}명</div>
                                     </div>
                                 </div>
 
@@ -461,7 +461,7 @@ export default function QuizManagement() {
                                     <div className="space-y-2">
                                         {stats.solvers && stats.solvers.length > 0 ? (
                                             stats.solvers.map((s: any, i: number) => (
-                                                <div key={i} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50">
+                                                <div key={i} className="flex justify-between items-center p-3 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
                                                     <div>
                                                         <span className="font-medium mr-2">{s.student_roster?.number}번 {s.student_roster?.name}</span>
                                                         <span className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString()}</span>
@@ -487,14 +487,14 @@ export default function QuizManagement() {
             {/* Manual Creation Modal */}
             {showManualModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold">퀴즈 직접 만들기</h3>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 직접 만들기</h3>
                             <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
                         </div>
                         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                             <div>
-                                <label className="block text-sm font-bold mb-1">문제</label>
+                                <label className="block text-sm font-bold mb-1 text-slate-800 dark:text-slate-200">문제</label>
                                 <textarea
                                     className="w-full p-2 border rounded-lg"
                                     rows={2}

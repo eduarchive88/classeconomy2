@@ -6,8 +6,7 @@ export async function POST(request: Request) {
     const { studentId, sessionCode } = await request.json();
     const supabase = createClient();
 
-    // 1. Validate session code and find the teacher (class)
-    // 1. Validate session code and find the class/teacher
+    // 1. 세션 코드로 학급/교사 찾기
     const { data: classData, error: classError } = await supabase
         .from('classes')
         .select('id, teacher_id, name')
@@ -17,19 +16,17 @@ export async function POST(request: Request) {
     if (classError || !classData) {
         return NextResponse.json({ error: '유효하지 않은 세션 코드입니다.' }, { status: 400 });
     }
-    const teacherId = classData.teacher_id;
 
     // 2. 해당 학급의 명단에서 학생 찾기
-    // 10120 형식 파싱 (학년-반-번호) -> 뒷자리 번호만 추출
     const idNum = parseInt(studentId);
     let number = idNum;
 
-    // 5자리 학번인 경우 뒷 2자리를 번호로 간주
+    // 3자리 이상 학번인 경우 뒷 2자리를 번호로 간주
     if (studentId.length >= 3) {
         number = idNum % 100;
     }
 
-    // class_id와 number로 학생 찾기 (가장 정확함)
+    // class_id와 number로 학생 찾기
     const { data: rosterEntry, error: rosterError } = await supabase
         .from('student_roster')
         .select('*')
@@ -45,14 +42,14 @@ export async function POST(request: Request) {
     const fakeEmail = `${sessionCode}_${studentId}@student.local`;
     const defaultPassword = `${sessionCode}_${studentId}`;
 
-    // Try to sign in first
+    // 먼저 로그인 시도
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: fakeEmail,
         password: defaultPassword,
     });
 
     if (signInError) {
-        // If sign in fails, create new user (Sign Up)
+        // 로그인 실패 시 회원가입 후 자동 로그인
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: fakeEmail,
             password: defaultPassword,
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '계정 생성 실패: ' + signUpError.message }, { status: 400 });
         }
 
-        // Mark as registered in roster and link class_id
+        // 명단에 등록 완료 표시
         await supabase
             .from('student_roster')
             .update({
@@ -82,6 +79,21 @@ export async function POST(request: Request) {
                 class_id: classData.id
             })
             .eq('id', rosterEntry.id);
+
+        // signUp 후 바로 signIn하여 세션 쿠키 확보
+        const { data: autoSignIn, error: autoSignInError } = await supabase.auth.signInWithPassword({
+            email: fakeEmail,
+            password: defaultPassword,
+        });
+
+        if (autoSignInError) {
+            // 자동 로그인 실패해도 계정은 생성됨 - 클라이언트에서 재시도 안내
+            return NextResponse.json({
+                success: true,
+                retry: true,
+                message: '계정이 생성되었습니다. 다시 로그인해주세요.'
+            });
+        }
     }
 
     return NextResponse.json({ success: true });

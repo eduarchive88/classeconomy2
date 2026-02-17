@@ -131,7 +131,7 @@ export default function StudentManagement() {
                                 <input
                                     type="text"
                                     placeholder="학년"
-                                    className="p-2 border rounded-lg text-sm"
+                                    className="p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                     value={newStudent.grade}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, grade: e.target.value })}
                                 />
@@ -162,7 +162,7 @@ export default function StudentManagement() {
                             <input
                                 type="number"
                                 placeholder="기본 주급"
-                                className="w-full p-2 border rounded-lg text-sm"
+                                className="w-full p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                 value={newStudent.allowance}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewStudent({ ...newStudent, allowance: parseInt(e.target.value) })}
                             />
@@ -272,7 +272,7 @@ export default function StudentManagement() {
                                 ))}
                                 {students.length === 0 && uploadQueue.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-slate-400">
+                                        <td colSpan={5} className="p-8 text-center text-slate-400 dark:text-slate-500">
                                             등록된 학생이 없습니다. 왼쪽에서 엑셀 파일을 업로드해주세요.
                                         </td>
                                     </tr>

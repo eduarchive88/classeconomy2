@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { ShoppingBag, Plus, Save, Trash2, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { ShoppingBag, Plus, Save, Trash2, ArrowLeft, Edit2, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -9,12 +9,16 @@ export default function MarketManagement() {
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [newItem, setNewItem] = useState({ name: '', price: 0, stock: 1, description: '' });
+    // 인라인 편집 상태
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editValues, setEditValues] = useState({ price: 0, stock: 0, description: '' });
     const supabase = createClient();
 
     useEffect(() => {
         fetchItems();
     }, []);
 
+    // 상품 목록 불러오기
     const fetchItems = async () => {
         const selectedClassId = localStorage.getItem('selected_class_id');
         if (!selectedClassId) return;
@@ -28,6 +32,7 @@ export default function MarketManagement() {
         if (data) setItems(data);
     };
 
+    // 새 상품 추가
     const handleAddItem = async () => {
         if (!newItem.name || newItem.price <= 0) return alert('상품명과 가격을 올바르게 입력해주세요.');
 
@@ -55,6 +60,31 @@ export default function MarketManagement() {
         }
     };
 
+    // 상품 수정 (인라인)
+    const handleEditItem = async (id: string) => {
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('market_items')
+                .update({
+                    price: editValues.price,
+                    stock: editValues.stock,
+                    description: editValues.description
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            setEditingId(null);
+            fetchItems();
+        } catch (e: any) {
+            alert('수정 실패: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 상품 삭제
     const handleDelete = async (id: string) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
 
@@ -68,6 +98,12 @@ export default function MarketManagement() {
         } else {
             fetchItems();
         }
+    };
+
+    // 편집 모드 진입
+    const startEdit = (item: any) => {
+        setEditingId(item.id);
+        setEditValues({ price: item.price, stock: item.stock, description: item.description || '' });
     };
 
     return (
@@ -89,18 +125,18 @@ export default function MarketManagement() {
             </div>
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
-                {/* Add Item Form */}
+                {/* 새 상품 등록 폼 */}
                 <div className="glass-panel p-6 h-fit">
-                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
                         <Plus className="w-5 h-5 text-blue-600" />
                         새 상품 등록
                     </h2>
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium mb-1">상품명</label>
+                            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">상품명</label>
                             <input
                                 type="text"
-                                className="w-full p-2 border rounded-lg"
+                                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                 value={newItem.name}
                                 onChange={e => setNewItem({ ...newItem, name: e.target.value })}
                                 placeholder="예: 숙제 면제권"
@@ -108,28 +144,28 @@ export default function MarketManagement() {
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <label className="block text-sm font-medium mb-1">가격</label>
+                                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">가격</label>
                                 <input
                                     type="number"
-                                    className="w-full p-2 border rounded-lg"
+                                    className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                     value={newItem.price}
                                     onChange={e => setNewItem({ ...newItem, price: parseInt(e.target.value) })}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">재고</label>
+                                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">재고</label>
                                 <input
                                     type="number"
-                                    className="w-full p-2 border rounded-lg"
+                                    className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                     value={newItem.stock}
                                     onChange={e => setNewItem({ ...newItem, stock: parseInt(e.target.value) })}
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">설명 (선택)</label>
+                            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">설명 (선택)</label>
                             <textarea
-                                className="w-full p-2 border rounded-lg h-20"
+                                className="w-full p-2 border rounded-lg h-20 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white"
                                 value={newItem.description}
                                 onChange={e => setNewItem({ ...newItem, description: e.target.value })}
                                 placeholder="상품에 대한 설명..."
@@ -146,39 +182,98 @@ export default function MarketManagement() {
                     </div>
                 </div>
 
-                {/* Item List */}
+                {/* 상품 목록 */}
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold mb-4">판매 중인 상품 ({items.length}개)</h2>
+                    <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">판매 중인 상품 ({items.length}개)</h2>
                     <div className="grid gap-4 sm:grid-cols-2">
                         {items.map((item) => (
-                            <div key={item.id} className="p-4 border rounded-xl bg-white shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div key={item.id} className="p-4 border rounded-xl bg-white dark:bg-slate-800 dark:border-slate-700 shadow-sm hover:shadow-md transition flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-lg text-slate-800">{item.name}</h3>
-                                        <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-sm font-bold">
-                                            {item.price.toLocaleString()}원
-                                        </span>
+                                        <h3 className="font-bold text-lg text-slate-800 dark:text-white">{item.name}</h3>
+                                        {editingId === item.id ? (
+                                            <input
+                                                type="number"
+                                                value={editValues.price}
+                                                onChange={e => setEditValues({ ...editValues, price: Number(e.target.value) })}
+                                                className="w-24 p-1 border rounded text-sm text-right bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span className="bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded text-sm font-bold">
+                                                {item.price.toLocaleString()}원
+                                            </span>
+                                        )}
                                     </div>
-                                    <p className="text-slate-500 text-sm mb-4 min-h-[40px]">{item.description || '셜명 없음'}</p>
+                                    {editingId === item.id ? (
+                                        <textarea
+                                            value={editValues.description}
+                                            onChange={e => setEditValues({ ...editValues, description: e.target.value })}
+                                            className="w-full p-1 border rounded text-sm mb-2 bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            rows={2}
+                                        />
+                                    ) : (
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 min-h-[40px]">{item.description || '설명 없음'}</p>
+                                    )}
                                     <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
-                                        <span className={`px-2 py-0.5 rounded ${item.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {item.stock > 0 ? `재고: ${item.stock}개` : '품절'}
-                                        </span>
+                                        {editingId === item.id ? (
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-slate-600 dark:text-slate-300">재고:</span>
+                                                <input
+                                                    type="number"
+                                                    value={editValues.stock}
+                                                    onChange={e => setEditValues({ ...editValues, stock: Number(e.target.value) })}
+                                                    className="w-16 p-1 border rounded text-sm bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <span className={`px-2 py-0.5 rounded ${item.stock > 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                                                {item.stock > 0 ? `재고: ${item.stock}개` : '품절'}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="flex justify-end pt-4 border-t">
-                                    <button
-                                        onClick={() => handleDelete(item.id)}
-                                        className="text-slate-400 hover:text-red-600 transition-colors p-2"
-                                        title="삭제"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
+                                <div className="flex justify-end gap-1 pt-4 border-t dark:border-slate-700">
+                                    {editingId === item.id ? (
+                                        <>
+                                            <button
+                                                onClick={() => handleEditItem(item.id)}
+                                                className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
+                                                title="저장"
+                                            >
+                                                <Check className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingId(null)}
+                                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                                title="취소"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => startEdit(item)}
+                                                className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                title="수정"
+                                            >
+                                                <Edit2 className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(item.id)}
+                                                className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                                title="삭제"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ))}
                         {items.length === 0 && (
-                            <div className="col-span-2 text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed">
+                            <div className="col-span-2 text-center py-12 text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed dark:border-slate-700">
                                 등록된 상품이 없습니다. 상품을 등록해보세요.
                             </div>
                         )}
