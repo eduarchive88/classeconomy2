@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Settings, Plus, Trash2, Key, Info, Save } from 'lucide-react';
+import { Settings, Plus, Trash2, Key, Info, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -101,11 +101,20 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="p-8 max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8 flex items-center gap-2 text-slate-800 dark:text-white">
-                <Settings className="w-8 h-8 text-slate-600" />
-                시스템 설정
-            </h1>
+        <div className="p-4 md:p-8 max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+                <Link
+                    href="/teacher"
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                    title="대시보드로 돌아가기"
+                >
+                    <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                </Link>
+                <h1 className="text-3xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Settings className="w-8 h-8 text-slate-600" />
+                    시스템 설정
+                </h1>
+            </div>
 
             <div className="space-y-8">
                 {/* AI 설정 */}

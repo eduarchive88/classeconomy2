@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
-import { Upload, UserPlus, Save, Trash2 } from 'lucide-react';
+import { Upload, UserPlus, Save, Trash2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function StudentManagement() {
     const [students, setStudents] = useState<any[]>([]); // 저장된 학생 명단
@@ -95,8 +96,17 @@ export default function StudentManagement() {
     };
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8 text-slate-800 dark:text-white">학생 명단 관리</h1>
+        <div className="p-4 md:p-8 max-w-6xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+                <Link
+                    href="/teacher"
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                    title="대시보드로 돌아가기"
+                >
+                    <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                </Link>
+                <h1 className="text-3xl font-bold text-slate-800 dark:text-white">학생 명단 관리</h1>
+            </div>
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
                 <div className="space-y-6">
