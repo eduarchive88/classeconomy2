@@ -16,28 +16,56 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid Request' }, { status: 400 });
     }
 
-    // 2. Prepare Transactions
-    const transactions = studentIds.map((studentId: string) => {
-        if (type === 'special_allowance') {
-            return {
-                from_id: null, // System money
-                to_id: studentId,
-                amount: amount,
-                type: 'special_allowance',
-                description: description || '특별 수당'
-            };
-        } else if (type === 'fine') {
-            return {
-                from_id: studentId,
-                to_id: null, // Money burnt (or could go to teacher: user.id)
-                amount: amount,
-                type: 'fine',
-                description: description || '벌금'
-            };
-        }
-    }).filter(Boolean);
+    // 2. Process Transactions (Update Balance & Log)
+    const transactions: any[] = [];
+    const updates: Promise<any>[] = [];
 
-    // 3. Insert Batch
+    for (const studentId of studentIds) {
+        // Fetch current balance
+        const { data: roster, error: rosterError } = await supabase
+            .from('student_roster')
+            .select('balance')
+            .eq('id', studentId)
+            .single();
+
+        if (rosterError || !roster) continue;
+
+        let amountChange = 0;
+        let fromId: string | null = null;
+        let toId: string | null = null;
+
+        if (type === 'special_allowance') {
+            amountChange = amount;
+            // from_id is null (System)
+            // to_id is linked to student_id (Roster ID)
+        } else if (type === 'fine') {
+            amountChange = -amount;
+            // from_id is student (Roster ID)
+            // to_id is null (System)
+        }
+
+        // Update Balance
+        updates.push(
+            supabase
+                .from('student_roster')
+                .update({ balance: (roster.balance || 0) + amountChange })
+                .eq('id', studentId)
+        );
+
+        // Prepare Transaction Log
+        transactions.push({
+            student_id: studentId, // Link to Roster ID
+            from_id: type === 'fine' ? null : null, // Original system used auth.uid, here we just use null for system or maybe teacher id? Let's use null for now. 
+            // Better: linking `student_id` is enough. `to_id` / `from_id` are for User Profiles.
+            // If student has a user profile, we could try to find it, but requirement says "even if not logged in".
+            // So we rely on `student_id` column.
+            amount: amount,
+            type: type,
+            description: description || (type === 'special_allowance' ? '특별 수당' : '벌금')
+        });
+    }
+
+    await Promise.all(updates);
     const { error } = await supabase.from('transactions').insert(transactions);
 
     if (error) {

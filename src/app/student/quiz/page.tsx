@@ -1,35 +1,37 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Lightbulb, CheckCircle, XCircle } from 'lucide-react';
+import { Lightbulb, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export default function StudentQuiz() {
-    const [quiz, setQuiz] = useState<any>(null);
+    const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedOption, setSelectedOption] = useState<number | null>(null);
-    const [submitted, setSubmitted] = useState(false);
-    const [result, setResult] = useState<{ isCorrect: boolean, reward: number } | null>(null);
-    const supabase = createClient();
+    const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: number }>({}); // daily_quiz_id -> option index
+    const [submissionResults, setSubmissionResults] = useState<{ [key: string]: any }>({}); // daily_quiz_id -> result
+    const [submitting, setSubmitting] = useState<{ [key: string]: boolean }>({});
 
     useEffect(() => {
-        fetchDailyQuiz();
+        fetchDailyQuizzes();
     }, []);
 
-    const fetchDailyQuiz = async () => {
+    const fetchDailyQuizzes = async () => {
         try {
-            // Fetch from API to handle "Lazy Init" of daily quiz safely server-side
             const res = await fetch('/api/student/quiz');
             const data = await res.json();
-
-            if (data.solved) {
-                setSubmitted(true);
-                setResult({ isCorrect: data.isCorrect, reward: data.reward });
-                // We still want to show the quiz context if possible, but API might just return status
-            }
-
-            if (data.quiz) {
-                setQuiz(data.quiz);
+            if (data.quizzes) {
+                setQuizzes(data.quizzes);
+                // Pre-fill results for already submitted quizzes
+                const initialResults: any = {};
+                data.quizzes.forEach((q: any) => {
+                    if (q.status !== 'pending') {
+                        initialResults[q.daily_quiz_id] = {
+                            isCorrect: q.status === 'correct',
+                            reward: q.reward,
+                            correctAnswer: q.answer
+                        };
+                    }
+                });
+                setSubmissionResults(initialResults);
             }
         } catch (e) {
             console.error(e);
@@ -38,104 +40,137 @@ export default function StudentQuiz() {
         }
     };
 
-    const handleSubmit = async () => {
-        if (selectedOption === null) return;
+    const handleSelectOption = (dailyQuizId: string, optionIdx: number) => {
+        if (submissionResults[dailyQuizId]) return; // Already submitted
+        setSelectedAnswers(prev => ({ ...prev, [dailyQuizId]: optionIdx }));
+    };
 
+    const handleSubmit = async (dailyQuizId: string) => {
+        const answer = selectedAnswers[dailyQuizId];
+        if (typeof answer !== 'number') return;
+
+        setSubmitting(prev => ({ ...prev, [dailyQuizId]: true }));
         try {
             const res = await fetch('/api/student/quiz', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quizId: quiz.id, answer: selectedOption }),
+                body: JSON.stringify({ dailyQuizId, answer }),
             });
 
             const data = await res.json();
-            setSubmitted(true);
-            setResult({ isCorrect: data.isCorrect, reward: data.reward });
-        } catch (e) {
-            alert('제출 오류');
+            if (data.error) throw new Error(data.error);
+
+            setSubmissionResults(prev => ({
+                ...prev,
+                [dailyQuizId]: {
+                    isCorrect: data.isCorrect,
+                    reward: data.reward,
+                    correctAnswer: data.correctAnswer
+                }
+            }));
+        } catch (e: any) {
+            alert(e.message || '제출 오류');
+        } finally {
+            setSubmitting(prev => ({ ...prev, [dailyQuizId]: false }));
         }
     };
 
-    if (loading) return <div className="p-8">로딩 중...</div>;
+    if (loading) return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
 
     return (
-        <div className="p-8 max-w-2xl mx-auto">
+        <div className="p-4 md:p-8 max-w-3xl mx-auto">
             <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <Lightbulb className="w-6 h-6 text-yellow-500" />
+                <Lightbulb className="w-8 h-8 text-yellow-500" />
                 오늘의 퀴즈
+                <span className="text-sm font-normal text-slate-500 ml-2">매일 아침 8시, 2문제가 도착합니다!</span>
             </h1>
 
-            <div className="card bg-white p-6">
-                {quiz ? (
-                    <>
-                        <div className="mb-6">
-                            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold mb-3">
-                                상금 {quiz.reward}원
-                            </span>
-                            <h2 className="text-xl font-bold text-slate-800">{quiz.question}</h2>
-                        </div>
+            {quizzes.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
+                    <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500">아직 도착한 퀴즈가 없습니다.</p>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {quizzes.map((quiz) => {
+                        const isSubmitted = !!submissionResults[quiz.daily_quiz_id];
+                        const result = submissionResults[quiz.daily_quiz_id];
+                        const mySelection = selectedAnswers[quiz.daily_quiz_id];
 
-                        <div className="space-y-3 mb-6">
-                            {quiz.options.map((opt: string, idx: number) => {
-                                const optNum = idx + 1;
-                                // Determine styling based on state
-                                let style = "p-4 w-full text-left rounded-xl border-2 transition-all ";
+                        return (
+                            <div key={quiz.daily_quiz_id} className="card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+                                        상금 {quiz.reward?.toLocaleString()}원
+                                    </span>
+                                    {isSubmitted && (
+                                        <span className={`flex items-center gap-1 font-bold ${result.isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                                            {result.isCorrect ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                                            {result.isCorrect ? '정답!' : '오답'}
+                                        </span>
+                                    )}
+                                </div>
 
-                                if (submitted) {
-                                    if (optNum === quiz.answer) style += "border-emerald-500 bg-emerald-50 text-emerald-700 font-bold";
-                                    else if (selectedOption === optNum && !result?.isCorrect) style += "border-red-500 bg-red-50 text-red-700";
-                                    else style += "border-slate-100 bg-slate-50 opacity-60";
-                                } else {
-                                    if (selectedOption === optNum) style += "border-blue-500 bg-blue-50 ring-2 ring-blue-200";
-                                    else style += "border-slate-200 hover:border-blue-300 hover:bg-slate-50";
-                                }
+                                <h3 className="text-lg font-bold text-slate-800 mb-6">Q. {quiz.question}</h3>
 
-                                return (
-                                    <button
-                                        key={idx}
-                                        disabled={submitted}
-                                        onClick={() => setSelectedOption(optNum)}
-                                        className={style}
-                                    >
-                                        {optNum}. {opt}
-                                    </button>
-                                )
-                            })}
-                        </div>
+                                <div className="space-y-3 mb-6">
+                                    {quiz.options?.map((opt: string, idx: number) => {
+                                        const optNum = idx + 1; // 1-based
+                                        let style = "w-full text-left p-4 rounded-xl border-2 transition-all ";
 
-                        {!submitted ? (
-                            <button
-                                onClick={handleSubmit}
-                                disabled={selectedOption === null}
-                                className="w-full btn-primary py-4 text-lg"
-                            >
-                                정답 제출하기
-                            </button>
-                        ) : (
-                            <div className={`p-4 rounded-xl text-center ${result?.isCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                                {result?.isCorrect ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <CheckCircle className="w-8 h-8" />
-                                        <p className="font-bold text-lg">정답입니다!</p>
-                                        <p>상금 {result.reward}원이 지급되었습니다.</p>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <XCircle className="w-8 h-8" />
-                                        <p className="font-bold text-lg">아쉽네요! 오답입니다.</p>
-                                        <p>내일 다시 도전해보세요.</p>
+                                        if (isSubmitted) {
+                                            if (optNum === result.correctAnswer) {
+                                                style += "border-green-500 bg-green-50 text-green-700 font-bold";
+                                            } else if (optNum === mySelection && !result.isCorrect) {
+                                                // Wait, we don't know mySelection from API if reloading.
+                                                // API only returned status. So if reloading, we can't highlight MY wrong answer unless I stored it.
+                                                style += "border-slate-100 bg-slate-50 opacity-60";
+                                            } else {
+                                                style += "border-slate-100 bg-slate-50 opacity-60";
+                                            }
+                                        } else {
+                                            if (mySelection === optNum) {
+                                                style += "border-blue-500 bg-blue-50 ring-2 ring-blue-100";
+                                            } else {
+                                                style += "border-slate-200 hover:border-blue-300 hover:bg-slate-50";
+                                            }
+                                        }
+
+                                        return (
+                                            <button
+                                                key={idx}
+                                                disabled={isSubmitted || submitting[quiz.daily_quiz_id]}
+                                                onClick={() => handleSelectOption(quiz.daily_quiz_id, optNum)}
+                                                className={style}
+                                            >
+                                                <span className="mr-2 font-bold">{optNum}.</span> {opt}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Explanation Section (Only if Submitted) */}
+                                {isSubmitted && (
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
+                                        <p className="font-bold text-sm text-slate-600 mb-1">📝 해설</p>
+                                        <p className="text-sm text-slate-700">{quiz.explanation || '해설이 없습니다.'}</p>
                                     </div>
                                 )}
+
+                                {!isSubmitted && (
+                                    <button
+                                        onClick={() => handleSubmit(quiz.daily_quiz_id)}
+                                        disabled={!mySelection || submitting[quiz.daily_quiz_id]}
+                                        className="w-full btn-primary py-3 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {submitting[quiz.daily_quiz_id] ? '제출 중...' : '정답 제출하기'}
+                                    </button>
+                                )}
                             </div>
-                        )}
-                    </>
-                ) : (
-                    <div className="text-center py-12 text-slate-500">
-                        <p className="text-lg">오늘의 퀴즈가 아직 준비되지 않았습니다.</p>
-                        <p className="text-sm mt-2">선생님께 말씀드려보세요!</p>
-                    </div>
-                )}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

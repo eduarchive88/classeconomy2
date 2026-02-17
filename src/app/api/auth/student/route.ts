@@ -62,7 +62,9 @@ export async function POST(request: Request) {
                     name: rosterEntry.name,
                     class_info: classData.name,
                     grade: rosterEntry.grade,
-                    number: rosterEntry.number // Fix: rosterEntry has 'number' column
+                    number: rosterEntry.number,
+                    roster_id: rosterEntry.id,
+                    class_id: classData.id
                 }
             }
         });

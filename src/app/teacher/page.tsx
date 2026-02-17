@@ -147,7 +147,7 @@ export default function TeacherDashboard() {
                         <Link href="/teacher/real-estate" className="card group hover:border-amber-500 transition-all">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="p-3 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                                    <Settings className="w-6 h-6" />
+                                    <MapPin className="w-6 h-6" />
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-amber-500" />
                             </div>
@@ -155,19 +155,32 @@ export default function TeacherDashboard() {
                             <p className="text-slate-500 text-sm">교실 자리 배치 및 임대료/매매가를 관리합니다.</p>
                         </Link>
 
-                        <Link href="/teacher/settings" className="card group hover:border-slate-500 transition-all">
+                        <Link href="/teacher/market" className="card group hover:border-purple-500 transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 rounded-lg bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white transition-colors">
-                                    <Settings className="w-6 h-6" />
+                                <div className="p-3 rounded-lg bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                    <ShoppingBag className="w-6 h-6" />
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-500" />
+                                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-purple-500" />
                             </div>
-                            <h2 className="text-xl font-bold mb-1">시스템 설정</h2>
-                            <p className="text-slate-500 text-sm">API 키 및 전체 학급 정보를 관리합니다.</p>
+                            <h2 className="text-xl font-bold mb-1">학급 마켓</h2>
+                            <p className="text-slate-500 text-sm">학생들이 구매할 수 있는 상품/쿠폰을 등록합니다.</p>
                         </Link>
                     </div>
                 )}
+
+                <Link href="/teacher/settings" className="card group hover:border-slate-500 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 rounded-lg bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white transition-colors">
+                            <Settings className="w-6 h-6" />
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-500" />
+                    </div>
+                    <h2 className="text-xl font-bold mb-1">시스템 설정</h2>
+                    <p className="text-slate-500 text-sm">API 키 및 전체 학급 정보를 관리합니다.</p>
+                </Link>
             </div>
+                )}
         </div>
+        </div >
     );
 }

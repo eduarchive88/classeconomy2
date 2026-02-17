@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
 import { Upload, UserPlus, Save, Trash2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import ClassSelector from '@/components/teacher/ClassSelector';
 
 export default function StudentManagement() {
     const [students, setStudents] = useState<any[]>([]); // 저장된 학생 명단
@@ -113,6 +114,9 @@ export default function StudentManagement() {
                     <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
                 </Link>
                 <h1 className="text-3xl font-bold text-slate-800 dark:text-white">학생 명단 관리</h1>
+                <div className="ml-auto">
+                    <ClassSelector onClassChange={fetchStudents} />
+                </div>
             </div>
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">

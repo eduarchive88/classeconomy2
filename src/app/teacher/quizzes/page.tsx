@@ -1,38 +1,97 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
-import { Upload, Sparkles, Save, RotateCw, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Loader2, Plus, Upload, Wand2, Save, Trash2, FileText, BarChart2, X, RefreshCw, Users } from 'lucide-react';
+import ClassSelector from '@/components/teacher/ClassSelector';
 
 export default function QuizManagement() {
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [apiKey, setApiKey] = useState('');
-    const [aiPrompt, setAiPrompt] = useState('');
-    const [aiGenerating, setAiGenerating] = useState(false);
+    const [generatedQuizzes, setGeneratedQuizzes] = useState<any[]>([]);
+    const [topic, setTopic] = useState('');
+    const [difficulty, setDifficulty] = useState('중');
+    const [saving, setSaving] = useState(false);
+
+    // Stats Modal
+    const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
+    const [stats, setStats] = useState<any>(null);
+    const [statsLoading, setStatsLoading] = useState(false);
+
     const supabase = createClient();
 
     useEffect(() => {
-        const fetchQuizzesAndKey = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // 부모 페이지/프로필의 API 키 사용
-                setApiKey(user.user_metadata?.google_api_key || '');
+        fetchQuizzes();
+    }, []);
+
+    const fetchQuizzes = async () => {
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return;
+
+        const { data, error } = await supabase
+            .from('quizzes')
+            .select('*')
+            .eq('class_id', selectedClassId)
+            .order('created_at', { ascending: false });
+
+        if (data) setQuizzes(data);
+    };
+
+    const handleDeleteQuiz = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('정말 삭제하시겠습니까? 관련 데이터(배포 기록, 학생 풀이 등)가 모두 삭제될 수 있습니다.')) return;
+
+        const { error } = await supabase.from('quizzes').delete().eq('id', id);
+        if (error) {
+            alert('삭제 실패: ' + error.message);
+        } else {
+            fetchQuizzes();
+        }
+    };
+
+    const handleShowStats = async (quiz: any) => {
+        setSelectedQuiz(quiz);
+        setStatsLoading(true);
+        setStats(null);
+
+        try {
+            // 1. Distribution Count
+            const { count: distCount } = await supabase
+                .from('daily_quizzes')
+                .select('*', { count: 'exact', head: true })
+                .eq('quiz_id', quiz.id);
+
+            // 2. Solvers
+            // Get all daily_quiz_ids for this quiz
+            const { data: dailyIds } = await supabase
+                .from('daily_quizzes')
+                .select('id')
+                .eq('quiz_id', quiz.id);
+
+            let solvers: any[] = [];
+            if (dailyIds && dailyIds.length > 0) {
+                const ids = dailyIds.map(d => d.id);
+                // Get submissions
+                const { data: subs } = await supabase
+                    .from('quiz_submissions')
+                    .select('student_id, is_correct, created_at, student_roster(name, number)')
+                    .in('daily_quiz_id', ids);
+
+                if (subs) solvers = subs;
             }
 
-            const selectedClassId = localStorage.getItem('selected_class_id');
-            const { data } = await supabase
-                .from('quizzes')
-                .select('*')
-                .eq('class_id', selectedClassId)
-                .order('created_at', { ascending: false });
-
-            if (data) setQuizzes(data);
-        };
-        fetchQuizzesAndKey();
-    }, []);
+            setStats({
+                distributionCount: distCount || 0,
+                solvers: solvers
+            });
+        } catch (e: any) {
+            console.error(e);
+            alert('통계 불러오기 실패');
+        } finally {
+            setStatsLoading(false);
+        }
+    };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -44,175 +103,327 @@ export default function QuizManagement() {
             const wb = XLSX.read(bstr, { type: 'binary' });
             const wsname = wb.SheetNames[0];
             const ws = wb.Sheets[wsname];
-            const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            const data = XLSX.utils.sheet_to_json(ws);
 
-            // Parse Logic: A:Question, B:Option1, C:Option2, D:Option3, E:Option4, F:Answer(1-4), G:Reward
-            const parsedQuizzes = data.slice(1).map((row: any) => ({
-                question: row[0],
-                options: [row[1], row[2], row[3], row[4]].filter(Boolean),
-                answer: Number(row[5]),
-                reward: Number(row[6]) || 500, // Default reward
-            })).filter((q: any) => q.question && q.options.length >= 2 && q.answer);
+            // Validate and format
+            const formatted = data.map((item: any) => ({
+                question: item['문제'] || item['question'],
+                answer: item['정답'] || item['answer'], // O/X
+                explanation: item['해설'] || item['explanation']
+            })).filter(q => q.question && q.answer);
 
-            setQuizzes([...quizzes, ...parsedQuizzes]);
+            setGeneratedQuizzes([...generatedQuizzes, ...formatted]);
         };
         reader.readAsBinaryString(file);
     };
 
-    const handleAiGenerate = async () => {
-        if (!apiKey) return alert('Google API 키를 입력해주세요.');
-        if (!aiPrompt) return alert('주제를 입력해주세요.');
+    const generateAIQuizzes = async () => {
+        if (!topic) return alert('주제를 입력해주세요.');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-        setAiGenerating(true);
-        try {
-            localStorage.setItem('google_api_key', apiKey); // Save for later
+        // Fetch API Key from metadata
+        const apiKey = user.user_metadata?.gemini_api_key;
+        if (!apiKey) return alert('설정에서 Gemini API Key를 먼저 등록해주세요.');
 
-            const res = await fetch('/api/teacher/quizzes/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: aiPrompt, apiKey }),
-            });
-
-            if (!res.ok) throw new Error((await res.json()).error);
-
-            const { quizzes: newQuizzes } = await res.json();
-            setQuizzes([...quizzes, ...newQuizzes]);
-            alert(`${newQuizzes.length}개의 퀴즈가 생성되었습니다.`);
-        } catch (e: any) {
-            alert('AI 생성 오류: ' + e.message);
-        } finally {
-            setAiGenerating(false);
-        }
-    };
-
-    const handleSave = async () => {
         setLoading(true);
-        const selectedClassId = localStorage.getItem('selected_class_id');
         try {
-            const res = await fetch('/api/teacher/quizzes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    quizzes,
-                    class_id: selectedClassId
-                }),
-            });
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-            if (!res.ok) throw new Error((await res.json()).error);
+            const prompt = `초등학생 대상의 경제 퀴즈를 5개 만들어줘.
+            주제: ${topic}
+            난이도: ${difficulty}
+            
+            형식은 반드시 다음 JSON 배열 포맷만 출력해줘 (Markdown 코드블럭 없이):
+            [{"question": "지문", "answer": "O 또는 X", "explanation": "해설"}]`;
 
-            alert('퀴즈가 성공적으로 등록되었습니다.');
-            setQuizzes([]);
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            // Clean text
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const quizzes = JSON.parse(jsonStr);
+
+            setGeneratedQuizzes([...generatedQuizzes, ...quizzes]);
         } catch (e: any) {
-            alert('오류 발생: ' + e.message);
+            alert('생성 실패: ' + e.message);
         } finally {
             setLoading(false);
         }
     };
 
+    const saveQuizzes = async () => {
+        if (generatedQuizzes.length === 0) return;
+
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return alert('반을 선택해주세요.');
+
+        setSaving(true);
+        try {
+            const payload = {
+                quizzes: generatedQuizzes,
+                classId: selectedClassId
+            };
+
+            const response = await fetch('/api/teacher/quizzes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error('저장 실패');
+
+            alert('저장되었습니다.');
+            setGeneratedQuizzes([]);
+            fetchQuizzes();
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const removeGenerated = (index: number) => {
+        setGeneratedQuizzes(generatedQuizzes.filter((_, i) => i !== index));
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto">
-            <div className="flex items-center gap-4 mb-8">
-                <Link
-                    href="/teacher"
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                    title="대시보드로 돌아가기"
-                >
-                    <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-                </Link>
-                <h1 className="text-3xl font-bold text-slate-800 dark:text-white">퀴즈 관리 (문제은행)</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                    <FileText className="w-8 h-8 text-blue-600" />
+                    퀴즈 관리
+                </h1>
+                <ClassSelector onClassChange={fetchQuizzes} />
             </div>
 
-            <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
+            <div className="grid gap-8 md:grid-cols-2">
+                {/* Left: Create/Upload */}
                 <div className="space-y-6">
                     <div className="glass-panel p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                            <Upload className="w-5 h-5 text-emerald-600" />
-                            엑셀 일괄 등록
+                            <Plus className="w-5 h-5 text-green-600" />
+                            새 퀴즈 등록
                         </h2>
-                        <div className="space-y-4">
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls, .csv"
-                                onChange={handleFileUpload}
-                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700"
-                            />
-                            <div className="text-xs text-slate-500 space-y-1">
-                                <p>양식: A(문제), B~E(보기), F(정답번호), G(상금)</p>
-                                <a href="/sample_quiz_upload.xlsx" className="text-blue-600 underline">샘플 양식 다운로드</a>
+
+                        {/* Tabs or Sections */}
+                        <div className="space-y-6">
+                            {/* Excel Upload */}
+                            <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
+                                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-slate-600">
+                                    <Upload className="w-4 h-4" /> 엑셀 일괄 업로드
+                                </h3>
+                                <input
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    onChange={handleFileUpload}
+                                    className="block w-full text-sm text-slate-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-50 file:text-blue-700
+                                    hover:file:bg-blue-100"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">컬럼: 문제, 정답(O/X), 해설</p>
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-slate-200"></div>
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    <span className="px-2 bg-white text-slate-500">또는 AI로 생성</span>
+                                </div>
+                            </div>
+
+                            {/* AI Generation */}
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">주제</label>
+                                    <input
+                                        type="text"
+                                        value={topic}
+                                        onChange={(e) => setTopic(e.target.value)}
+                                        placeholder="예: 화폐의 역사, 인플레이션"
+                                        className="w-full p-2 border rounded-lg"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">난이도</label>
+                                    <select
+                                        value={difficulty}
+                                        onChange={(e) => setDifficulty(e.target.value)}
+                                        className="w-full p-2 border rounded-lg"
+                                    >
+                                        <option value="상">상</option>
+                                        <option value="중">중</option>
+                                        <option value="하">하</option>
+                                    </select>
+                                </div>
+                                <button
+                                    onClick={generateAIQuizzes}
+                                    disabled={loading}
+                                    className="w-full btn-secondary py-2 flex justify-center items-center gap-2"
+                                >
+                                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                                    AI 퀴즈 생성
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <div className="glass-panel p-6 border-indigo-100 bg-indigo-50/50">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-indigo-700">
-                            <Sparkles className="w-5 h-5" />
-                            AI 자동 생성
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="p-3 bg-white rounded-lg border text-sm text-slate-600 mb-4">
-                                {apiKey ? '✅ 시스템 설정에서 등록된 API 키를 사용 중입니다.' : '❌ 시스템 설정에서 API 키를 먼저 등록해주세요.'}
+                    {/* Preview Generated */}
+                    {generatedQuizzes.length > 0 && (
+                        <div className="glass-panel p-6 border-2 border-blue-100">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-blue-800">생성된 퀴즈 ({generatedQuizzes.length}개)</h3>
+                                <button
+                                    onClick={saveQuizzes}
+                                    disabled={saving}
+                                    className="btn-primary py-1.5 px-4 flex items-center gap-2"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    저장하기
+                                </button>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">퀴즈 주제</label>
-                                <input
-                                    type="text"
-                                    value={aiPrompt}
-                                    onChange={e => setAiPrompt(e.target.value)}
-                                    className="w-full p-2 border rounded-lg bg-white"
-                                    placeholder="예: 기초 경제 용어, 환율과 금리"
-                                />
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                {generatedQuizzes.map((q, i) => (
+                                    <div key={i} className="bg-white p-3 rounded-lg border shadow-sm relative group">
+                                        <button
+                                            onClick={() => removeGenerated(i)}
+                                            className="absolute top-2 right-2 text-slate-300 hover:text-red-500"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                        <p className="font-medium pr-6">Q. {q.question}</p>
+                                        <div className="flex gap-2 mt-2 text-sm">
+                                            <span className={`font-bold ${q.answer === 'O' ? 'text-blue-600' : 'text-red-600'}`}>
+                                                A. {q.answer}
+                                            </span>
+                                            <span className="text-slate-500">| {q.explanation}</span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <button
-                                onClick={handleAiGenerate}
-                                disabled={aiGenerating}
-                                className="btn-primary w-full flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {aiGenerating ? <RotateCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                {aiGenerating ? '생성 중...' : 'AI로 문제 만들기'}
-                            </button>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                <div className="glass-panel p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-semibold">등록 대기 문제 ({quizzes.length}개)</h2>
-                        {quizzes.length > 0 && (
-                            <button
-                                onClick={handleSave}
-                                disabled={loading}
-                                className="btn-primary flex items-center gap-2"
-                            >
-                                <Save className="w-4 h-4" />
-                                {loading ? '저장 중...' : '저장하기'}
-                            </button>
-                        )}
-                    </div>
+                {/* Right: Existing Quizzes List */}
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-slate-600" />
+                        저장된 퀴즈 ({quizzes.length}개)
+                    </h2>
 
-                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                        {quizzes.map((q, i) => (
-                            <div key={i} className="p-4 border rounded-lg bg-white hover:shadow-sm transition">
-                                <div className="flex justify-between mb-2">
-                                    <h3 className="font-medium text-slate-800">Q. {q.question}</h3>
-                                    <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full h-fit">{q.reward}원</span>
+                    <div className="space-y-3">
+                        {quizzes.map((quiz) => (
+                            <div key={quiz.id}
+                                onClick={() => handleShowStats(quiz)}
+                                className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="font-medium text-slate-800 flex-1 pr-4">Q. {quiz.question}</p>
+                                    <button
+                                        onClick={(e) => handleDeleteQuiz(quiz.id, e)}
+                                        className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="삭제"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <ul className="grid grid-cols-2 gap-2 text-sm text-slate-600">
-                                    {q.options.map((opt: string, idx: number) => (
-                                        <li key={idx} className={`${idx + 1 === q.answer ? 'text-emerald-600 font-bold' : ''}`}>
-                                            {idx + 1}. {opt}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="flex justify-between items-center text-sm">
+                                    <div className="flex gap-3">
+                                        <span className={`font-bold ${quiz.answer === 'O' ? 'text-blue-600' : 'text-red-600'}`}>
+                                            A. {quiz.answer}
+                                        </span>
+                                        <span className="text-slate-400 truncate max-w-[200px]">{quiz.explanation}</span>
+                                    </div>
+                                    <div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded flex items-center gap-1">
+                                        <BarChart2 className="w-3 h-3" />
+                                        통계 보기
+                                    </div>
+                                </div>
                             </div>
                         ))}
                         {quizzes.length === 0 && (
-                            <div className="text-center py-12 text-slate-400">
-                                문제가 없습니다. 엑셀을 업로드하거나 AI로 생성해보세요.
+                            <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed">
+                                등록된 퀴즈가 없습니다.
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Stats Modal */}
+            {selectedQuiz && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedQuiz(null)}>
+                    <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold">퀴즈 통계</h3>
+                            <button onClick={() => setSelectedQuiz(null)} className="text-slate-400 hover:text-slate-600">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6 bg-slate-50 p-4 rounded-xl">
+                            <p className="font-medium text-lg mb-2">Q. {selectedQuiz.question}</p>
+                            <div className="flex gap-2 text-sm text-slate-600">
+                                <span>정답: {selectedQuiz.answer}</span>
+                                <span>|</span>
+                                <span>{selectedQuiz.explanation}</span>
+                            </div>
+                        </div>
+
+                        {statsLoading ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            </div>
+                        ) : stats ? (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-blue-50 p-4 rounded-xl text-center">
+                                        <div className="text-sm text-blue-600 font-medium mb-1">총 배포 횟수</div>
+                                        <div className="text-2xl font-bold text-blue-900">{stats.distributionCount}회</div>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-xl text-center">
+                                        <div className="text-sm text-green-600 font-medium mb-1">문제 푼 학생</div>
+                                        <div className="text-2xl font-bold text-green-900">{stats.solvers?.length || 0}명</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-slate-500" />
+                                        풀이 기록
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {stats.solvers && stats.solvers.length > 0 ? (
+                                            stats.solvers.map((s: any, i: number) => (
+                                                <div key={i} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50">
+                                                    <div>
+                                                        <span className="font-medium mr-2">{s.student_roster?.number}번 {s.student_roster?.name}</span>
+                                                        <span className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold ${s.is_correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {s.is_correct ? '정답' : '오답'}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-center text-slate-400 py-4">아직 문제를 푼 학생이 없습니다.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-red-500">데이터를 불러오지 못했습니다.</div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

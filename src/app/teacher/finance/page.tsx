@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Coins, AlertTriangle, Check, ArrowLeft, Edit2, Save, X } from 'lucide-react';
 import Link from 'next/link';
+import ClassSelector from '@/components/teacher/ClassSelector';
 
 export default function FinanceManagement() {
     const [students, setStudents] = useState<any[]>([]);
@@ -157,6 +158,9 @@ export default function FinanceManagement() {
                     <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
                 </Link>
                 <h1 className="text-3xl font-bold text-slate-800 dark:text-white">재무/금융 관리</h1>
+                <div className="ml-auto">
+                    <ClassSelector onClassChange={fetchStudents} />
+                </div>
             </div>
 
             <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
