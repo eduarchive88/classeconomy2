@@ -5,12 +5,15 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
     const { prompt, apiKey } = await request.json();
 
-    if (!apiKey) {
-        return NextResponse.json({ error: 'API Key is missing' }, { status: 400 });
+    // 환경변수에서 API 키 우선 사용, 없으면 사용자 입력 API 키 사용
+    const finalApiKey = process.env.GOOGLE_AI_API_KEY || apiKey;
+
+    if (!finalApiKey) {
+        return NextResponse.json({ error: 'API Key is missing. Please set GOOGLE_AI_API_KEY environment variable or provide an API key.' }, { status: 400 });
     }
 
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const genAI = new GoogleGenerativeAI(finalApiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const systemPrompt = `
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ quizzes });
     } catch (error: any) {
-        console.error(error);
+        console.error('AI Quiz Generation Error:', error);
         return NextResponse.json({ error: 'AI Error: ' + error.message }, { status: 500 });
     }
 }
