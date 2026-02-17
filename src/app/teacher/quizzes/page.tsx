@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Loader2, Plus, Upload, Wand2, Save, Trash2, FileText, BarChart2, X, RefreshCw, Users } from 'lucide-react';
+import { Loader2, Plus, Upload, Wand2, Save, Trash2, FileText, BarChart2, X, RefreshCw, Users, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
 export default function QuizManagement() {
@@ -13,6 +14,17 @@ export default function QuizManagement() {
     const [topic, setTopic] = useState('');
     const [difficulty, setDifficulty] = useState('중');
     const [saving, setSaving] = useState(false);
+    const [showManualModal, setShowManualModal] = useState(false);
+    const [manualQuiz, setManualQuiz] = useState({
+        question: '',
+        option1: '',
+        option2: '',
+        option3: '',
+        option4: '',
+        answer: 1,
+        explanation: '정답입니다',
+        reward: 500
+    });
 
     // Stats Modal
     const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
@@ -192,14 +204,49 @@ export default function QuizManagement() {
         setGeneratedQuizzes(generatedQuizzes.filter((_, i) => i !== index));
     };
 
+    const handleManualSubmit = () => {
+        if (!manualQuiz.question || !manualQuiz.option1 || !manualQuiz.option2 || !manualQuiz.option3 || !manualQuiz.option4) {
+            return alert('모든 항목을 입력해주세요.');
+        }
+
+        const formatted = {
+            question: manualQuiz.question,
+            options: [manualQuiz.option1, manualQuiz.option2, manualQuiz.option3, manualQuiz.option4],
+            answer: Number(manualQuiz.answer),
+            explanation: manualQuiz.explanation,
+            reward: Number(manualQuiz.reward)
+        };
+
+        setGeneratedQuizzes([...generatedQuizzes, formatted]);
+        setShowManualModal(false);
+        setManualQuiz({
+            question: '',
+            option1: '',
+            option2: '',
+            option3: '',
+            option4: '',
+            answer: 1,
+            explanation: '정답입니다',
+            reward: 500
+        });
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                    <FileText className="w-8 h-8 text-blue-600" />
-                    퀴즈 관리
-                </h1>
-                <ClassSelector onClassChange={fetchQuizzes} />
+            <div className="flex items-center gap-4 mb-8">
+                <Link
+                    href="/teacher"
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                >
+                    <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                </Link>
+                <div className="flex-1 flex justify-between items-center">
+                    <h1 className="text-3xl font-bold flex items-center gap-2">
+                        <FileText className="w-8 h-8 text-blue-600" />
+                        퀴즈 관리
+                    </h1>
+                    <ClassSelector onClassChange={fetchQuizzes} />
+                </div>
             </div>
 
             <div className="grid gap-8 md:grid-cols-2">
@@ -210,6 +257,14 @@ export default function QuizManagement() {
                             <Plus className="w-5 h-5 text-green-600" />
                             새 퀴즈 등록
                         </h2>
+
+                        <button
+                            onClick={() => setShowManualModal(true)}
+                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2 mb-6"
+                        >
+                            <Plus className="w-4 h-4" />
+                            퀴즈 직접 추가하기
+                        </button>
 
                         {/* Tabs or Sections */}
                         <div className="space-y-6">
@@ -428,5 +483,81 @@ export default function QuizManagement() {
                 </div>
             )}
         </div>
+    )
+}
+
+{/* Manual Creation Modal */ }
+{
+    showManualModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold">퀴즈 직접 만들기</h3>
+                    <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                </div>
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                    <div>
+                        <label className="block text-sm font-bold mb-1">문제</label>
+                        <textarea
+                            className="w-full p-2 border rounded-lg"
+                            rows={2}
+                            value={manualQuiz.question}
+                            onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
+                            placeholder="문제를 입력하세요"
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                        <label className="block text-sm font-bold">보기</label>
+                        {[1, 2, 3, 4].map(num => (
+                            <input
+                                key={num}
+                                type="text"
+                                placeholder={`보기 ${num}`}
+                                className="w-full p-2 border rounded-lg text-sm"
+                                value={(manualQuiz as any)[`option${num}`]}
+                                onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
+                            />
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold mb-1">정답 번호</label>
+                            <select
+                                className="w-full p-2 border rounded-lg"
+                                value={manualQuiz.answer}
+                                onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
+                            >
+                                {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold mb-1">상금</label>
+                            <input
+                                type="number"
+                                className="w-full p-2 border rounded-lg"
+                                value={manualQuiz.reward}
+                                onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold mb-1">해설</label>
+                        <textarea
+                            className="w-full p-2 border rounded-lg"
+                            rows={2}
+                            value={manualQuiz.explanation}
+                            onChange={e => setManualQuiz({ ...manualQuiz, explanation: e.target.value })}
+                        />
+                    </div>
+                </div>
+                <div className="mt-6 flex justify-end gap-2">
+                    <button onClick={() => setShowManualModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
+                    <button onClick={handleManualSubmit} className="btn-primary px-6">추가하기</button>
+                </div>
+            </div>
+        </div>
+    )
+}
+        </div >
     );
 }

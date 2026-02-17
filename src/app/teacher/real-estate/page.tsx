@@ -91,6 +91,15 @@ export default function RealEstateManagement() {
                 if (selectedStudentId === 'unassign') {
                     updateData.student_id = null;
                 } else if (selectedStudentId) {
+                    // Check if student is already assigned to another seat
+                    const previousSeat = seats.find(s => s.student_id === selectedStudentId && (s.row_idx !== row || s.col_idx !== col));
+                    if (previousSeat) {
+                        // Clear previous seat
+                        await supabase
+                            .from('seats')
+                            .update({ student_id: null })
+                            .eq('id', previousSeat.id);
+                    }
                     updateData.student_id = selectedStudentId;
                 } else {
                     // Do nothing if no student selected
@@ -121,22 +130,53 @@ export default function RealEstateManagement() {
     };
 
     const applyDefaultPrices = async () => {
-        if (!confirm('현재 자리 가격을 모두 초기화하고 기본 규칙(앞자리가 비쌈)을 적용하시겠습니까?')) return;
+        if (!confirm('현재 자리 가격을 모두 초기화하고 인플레이션 규칙((총 자산 * 60%) / 학생 수)을 적용하시겠습니까?')) return;
 
         const selectedClassId = localStorage.getItem('selected_class_id');
         if (!selectedClassId) return;
 
         setLoading(true);
         try {
+            // 1. Calculate Total Assets (Currency + Stock + etc? For now, Currency only as per request "Attributes")
+            // Actually request says "Total Student Assets". I'll use 'currency' from student_roster.
+            // If currency column missing, fallback to 0.
+            const { data: roster } = await supabase
+                .from('student_roster')
+                .select('currency, allowance')
+                .eq('class_id', selectedClassId);
+
+            const totalAssets = roster?.reduce((sum, s) => sum + (s.currency || 0), 0) || 0;
+            const studentCount = roster?.length || 1; // Avoid divide by zero
+
+            // Formula: (Total Assets * 0.6) / Student Count
+            const basePrice = Math.floor((totalAssets * 0.6) / studentCount);
+            // Ensure a minimum price just in case
+            const finalBasePrice = Math.max(100, basePrice);
+
             const updates = [];
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    const price = Math.max(100, 3000 - (r * 500)); // Example rule
+                    // Apply variation based on row (front row more expensive?)
+                    // Let's keep the row variation logic but scale it around basePrice?
+                    // Or just use basePrice as the average?
+                    // User said: "Default rule price varies". 
+                    // Let's make front rows +10%, back rows -10% around basePrice?
+                    // Or keep the simple subtraction logic but starting from basePrice.
+                    // Let's use basePrice as the *average* seat price.
+
+                    // Simple logic: Base Price is for the middle row. Front +X, Back -X.
+                    // Center row index = rows/2 = 2.5
+                    // Price = Base + (2 - r) * (Base * 0.1)
+
+                    const variation = Math.floor(finalBasePrice * 0.1); // 10% variation per row
+                    const rowFactor = 2 - r; // Row 0: +2, Row 1: +1, Row 2: 0, Row 3: -1, Row 4: -2
+                    const price = Math.max(100, finalBasePrice + (rowFactor * variation));
+
                     updates.push({
                         class_id: selectedClassId,
                         row_idx: r,
                         col_idx: c,
-                        price: price
+                        price: Math.floor(price / 10) * 10 // Round to nearest 10
                     });
                 }
             }

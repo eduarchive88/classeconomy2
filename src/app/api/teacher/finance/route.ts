@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         // Fetch current balance
         const { data: roster, error: rosterError } = await supabase
             .from('student_roster')
-            .select('balance')
+            .select('currency')
             .eq('id', studentId)
             .single();
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         updates.push(
             supabase
                 .from('student_roster')
-                .update({ balance: (roster.balance || 0) + amountChange })
+                .update({ currency: (roster.currency || 0) + amountChange })
                 .eq('id', studentId)
         );
 

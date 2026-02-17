@@ -60,7 +60,14 @@ export default function TeacherDashboard() {
             <div className="max-w-6xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">선생님 대시보드</h1>
+                        <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            선생님 대시보드
+                            {classes.find((c: any) => c.id === selectedClassId) && (
+                                <span className="text-2xl font-normal text-slate-500">
+                                    ({classes.find((c: any) => c.id === selectedClassId).name})
+                                </span>
+                            )}
+                        </h1>
                         <p className="text-slate-500 mt-1">{user?.user_metadata?.name || 'OOO'} 선생님 환영합니다</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">

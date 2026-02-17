@@ -19,22 +19,23 @@ export async function POST(request: Request) {
     }
     const teacherId = classData.teacher_id;
 
-    // 2. 해당 교사의 명단에서 학생 찾기
-    // 10120 형식 파싱 (학년-반-번호)
+    // 2. 해당 학급의 명단에서 학생 찾기
+    // 10120 형식 파싱 (학년-반-번호) -> 뒷자리 번호만 추출
     const idNum = parseInt(studentId);
-    let query = supabase.from('student_roster').select('*').eq('teacher_id', teacherId);
+    let number = idNum;
 
-    if (studentId.length === 5) {
-        const grade = Math.floor(idNum / 10000);
-        const classInfo = Math.floor((idNum % 10000) / 100);
-        const number = idNum % 100;
-        query = query.eq('grade', grade).eq('class_info', classInfo).eq('number', number);
-    } else {
-        // Fallback for older format
-        query = query.eq('number', studentId);
+    // 5자리 학번인 경우 뒷 2자리를 번호로 간주
+    if (studentId.length >= 3) {
+        number = idNum % 100;
     }
 
-    const { data: rosterEntry, error: rosterError } = await query.single();
+    // class_id와 number로 학생 찾기 (가장 정확함)
+    const { data: rosterEntry, error: rosterError } = await supabase
+        .from('student_roster')
+        .select('*')
+        .eq('class_id', classData.id)
+        .eq('number', number)
+        .single();
 
     if (rosterError || !rosterEntry) {
         return NextResponse.json({ error: '해당 학번/번호가 명단에 없습니다.' }, { status: 400 });

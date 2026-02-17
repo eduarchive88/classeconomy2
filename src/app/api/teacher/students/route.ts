@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     const { error } = await supabase
         .from('student_roster')
-        .upsert(rosterData, { onConflict: 'teacher_id, grade, class_info, number' });
+        .upsert(rosterData, { onConflict: 'class_id, number' });
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 });

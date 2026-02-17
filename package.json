@@ -17,7 +17,8 @@
     "lucide-react": "^0.468.0",
     "xlsx": "^0.18.5",
     "yahoo-finance2": "^2.13.2",
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.21.0",
+    "next-themes": "^0.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.17.10",

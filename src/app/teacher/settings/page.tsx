@@ -2,8 +2,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Settings, Plus, Trash2, Key, Info, Save, ArrowLeft } from 'lucide-react';
+import { Settings, Plus, Trash2, Key, Info, Save, ArrowLeft, Sun } from 'lucide-react';
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function SettingsPage() {
     const [apiKey, setApiKey] = useState('');
@@ -110,13 +111,29 @@ export default function SettingsPage() {
                 >
                     <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
                 </Link>
-                <h1 className="text-3xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
-                    <Settings className="w-8 h-8 text-slate-600" />
-                    시스템 설정
-                </h1>
+                <div className="flex-1 flex justify-between items-center">
+                    <h1 className="text-3xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                        <Settings className="w-8 h-8 text-slate-600" />
+                        시스템 설정
+                    </h1>
+                </div>
             </div>
 
             <div className="space-y-8">
+                {/* 1. UI 설정 */}
+                <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+                        <Sun className="w-5 h-5 text-amber-500" />
+                        화면 설정
+                    </h2>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-medium text-slate-900 dark:text-slate-100">테마 모드 (다크/라이트)</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">화면의 밝기를 설정합니다.</p>
+                        </div>
+                        <ThemeToggle />
+                    </div>
+                </section>
                 {/* AI 설정 */}
                 <section className="glass-panel p-6">
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
