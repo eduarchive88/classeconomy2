@@ -203,7 +203,7 @@ export default function LoginPage() {
                       value={studentId}
                       onChange={(e) => setStudentId(e.target.value)}
                       className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-emerald-500 outline-none bg-white/80"
-                      placeholder="예: 3-2-15 (3학년 2반 15번)"
+                      placeholder="예: 20201 (2학년 2반 1번)"
                     />
                   </div>
                   <div>

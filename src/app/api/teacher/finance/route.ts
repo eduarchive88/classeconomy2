@@ -18,59 +18,80 @@ export async function POST(request: Request) {
 
     // 2. Process Transactions (Update Balance & Log)
     const transactions: any[] = [];
-    const updates: Promise<any>[] = [];
+    const updateResults: any[] = [];
+    let successCount = 0;
+    let failCount = 0;
 
     for (const studentId of studentIds) {
-        // Fetch current balance
-        const { data: roster, error: rosterError } = await supabase
-            .from('student_roster')
-            .select('currency')
-            .eq('id', studentId)
-            .single();
-
-        if (rosterError || !roster) continue;
-
-        let amountChange = 0;
-        let fromId: string | null = null;
-        let toId: string | null = null;
-
-        if (type === 'special_allowance') {
-            amountChange = amount;
-            // from_id is null (System)
-            // to_id is linked to student_id (Roster ID)
-        } else if (type === 'fine') {
-            amountChange = -amount;
-            // from_id is student (Roster ID)
-            // to_id is null (System)
-        }
-
-        // Update Balance
-        updates.push(
-            supabase
+        try {
+            // Fetch current balance
+            const { data: roster, error: rosterError } = await supabase
                 .from('student_roster')
-                .update({ currency: (roster.currency || 0) + amountChange })
+                .select('currency, name')
                 .eq('id', studentId)
-        );
+                .single();
 
-        // Prepare Transaction Log
-        transactions.push({
-            student_id: studentId, // Link to Roster ID
-            from_id: type === 'fine' ? null : null, // Original system used auth.uid, here we just use null for system or maybe teacher id? Let's use null for now. 
-            // Better: linking `student_id` is enough. `to_id` / `from_id` are for User Profiles.
-            // If student has a user profile, we could try to find it, but requirement says "even if not logged in".
-            // So we rely on `student_id` column.
-            amount: amount,
-            type: type,
-            description: description || (type === 'special_allowance' ? '특별 수당' : '벌금')
-        });
+            if (rosterError || !roster) {
+                console.error(`Student ${studentId} not found:`, rosterError);
+                failCount++;
+                continue;
+            }
+
+            let amountChange = 0;
+
+            if (type === 'special_allowance') {
+                amountChange = amount;
+            } else if (type === 'fine') {
+                amountChange = -amount;
+            }
+
+            const newBalance = (roster.currency || 0) + amountChange;
+
+            // Update Balance
+            const { error: updateError } = await supabase
+                .from('student_roster')
+                .update({ currency: newBalance })
+                .eq('id', studentId);
+
+            if (updateError) {
+                console.error(`Failed to update student ${studentId}:`, updateError);
+                failCount++;
+                continue;
+            }
+
+            console.log(`Successfully updated student ${roster.name} (${studentId}): ${roster.currency} → ${newBalance}`);
+            successCount++;
+
+            // Prepare Transaction Log
+            transactions.push({
+                student_id: studentId,
+                amount: amount,
+                type: type,
+                description: description || (type === 'special_allowance' ? '특별 수당' : '벌금')
+            });
+        } catch (error: any) {
+            console.error(`Error processing student ${studentId}:`, error);
+            failCount++;
+        }
     }
 
-    await Promise.all(updates);
-    const { error } = await supabase.from('transactions').insert(transactions);
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    // Insert transaction logs
+    if (transactions.length > 0) {
+        const { error: transactionError } = await supabase.from('transactions').insert(transactions);
+        if (transactionError) {
+            console.error('Transaction log error:', transactionError);
+            return NextResponse.json({
+                error: 'Failed to log transactions: ' + transactionError.message,
+                successCount,
+                failCount
+            }, { status: 500 });
+        }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+        success: true,
+        successCount,
+        failCount,
+        message: `${successCount}명 처리 완료${failCount > 0 ? `, ${failCount}명 실패` : ''}`
+    });
 }

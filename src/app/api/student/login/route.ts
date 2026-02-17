@@ -16,16 +16,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '유효하지 않은 세션코드입니다.' }, { status: 400 });
     }
 
-    // 2. 학번 파싱 (형식: 학년-반-번호, 예: 3-2-15)
-    const parts = studentId.split('-');
-    if (parts.length !== 3) {
-        return NextResponse.json({ error: '학번 형식이 올바르지 않습니다. (예: 3-2-15)' }, { status: 400 });
+    // 2. 학번 파싱 (형식: 5자리 숫자 GCCNN, 예: 20201 = 2학년 02반 01번)
+    if (!/^\d{5}$/.test(studentId)) {
+        return NextResponse.json({ error: '학번은 5자리 숫자여야 합니다. (예: 20201 = 2학년 2반 1번)' }, { status: 400 });
     }
 
-    const [grade, classInfo, number] = parts.map(p => parseInt(p));
-    if (isNaN(grade) || isNaN(classInfo) || isNaN(number)) {
-        return NextResponse.json({ error: '학번은 숫자로만 구성되어야 합니다.' }, { status: 400 });
-    }
+    const grade = parseInt(studentId.charAt(0)); // 첫 번째 자리: 학년
+    const classInfo = parseInt(studentId.substring(1, 3)); // 2-3번째 자리: 반
+    const number = parseInt(studentId.substring(3, 5)); // 4-5번째 자리: 번호
 
     // 3. 학생 찾기
     const { data: student, error: studentError } = await supabase
