@@ -62,7 +62,7 @@ export default function TeacherDashboard() {
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                             선생님 대시보드
-                            {classes.find((c: any) => c.id === selectedClassId) && (
+                            {classes.find((c: any) => c.id === selectedClassId)?.name && (
                                 <span className="text-2xl font-normal text-slate-500">
                                     ({classes.find((c: any) => c.id === selectedClassId).name})
                                 </span>
