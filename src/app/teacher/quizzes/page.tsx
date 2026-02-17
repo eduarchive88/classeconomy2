@@ -73,11 +73,15 @@ export default function QuizManagement() {
 
     const handleSave = async () => {
         setLoading(true);
+        const selectedClassId = localStorage.getItem('selected_class_id');
         try {
             const res = await fetch('/api/teacher/quizzes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quizzes }),
+                body: JSON.stringify({
+                    quizzes,
+                    class_id: selectedClassId
+                }),
             });
 
             if (!res.ok) throw new Error((await res.json()).error);

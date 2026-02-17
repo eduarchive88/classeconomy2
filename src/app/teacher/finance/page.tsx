@@ -21,8 +21,29 @@ export default function FinanceManagement() {
     const fetchStudents = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase.from('student_roster').select('*').eq('teacher_id', user.id);
-        if (data) setStudents(data);
+
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return;
+
+        // 1. Get class details to get session_code
+        const { data: classData } = await supabase
+            .from('classes')
+            .select('session_code')
+            .eq('id', selectedClassId)
+            .single();
+
+        if (!classData) return;
+
+        // 2. Fetch profiles matching the session_code (registered students)
+        // Since profiles table has 'session_code' and students are registered with it.
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'student')
+            .eq('session_code', classData.session_code)
+            .order('number', { ascending: true });
+
+        if (profiles) setStudents(profiles);
     };
 
     const handleSubmit = async () => {

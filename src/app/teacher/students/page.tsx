@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
 import { Upload, UserPlus, Save, Trash2, ArrowLeft } from 'lucide-react';
@@ -43,9 +43,9 @@ export default function StudentManagement() {
     };
 
     // 초기 로딩 시 데이터 가져오기
-    useState(() => {
+    useEffect(() => {
         fetchStudents();
-    });
+    }, []);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -76,11 +76,15 @@ export default function StudentManagement() {
 
     const handleSave = async () => {
         setLoading(true);
+        const selectedClassId = localStorage.getItem('selected_class_id');
         try {
             const res = await fetch('/api/teacher/students', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ students: uploadQueue, sessionCode: classInfo.sessionCode }),
+                body: JSON.stringify({
+                    students: uploadQueue,
+                    class_id: selectedClassId
+                }),
             });
 
             if (!res.ok) throw new Error((await res.json()).error);

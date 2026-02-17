@@ -7,21 +7,22 @@ export async function POST(request: Request) {
     const supabase = createClient();
 
     // 1. Validate session code and find the teacher (class)
-    const { data: teacher, error: teacherError } = await supabase
-        .from('profiles')
-        .select('id, class_info')
-        .eq('role', 'teacher')
+    // 1. Validate session code and find the class/teacher
+    const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('id, teacher_id, name')
         .eq('session_code', sessionCode)
         .single();
 
-    if (teacherError || !teacher) {
+    if (classError || !classData) {
         return NextResponse.json({ error: '유효하지 않은 세션 코드입니다.' }, { status: 400 });
     }
+    const teacherId = classData.teacher_id;
 
     // 2. 해당 교사의 명단에서 학생 찾기
     // 10120 형식 파싱 (학년-반-번호)
     const idNum = parseInt(studentId);
-    let query = supabase.from('student_roster').select('*').eq('teacher_id', teacher.id);
+    let query = supabase.from('student_roster').select('*').eq('teacher_id', teacherId);
 
     if (studentId.length === 5) {
         const grade = Math.floor(idNum / 10000);
@@ -59,9 +60,9 @@ export async function POST(request: Request) {
                     role: 'student',
                     student_id: studentId,
                     name: rosterEntry.name,
-                    class_info: teacher.class_info,
+                    class_info: classData.name,
                     grade: rosterEntry.grade,
-                    number: rosterEntry.class_info // Note: Mapping might be loose here, but sufficient for now
+                    number: rosterEntry.number // Fix: rosterEntry has 'number' column
                 }
             }
         });
@@ -70,10 +71,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '계정 생성 실패: ' + signUpError.message }, { status: 400 });
         }
 
-        // Mark as registered in roster
+        // Mark as registered in roster and link class_id
         await supabase
             .from('student_roster')
-            .update({ is_registered: true })
+            .update({
+                is_registered: true,
+                class_id: classData.id
+            })
             .eq('id', rosterEntry.id);
     }
 
