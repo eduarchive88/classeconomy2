@@ -393,13 +393,42 @@ export default function QuizManagement() {
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex gap-3">
-                                        <span className={`font-bold ${quiz.answer === 'O' ? 'text-blue-600' : 'text-red-600'}`}>
-                                            A. {quiz.answer}
-                                        </span>
-                                        <span className="text-slate-400 truncate max-w-[200px]">{quiz.explanation}</span>
-                                    </div>
+                                <div className="mt-3 space-y-2">
+                                    {(() => {
+                                        try {
+                                            const options = typeof quiz.options === 'string' ? JSON.parse(quiz.options) : quiz.options;
+                                            if (Array.isArray(options)) {
+                                                return options.map((opt: string, idx: number) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`text-sm px-3 py-2 rounded-lg flex items-center gap-2 ${quiz.answer === (idx + 1)
+                                                                ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200 font-medium'
+                                                                : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                                            }`}
+                                                    >
+                                                        {quiz.answer === (idx + 1) && (
+                                                            <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
+                                                        <span>{idx + 1}. {opt}</span>
+                                                    </div>
+                                                ));
+                                            }
+                                        } catch (e) {
+                                            // Fallback for old format
+                                        }
+                                        return (
+                                            <div className="flex gap-3">
+                                                <span className={`font-bold ${quiz.answer === 'O' ? 'text-blue-600' : 'text-red-600'}`}>
+                                                    A. {quiz.answer}
+                                                </span>
+                                                <span className="text-slate-400 truncate max-w-[200px]">{quiz.explanation}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                                <div className="flex justify-end items-center text-sm mt-3">
                                     <div className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700 px-2 py-1 rounded flex items-center gap-1">
                                         <BarChart2 className="w-3 h-3" />
                                         통계 보기

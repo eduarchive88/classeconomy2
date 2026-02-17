@@ -68,20 +68,26 @@ export default function StudentRealEstate() {
 
                 // Update balance
                 const { error: balError } = await supabase.from('student_roster')
-                    .update({ balance: roster.balance - seat.price })
+                    .update({ currency: roster.currency - seat.price })
                     .eq('id', roster.id);
                 if (balError) throw balError;
 
-                // Update seat
+                // Calculate new price (5% increase, minimum 5% higher than current price)
+                const newPrice = Math.ceil(seat.price * 1.05);
+
+                // Update seat with new owner and increased price
                 const { error: seatError } = await supabase.from('seats')
-                    .update({ student_id: roster.id })
+                    .update({
+                        student_id: roster.id,
+                        price: newPrice
+                    })
                     .eq('id', seat.id);
                 if (seatError) throw seatError;
 
                 // Record transaction
                 await supabase.from('transactions').insert({
                     student_id: roster.id,
-                    amount: -seat.price,
+                    amount: seat.price,
                     type: 'real_estate_purchase',
                     description: `자리 구매 (${seat.row_idx + 1}-${seat.col_idx + 1})`
                 });

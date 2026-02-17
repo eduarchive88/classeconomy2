@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const systemPrompt = `
       You are an economics teacher. Create 5 multiple choice quizzes about the following topic: "${prompt}".
