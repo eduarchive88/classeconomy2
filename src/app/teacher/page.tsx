@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { Users, Coins, BookOpen, Settings, ChevronRight, LogOut, Plus } from 'lucide-react';
+import { Users, Coins, BookOpen, Settings, ChevronRight, LogOut, Plus, MapPin, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeacherDashboard() {
@@ -179,8 +179,6 @@ export default function TeacherDashboard() {
                     <p className="text-slate-500 text-sm">API 키 및 전체 학급 정보를 관리합니다.</p>
                 </Link>
             </div>
-                )}
         </div>
-        </div >
     );
 }
