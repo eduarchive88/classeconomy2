@@ -6,8 +6,10 @@ export function createClient() {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase environment variables are missing');
+        console.error('Supabase environment variables are missing');
+        // Return dummy or empty client to prevent build crash
+        // This will fail at runtime if not fixed
     }
 
-    return createBrowserClient(supabaseUrl, supabaseKey)
+    return createBrowserClient(supabaseUrl || '', supabaseKey || '')
 }
