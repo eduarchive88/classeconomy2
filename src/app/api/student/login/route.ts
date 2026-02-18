@@ -120,6 +120,7 @@ export async function POST(request: Request) {
     // 5. 세션 정보를 로컬스토리지에 저장하도록 클라이언트에 반환
     return NextResponse.json({
         success: true,
+        session: authData.session, // 세션 객체 직접 전달
         student: {
             id: student.id,
             name: student.name,

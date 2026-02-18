@@ -93,11 +93,16 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '로그인 실패')
 
-      // 세션 정보를 로컬스토리지에 저장
+      // 세션 열쇠(Session)가 있다면 클라이언트 브라우저에도 직접 등록 (이중 보안)
+      if (data.session) {
+        await supabase.auth.setSession(data.session)
+      }
+
+      // 세션 정보를 로컬스토리지에 저장 (기존 호환성 유지)
       localStorage.setItem('student_session', JSON.stringify({
         student: data.student,
-        sessionToken: data.sessionToken,
-        expiresAt: data.expiresAt
+        sessionToken: data.sessionToken || data.session?.access_token,
+        expiresAt: data.expiresAt || data.session?.expires_at
       }))
 
       router.push('/student')

@@ -13,7 +13,15 @@ export async function GET(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
         console.error('GET /api/student/quiz: Unauthorized access attempt.', { authError: authError?.message });
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({
+            error: 'Unauthorized',
+            debug: {
+                hasUser: !!user,
+                authErrorMessage: authError?.message,
+                message: '인증 세션이 유효하지 않거나 만료되었습니다. 다시 로그인해주세요.',
+                serverTime: new Date().toISOString()
+            }
+        }, { status: 401 });
     }
 
     // 2. Resolve Student ID & Class ID using shared utility
