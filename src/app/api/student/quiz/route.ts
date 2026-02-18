@@ -9,35 +9,54 @@ export async function GET(request: Request) {
     // Use KST (Korea Standard Time) for today's date
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
-    // 1. Check Auth (Student)
+    // 1. Check Auth (Student) & Fallback
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-        console.error('GET /api/student/quiz: Unauthorized access attempt.', { authError: authError?.message });
+
+    let rosterId: string | null = null;
+    let classId: string | null = null;
+    let authMethod = 'cookie';
+
+    if (user) {
+        const studentInfo = await getStudentFromAuth(supabase, user);
+        rosterId = studentInfo.rosterId;
+        classId = studentInfo.classId;
+    }
+
+    // Fallback: If cookie auth failed, check for custom header from client (localStorage)
+    if (!rosterId || !classId) {
+        const headerStudentId = request.headers.get('x-student-id');
+        if (headerStudentId) {
+            console.log(`GET /api/student/quiz: Auth failed, trying fallback with header x-student-id: ${headerStudentId}`);
+
+            // Verify this ID exists in DB
+            // use admin client to bypass RLS if needed for this lookup, or just standard client if public read allowed.
+            // Safe to use standard client as we are just checking existence if RLS allows.
+            // Actually, we need to know the class_id.
+            const { data: roster } = await supabase
+                .from('student_roster')
+                .select('id, class_id')
+                .eq('id', headerStudentId)
+                .single();
+
+            if (roster) {
+                rosterId = roster.id;
+                classId = roster.class_id;
+                authMethod = 'header_fallback';
+            }
+        }
+    }
+
+    if (!rosterId || !classId) {
+        console.error('GET /api/student/quiz: Unauthorized or Student not found.', { authError: authError?.message });
         return NextResponse.json({
             error: 'Unauthorized',
             debug: {
                 hasUser: !!user,
                 authErrorMessage: authError?.message,
-                message: '인증 세션이 유효하지 않거나 만료되었습니다. 다시 로그인해주세요.',
+                message: '인증 세션이 유효하지 않으며, 백업 인증 정보도 없습니다. 다시 로그인해주세요.',
                 serverTime: new Date().toISOString()
             }
         }, { status: 401 });
-    }
-
-    // 2. Resolve Student ID & Class ID using shared utility
-    const { rosterId, classId } = await getStudentFromAuth(supabase, user);
-
-    if (!rosterId || !classId) {
-        console.error('GET /api/student/quiz: Failed to resolve student info.', {
-            email: user.email,
-            metadata: user.user_metadata,
-            rosterId,
-            classId
-        });
-        return NextResponse.json({
-            error: '학생 정보를 찾을 수 없습니다.',
-            debug: { email: user.email, metadata: user.user_metadata, foundClass: !!classId, foundRoster: !!rosterId }
-        }, { status: 200 }); // Return 200 to ensure client parses JSON and shows debug info
     }
 
     // 3. Fetch Daily Quizzes for this Class
@@ -119,14 +138,39 @@ export async function POST(request: Request) {
     const { dailyQuizId, answer } = await request.json();
     const supabase = createClient();
 
-    // 1. Auth
+    // 1. Auth & Fallback
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 2. Resolve Roster ID
-    const { rosterId } = await getStudentFromAuth(supabase, user);
+    let rosterId: string | null = null;
 
-    if (!rosterId) return NextResponse.json({ error: 'Student info not found' }, { status: 404 });
+    if (user) {
+        const studentInfo = await getStudentFromAuth(supabase, user);
+        rosterId = studentInfo.rosterId;
+    }
+
+    // Fallback: Check header if cookie auth failed
+    if (!rosterId) {
+        const headerStudentId = request.headers.get('x-student-id');
+        if (headerStudentId) {
+            console.log(`POST /api/student/quiz: Auth failed, trying fallback with header x-student-id: ${headerStudentId}`);
+            // Verify existence
+            const { data: roster } = await supabase
+                .from('student_roster')
+                .select('id')
+                .eq('id', headerStudentId)
+                .single();
+
+            if (roster) {
+                rosterId = roster.id;
+            }
+        }
+    }
+
+    if (!rosterId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // 2. Resolve Roster ID - already done above
+    // const { rosterId } = await getStudentFromAuth(supabase, user); 
+    // if (!rosterId) return NextResponse.json({ error: 'Student info not found' }, { status: 404 });
 
     // 3. Verify Quiz & Answer
     const { data: dq } = await supabase

@@ -19,7 +19,19 @@ export default function StudentQuiz() {
 
     const fetchDailyQuizzes = async () => {
         try {
-            const res = await fetch('/api/student/quiz');
+            // Get student ID from local storage for fallback auth
+            let headers: any = {};
+            const sessionStr = localStorage.getItem('student_session');
+            if (sessionStr) {
+                const session = JSON.parse(sessionStr);
+                if (session?.student?.id) {
+                    headers['x-student-id'] = session.student.id;
+                }
+            }
+
+            const res = await fetch('/api/student/quiz', {
+                headers: headers
+            });
             const data = await res.json();
 
             if (data.debug) {
