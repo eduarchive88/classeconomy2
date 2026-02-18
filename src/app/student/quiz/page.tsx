@@ -96,7 +96,11 @@ export default function StudentQuiz() {
                 }
             }));
         } catch (e: any) {
-            alert(e.message || '제출 오류');
+            if (e.message?.includes('Unauthorized')) {
+                alert('인증이 만료되었습니다. 페이지를 새로고침 해주세요.');
+            } else {
+                alert(e.message || '제출 오류가 발생했습니다.');
+            }
         } finally {
             setSubmitting(prev => ({ ...prev, [dailyQuizId]: false }));
         }
@@ -143,7 +147,7 @@ export default function StudentQuiz() {
                                     )}
                                 </div>
 
-                                <h3 className="text-lg font-bold text-slate-800 mb-6">Q. {quiz.question}</h3>
+                                <h3 className="text-lg font-bold text-gray-900 mb-6">Q. {quiz.question}</h3>
 
                                 <div className="space-y-3 mb-6">
                                     {quiz.options?.map((opt: string, idx: number) => {
@@ -175,7 +179,7 @@ export default function StudentQuiz() {
                                                 onClick={() => handleSelectOption(quiz.daily_quiz_id, optNum)}
                                                 className={style}
                                             >
-                                                <span className="mr-2 font-bold">{optNum}.</span> {opt}
+                                                <span className="mr-2 font-bold text-gray-900">{optNum}.</span> <span className="text-gray-800">{opt}</span>
                                             </button>
                                         );
                                     })}
@@ -204,14 +208,14 @@ export default function StudentQuiz() {
                 </div>
             )}
 
-            {/* Debug Info Section - Only visible if there are issues or empty */}
-            {(quizzes.length === 0 || debugInfo) && (
+            {/* Debug Info Section - Removed as per user request */}
+            {/* {(quizzes.length === 0 || debugInfo) && (
                 <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs text-slate-500 font-mono">
                     <p className="font-bold mb-2">Debug Info (개발자 확인용)</p>
                     <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
                     <p className="mt-2">Quizzes Loaded: {quizzes.length}</p>
                 </div>
-            )}
+            )} */}
         </div>
     );
 }

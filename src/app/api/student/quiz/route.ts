@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import { getStudentFromAuth } from '@/utils/student-auth';
 
@@ -60,10 +60,8 @@ export async function GET(request: Request) {
     }
 
     // 3. Fetch Daily Quizzes for this Class
-    // 날짜 매칭 실패를 대비해 오늘뿐만 아니라 어제 날짜도 포함하거나, 날짜 문자열 처리를 더 유연하게 합니다.
-    const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
-
-    console.log(`Fetching quizzes for class ${classId} on dates: ${today}, ${yesterday}`);
+    // 사용자 요청: 오늘 날짜 퀴즈만 표시
+    console.log(`Fetching quizzes for class ${classId} on date: ${today}`);
 
     const { data: dailyQuizzes, error: dqError } = await supabase
         .from('daily_quizzes')
@@ -81,7 +79,7 @@ export async function GET(request: Request) {
             )
         `)
         .eq('class_id', classId)
-        .in('date', [today, yesterday]) // 오늘과 어제 퀴즈를 모두 조회 (미해결 퀴즈 대응)
+        .eq('date', today) // 어제 날짜 제외하고 오늘만 조회
         .order('date', { ascending: false });
 
     if (dqError || !dailyQuizzes) {
@@ -92,7 +90,6 @@ export async function GET(request: Request) {
                 resolvedClassId: classId,
                 resolvedRosterId: rosterId,
                 queryDate: today,
-                queryYesterday: yesterday,
                 error: dqError?.message || 'No data returned',
                 authMethod,
                 serverTime: new Date().toISOString()
@@ -139,7 +136,6 @@ export async function GET(request: Request) {
             resolvedClassId: classId,
             resolvedRosterId: rosterId,
             queryDate: today,
-            queryYesterday: yesterday,
             foundQuizzesCount: dailyQuizzes.length,
             userEmail: user?.email,
             authMethod,
@@ -163,12 +159,19 @@ export async function POST(request: Request) {
     }
 
     // Fallback: Check header if cookie auth failed
+    // If we use fallback, we MUST use admin client to bypass RLS for submission insert
+    // because 'anon' user cannot insert into 'quiz_submissions' usually.
+    let dbClient = supabase;
+
     if (!rosterId) {
         const headerStudentId = request.headers.get('x-student-id');
         if (headerStudentId) {
             console.log(`POST /api/student/quiz: Auth failed, trying fallback with header x-student-id: ${headerStudentId}`);
-            // Verify existence
-            const { data: roster } = await supabase
+
+            // Use Admin Client for lookup AND subsequent operations
+            const adminSupabase = createAdminClient();
+
+            const { data: roster } = await adminSupabase
                 .from('student_roster')
                 .select('id')
                 .eq('id', headerStudentId)
@@ -176,6 +179,7 @@ export async function POST(request: Request) {
 
             if (roster) {
                 rosterId = roster.id;
+                dbClient = adminSupabase; // Use admin client for the rest of the request
             }
         }
     }
@@ -187,7 +191,7 @@ export async function POST(request: Request) {
     // if (!rosterId) return NextResponse.json({ error: 'Student info not found' }, { status: 404 });
 
     // 3. Verify Quiz & Answer
-    const { data: dq } = await supabase
+    const { data: dq } = await dbClient
         .from('daily_quizzes')
         .select('*, quizzes(answer, reward)')
         .eq('id', dailyQuizId)
@@ -200,7 +204,7 @@ export async function POST(request: Request) {
     const isCorrect = parseInt(answer) === correctAnswer;
 
     // 4. Check double submission
-    const { data: existing } = await supabase
+    const { data: existing } = await dbClient
         .from('quiz_submissions')
         .select('id')
         .eq('daily_quiz_id', dailyQuizId)
@@ -210,7 +214,7 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ error: 'Already submitted' }, { status: 400 });
 
     // 5. Insert Submission
-    const { error: insertError } = await supabase
+    const { error: insertError } = await dbClient
         .from('quiz_submissions')
         .insert({
             daily_quiz_id: dailyQuizId,
@@ -225,16 +229,16 @@ export async function POST(request: Request) {
     if (isCorrect) {
         const reward = quiz.reward || 0;
         if (reward > 0) {
-            await supabase.from('transactions').insert({
+            await dbClient.from('transactions').insert({
                 student_id: rosterId,
                 amount: reward,
                 type: 'quiz_reward',
                 description: '퀴즈 정답 보상'
             });
 
-            const { data: r } = await supabase.from('student_roster').select('balance').eq('id', rosterId).single();
+            const { data: r } = await dbClient.from('student_roster').select('balance').eq('id', rosterId).single();
             if (r) {
-                await supabase.from('student_roster').update({ balance: (r.balance || 0) + reward }).eq('id', rosterId);
+                await dbClient.from('student_roster').update({ balance: (r.balance || 0) + reward }).eq('id', rosterId);
             }
         }
     }
