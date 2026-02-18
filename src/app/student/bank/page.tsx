@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, PiggyBank, History, Coins, Lock } from 'lucide-react';
+import { ArrowLeft, Send, PiggyBank, History, Coins } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentBank() {
@@ -264,7 +264,7 @@ export default function StudentBank() {
                                             </div>
                                         </div>
                                         <div className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            예상 금액: {Math.floor(Number(quantity) * selectedStock.price).toLocaleString()} 원
+                                            {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()} 원
                                         </div>
                                     </div>
                                 ))}

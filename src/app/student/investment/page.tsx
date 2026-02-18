@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCcw, Newspaper, DollarSign } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, RefreshCcw, Newspaper, DollarSign, PieChart, Wallet } from 'lucide-react';
 import Link from 'next/link';
 
 const STOCKS = [
@@ -29,6 +29,10 @@ export default function InvestmentPage() {
     const [tradeLoading, setTradeLoading] = useState(false);
 
     // My Portfolio
+    const [portfolio, setPortfolio] = useState<any[]>([]);
+    const [portfolioLoading, setPortfolioLoading] = useState(true);
+
+    // My Portfolio
     // TODO: Fetch portfolio from a separate API or include in quote API?
     // For now, let's just show trade interface. Portfolio viewing can be added later or via bank API enhancement.
 
@@ -39,6 +43,9 @@ export default function InvestmentPage() {
         }
         fetchQuotes();
         fetchNews();
+        if (stored) {
+            fetchPortfolio(JSON.parse(stored).student.id);
+        }
 
         const interval = setInterval(fetchQuotes, 10000); // Refresh quotes every 10s
         return () => clearInterval(interval);
@@ -58,7 +65,22 @@ export default function InvestmentPage() {
             }
         }
         setQuotes(newQuotes);
+        setQuotes(newQuotes);
         setLoading(false);
+    };
+
+    const fetchPortfolio = async (id: string) => {
+        try {
+            const res = await fetch(`/api/student/investment/portfolio?studentId=${id}`);
+            const data = await res.json();
+            if (data.portfolio) {
+                setPortfolio(data.portfolio);
+            }
+        } catch (error) {
+            console.error('Failed to fetch portfolio', error);
+        } finally {
+            setPortfolioLoading(false);
+        }
     };
 
     const fetchNews = async () => {
@@ -97,7 +119,7 @@ export default function InvestmentPage() {
                 setQuantity('');
                 setTradeAction(null);
                 setSelectedStock(null);
-                // Refresh balance/portfolio if we had that data visible
+                if (studentId) fetchPortfolio(studentId); // Refresh portfolio
             } else {
                 alert(json.error);
             }
@@ -177,6 +199,59 @@ export default function InvestmentPage() {
                 })}
             </div>
 
+            {/* My Portfolio Section */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-8">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <PieChart className="w-6 h-6 text-emerald-500" />
+                    나의 투자 현황 (포트폴리오)
+                </h2>
+
+                {portfolioLoading ? (
+                    <div className="text-center py-8 text-slate-400">불러오는 중...</div>
+                ) : portfolio.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-700/50">
+                                <tr>
+                                    <th className="px-4 py-3 rounded-l-lg">종목</th>
+                                    <th className="px-4 py-3 text-right">보유량</th>
+                                    <th className="px-4 py-3 text-right">평단가</th>
+                                    <th className="px-4 py-3 text-right">현재가</th>
+                                    <th className="px-4 py-3 text-right rounded-r-lg">수익률</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {portfolio.map((item) => {
+                                    const isProfitable = item.profit >= 0;
+                                    const stockName = STOCKS.find(s => s.symbol === item.symbol)?.name || item.symbol;
+
+                                    return (
+                                        <tr key={item.symbol} className="border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                            <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                                                {stockName}
+                                                <div className="text-xs text-slate-400 font-normal">{item.symbol}</div>
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-mono">{item.quantity}주</td>
+                                            <td className="px-4 py-3 text-right font-mono text-slate-500">{Math.floor(item.average_price).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-right font-mono font-bold">{item.currentPrice?.toLocaleString()}</td>
+                                            <td className={`px-4 py-3 text-right font-mono font-bold ${isProfitable ? 'text-red-500' : 'text-blue-500'}`}>
+                                                {isProfitable ? '+' : ''}{Math.floor(item.profit).toLocaleString()} ({item.profitPercent.toFixed(2)}%)
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="text-center py-10 flex flex-col items-center justify-center text-slate-500">
+                        <Wallet className="w-12 h-12 mb-3 text-slate-300" />
+                        <p>아직 보유한 주식이 없습니다.</p>
+                        <p className="text-sm text-slate-400 mt-1">아래 시장에서 첫 투자를 시작해보세요!</p>
+                    </div>
+                )}
+            </div>
+
             {/* Economic News */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
                 <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
@@ -238,8 +313,8 @@ export default function InvestmentPage() {
                                 <div className="relative">
                                     <input
                                         type="number"
-                                        min="1"
-                                        step="1"
+                                        min="0.0001"
+                                        step="any"
                                         value={quantity}
                                         onChange={(e) => setQuantity(e.target.value)}
                                         className="w-full p-4 pl-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none text-lg font-bold transition-all text-right pr-12"
@@ -278,6 +353,15 @@ export default function InvestmentPage() {
                     </div>
                 </div>
             )}
+
+            {/* Guide */}
+            <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
+                <p className="font-bold mb-2">💡 투자 안내</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li>주식은 <strong>소수점 단위</strong>로도 구매 가능합니다. (예: 0.5주)</li>
+                    <li>실시간 가격 변동에 따라 수익률이 달라질 수 있습니다.</li>
+                </ul>
+            </div>
         </div>
     );
 }

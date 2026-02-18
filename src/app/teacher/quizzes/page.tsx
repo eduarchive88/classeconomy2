@@ -320,408 +320,341 @@ export default function QuizManagement() {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
-            <div className="flex items-center gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+            <div className="flex items-center gap-4 w-full md:w-auto">
                 <Link
                     href="/teacher"
                     className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                 >
                     <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
                 </Link>
-                <div className="flex-1 flex justify-between items-center">
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <FileText className="w-8 h-8 text-blue-600" />
-                        퀴즈 관리
-                    </h1>
-                    <ClassSelector onClassChange={fetchQuizzes} />
-                </div>
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                    <FileText className="w-8 h-8 text-blue-600" />
+                    퀴즈 관리
+                </h1>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Left: Create/Upload & Preview */}
-                <div className="space-y-6 lg:sticky lg:top-8">
-                    <div className="glass-panel p-6 shadow-lg">
-                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                            <Plus className="w-5 h-5 text-green-600" />
-                            새 퀴즈 등록
-                        </h2>
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                <ClassSelector onClassChange={fetchQuizzes} />
 
-                        <button
-                            onClick={() => setShowManualModal(true)}
-                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2 mb-4"
-                        >
-                            <Plus className="w-4 h-4" />
-                            퀴즈 직접 추가하기
-                        </button>
+                <button
+                    onClick={async () => {
+                        if (!confirm('오늘의 퀴즈를 수동으로 배포하시겠습니까?\n(이미 배포된 반은 제외됩니다.)')) return;
+                        try {
+                            const res = await fetch('/api/cron/daily-quiz');
+                            const data = await res.json();
+                            if (data.success) {
+                                alert('퀴즈 배포가 완료되었습니다.');
+                            } else {
+                                alert('배포 실패: ' + JSON.stringify(data));
+                            }
+                        } catch (e: any) {
+                            alert('오류: ' + e.message);
+                        }
+                    }}
+                    className="btn-secondary py-2 px-4 flex items-center gap-2 bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200"
+                >
+                    <RefreshCw className="w-4 h-4" />
+                    <span className="hidden md:inline">오늘의 퀴즈 배포</span>
+                </button>
 
-                        <button
-                            onClick={async () => {
-                                if (!confirm('오늘의 퀴즈를 수동으로 배포하시겠습니까?\n(이미 배포된 반은 제외됩니다.)')) return;
-                                try {
-                                    const res = await fetch('/api/cron/daily-quiz');
-                                    const data = await res.json();
-                                    if (data.success) {
-                                        alert('퀴즈 배포가 완료되었습니다.');
-                                    } else {
-                                        alert('배포 실패: ' + JSON.stringify(data));
-                                    }
-                                } catch (e: any) {
-                                    alert('오류: ' + e.message);
-                                }
-                            }}
-                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2 bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200"
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                            오늘의 퀴즈 즉시 배포 (수동)
-                        </button>
+                <button
+                    onClick={() => setShowManualModal(true)}
+                    className="btn-primary py-2 px-5 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                >
+                    <Plus className="w-5 h-5" />
+                    <span>새 퀴즈 등록</span>
+                </button>
+            </div>
+        </div>
 
-                        {/* Tabs or Sections */}
-                        <div className="space-y-6">
-                            {/* Excel Upload */}
-                            <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300">
-                                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-slate-600">
-                                    <Upload className="w-4 h-4" /> 엑셀 일괄 업로드
-                                </h3>
-                                <input
-                                    type="file"
-                                    accept=".xlsx, .xls"
-                                    onChange={handleFileUpload}
-                                    className="block w-full text-sm text-slate-500
-                                        file:mr-4 file:py-2 file:px-4
-                                        file:rounded-full file:border-0
-                                        file:text-sm file:font-semibold
-                                        file:bg-blue-50 file:text-blue-700
-                                        hover:file:bg-blue-100"
-                                />
-                                <p className="text-xs text-slate-400 mt-1">컬럼: 문제, 보기1~4, 정답, 상금 (A~G열)</p>
-                            </div>
+            {/* Quiz Stats Overview / Dashboard could go here */ }
 
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-slate-200"></div>
-                                </div>
-                                <div className="relative flex justify-center text-sm">
-                                    <span className="px-2 bg-white text-slate-500">또는 AI로 생성</span>
-                                </div>
-                            </div>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                <FileText className="w-5 h-5 text-slate-500" />
+                퀴즈 목록 <span className="text-sm font-normal text-slate-500">({quizzes.length}개)</span>
+            </h2>
+            {/* Filter/Search could go here */}
+        </div>
 
-                            {/* AI Generation */}
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">주제</label>
-                                    <input
-                                        type="text"
-                                        value={topic}
-                                        onChange={(e) => setTopic(e.target.value)}
-                                        placeholder="예: 화폐의 역사, 인플레이션"
-                                        className="w-full p-2 border rounded-lg"
-                                    />
-                                </div>
-                                <label className="block text-sm font-medium mb-1">난이도</label>
-                                <select
-                                    value={difficulty}
-                                    onChange={(e) => setDifficulty(e.target.value)}
-                                    className="w-full p-2 border rounded-lg"
-                                >
-                                    <option value="상">상</option>
-                                    <option value="중">중</option>
-                                    <option value="하">하</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">문항 수</label>
-                                <select
-                                    value={count}
-                                    onChange={(e) => setCount(Number(e.target.value))}
-                                    className="w-full p-2 border rounded-lg"
-                                >
-                                    <option value={5}>5문제</option>
-                                    <option value={10}>10문제</option>
-                                    <option value={15}>15문제</option>
-                                    <option value={20}>20문제</option>
-                                </select>
-                            </div>
+        {quizzes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {quizzes.map((quiz) => (
+                    <div key={quiz.id}
+                        onClick={() => handleShowStats(quiz)}
+                        className="bg-slate-50 dark:bg-slate-700/50 p-5 rounded-xl border border-slate-100 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 transition-all cursor-pointer group hover:shadow-md relative"
+                    >
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                                onClick={generateAIQuizzes}
-                                disabled={loading}
-                                className="w-full btn-secondary py-2 flex justify-center items-center gap-2"
+                                onClick={(e) => handleDeleteQuiz(quiz.id, e)}
+                                className="text-slate-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                title="삭제"
                             >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                                AI 퀴즈 생성
+                                <Trash2 className="w-4 h-4" />
                             </button>
+                        </div>
+
+                        <div className="mb-3 pr-8">
+                            <span className="inline-block px-2 py-0.5 rounded textxs font-medium bg-blue-100 text-blue-700 mb-2">
+                                상금 {quiz.reward?.toLocaleString()}원
+                            </span>
+                            <p className="font-bold text-slate-800 dark:text-slate-100 line-clamp-2">Q. {quiz.question}</p>
+                        </div>
+
+                        <div className="space-y-1.5 mb-4">
+                            {/* Simplified Options Display */}
+                            {(() => {
+                                try {
+                                    const options = typeof quiz.options === 'string' ? JSON.parse(quiz.options) : quiz.options;
+                                    if (Array.isArray(options)) {
+                                        // Show only first 2 options or summary
+                                        return (
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-600">1</span>
+                                                    <span className="truncate">{options[0]}</span>
+                                                </div>
+                                                {options.length > 1 && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-600">2</span>
+                                                        <span className="truncate">{options[1]}</span>
+                                                    </div>
+                                                )}
+                                                {options.length > 2 && <div className="text-xs text-slate-400 mt-1">+ {options.length - 2} more</div>}
+                                            </div>
+                                        );
+                                    }
+                                } catch (e) { }
+                            })()}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-600">
+                            <div className="text-xs font-semibold text-green-600 dark:text-green-400">
+                                정답: {quiz.answer}번
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                                <BarChart2 className="w-3 h-3" />
+                                통계 보기
+                            </div>
                         </div>
                     </div>
-                </div>
+                ))}
+            </div>
+        ) : (
+            <div className="text-center py-20 text-slate-400 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-dashed border-slate-300">
+                <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p>등록된 퀴즈가 없습니다.</p>
+                <p className="text-sm mt-1">새 퀴즈를 등록하여 학생들에게 문제를 출제해보세요.</p>
+            </div>
+        )}
+    </div>
 
-                {/* Preview Generated */}
-                {generatedQuizzes.length > 0 && (
-                    <div className="glass-panel p-6 border-2 border-blue-100 dark:border-blue-800">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-blue-800 dark:text-blue-300">생성된 퀴즈 ({generatedQuizzes.length}개)</h3>
-                            <button
-                                onClick={saveQuizzes}
-                                disabled={saving}
-                                className="btn-primary py-1.5 px-4 flex items-center gap-2"
-                            >
-                                <Save className="w-4 h-4" />
-                                저장하기
-                            </button>
-                        </div>
-                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                            {generatedQuizzes.map((q, i) => (
-                                <div key={i} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative group hover:border-blue-300 transition-all">
-                                    <button
-                                        onClick={() => removeGenerated(i)}
-                                        className="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-1"
-                                        title="삭제"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                    <p className="font-bold text-lg text-slate-800 dark:text-slate-100 pr-8 mb-3">Q. {q.question}</p>
+    {/* Unified Registration Modal */ }
+    {
+        showManualModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+                    <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Plus className="w-6 h-6 text-blue-600" />
+                            퀴즈 등록
+                        </h3>
+                        <button onClick={() => setShowManualModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
 
-                                    <div className="grid grid-cols-1 gap-2 mb-3">
-                                        {q.options && q.options.map((opt: string, idx: number) => (
-                                            <div key={idx} className={`text-sm px-3 py-2 rounded-lg border ${q.answer === (idx + 1)
-                                                ? 'bg-blue-50 border-blue-200 text-blue-800 font-bold'
-                                                : 'bg-slate-50 border-slate-100 text-slate-600'
-                                                }`}>
-                                                <span className="mr-2">{idx + 1}.</span> {opt}
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Left: AI & Excel */}
+                            <div className="space-y-8">
+                                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-800">
+                                    <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-4 flex items-center gap-2">
+                                        <Wand2 className="w-5 h-5" /> AI로 퀴즈 생성
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1.5 text-slate-600">주제</label>
+                                            <input
+                                                type="text"
+                                                value={topic}
+                                                onChange={(e) => setTopic(e.target.value)}
+                                                placeholder="예: 화폐의 역사, 수요와 공급"
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1.5 text-slate-600">난이도</label>
+                                                <select
+                                                    value={difficulty}
+                                                    onChange={(e) => setDifficulty(e.target.value)}
+                                                    className="w-full p-2.5 border border-slate-200 rounded-lg text-sm"
+                                                >
+                                                    <option value="상">상</option>
+                                                    <option value="중">중</option>
+                                                    <option value="하">하</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1.5 text-slate-600">문항 수</label>
+                                                <select
+                                                    value={count}
+                                                    onChange={(e) => setCount(Number(e.target.value))}
+                                                    className="w-full p-2.5 border border-slate-200 rounded-lg text-sm"
+                                                >
+                                                    <option value={3}>3문제</option>
+                                                    <option value={5}>5문제</option>
+                                                    <option value={10}>10문제</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={generateAIQuizzes}
+                                            disabled={loading}
+                                            className="w-full btn-primary py-2.5 flex justify-center items-center gap-2 text-sm"
+                                        >
+                                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                                            AI 퀴즈 생성하기
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-300">
+                                    <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                        <Upload className="w-5 h-5" /> 엑셀 업로드
+                                    </h4>
+                                    <p className="text-xs text-slate-500 mb-4">
+                                        문제, 보기1~4, 정답, 상금 컬럼이 포함된 엑셀 파일을 업로드하세요.
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept=".xlsx, .xls"
+                                        onChange={handleFileUpload}
+                                        className="block w-full text-sm text-slate-500
+                                                file:mr-4 file:py-2 file:px-4
+                                                file:rounded-full file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-slate-200 file:text-slate-700
+                                                hover:file:bg-slate-300 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Right: Manual Input */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                        <Plus className="w-5 h-5" /> 직접 입력
+                                    </h4>
+                                    {generatedQuizzes.length > 0 && (
+                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                            {generatedQuizzes.length}개 생성됨 (저장 대기)
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Question</label>
+                                        <textarea
+                                            className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            rows={2}
+                                            value={manualQuiz.question}
+                                            onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
+                                            placeholder="문제를 입력하세요"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {[1, 2, 3, 4].map(num => (
+                                            <div key={num} className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">{num}</div>
+                                                <input
+                                                    type="text"
+                                                    placeholder={`보기 ${num}`}
+                                                    className="flex-1 p-2 border rounded-lg text-sm"
+                                                    value={(manualQuiz as any)[`option${num}`]}
+                                                    onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
+                                                />
                                             </div>
                                         ))}
                                     </div>
-
-                                    <div className="flex items-center gap-2 text-sm bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
-                                        <span className="font-bold text-blue-600 whitespace-nowrap">
-                                            정답: {q.answer}번
-                                        </span>
-                                        <span className="text-slate-300">|</span>
-                                        <span className="text-slate-600 dark:text-slate-300 text-xs">
-                                            {q.explanation}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Right: Existing Quizzes List */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-slate-600" />
-                    저장된 퀴즈 ({quizzes.length}개)
-                </h2>
-
-                <div className="space-y-3">
-                    {quizzes.map((quiz) => (
-                        <div key={quiz.id}
-                            onClick={() => handleShowStats(quiz)}
-                            className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group"
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="font-medium text-slate-800 dark:text-slate-200 flex-1 pr-4">Q. {quiz.question}</p>
-                                <button
-                                    onClick={(e) => handleDeleteQuiz(quiz.id, e)}
-                                    className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    title="삭제"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <div className="mt-3 space-y-2">
-                                {(() => {
-                                    try {
-                                        const options = typeof quiz.options === 'string' ? JSON.parse(quiz.options) : quiz.options;
-                                        if (Array.isArray(options)) {
-                                            return options.map((opt: string, idx: number) => (
-                                                <div
-                                                    key={idx}
-                                                    className={`text-sm px-3 py-2 rounded-lg flex items-center gap-2 ${quiz.answer === (idx + 1)
-                                                        ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200 font-medium'
-                                                        : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                                                        }`}
-                                                >
-                                                    {quiz.answer === (idx + 1) && (
-                                                        <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                    )}
-                                                    <span>{idx + 1}. {opt}</span>
-                                                </div>
-                                            ));
-                                        }
-                                    } catch (e) {
-                                        // Fallback for old format
-                                    }
-                                    return (
-                                        <div className="flex gap-3">
-                                            <span className={`font-bold ${quiz.answer === 'O' ? 'text-blue-600' : 'text-red-600'}`}>
-                                                A. {quiz.answer}
-                                            </span>
-                                            <span className="text-slate-400 truncate max-w-[200px]">{quiz.explanation}</span>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                            <div className="flex justify-end items-center text-sm mt-3">
-                                <div className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700 px-2 py-1 rounded flex items-center gap-1">
-                                    <BarChart2 className="w-3 h-3" />
-                                    통계 보기
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {quizzes.length === 0 && (
-                        <div className="text-center py-12 text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed dark:border-slate-700">
-                            등록된 퀴즈가 없습니다.
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Stats Modal */}
-            {
-                selectedQuiz && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedQuiz(null)}>
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 통계</h3>
-                                <button onClick={() => setSelectedQuiz(null)} className="text-slate-400 hover:text-slate-600">
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-
-                            <div className="mb-6 bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
-                                <p className="font-medium text-lg mb-2 text-slate-800 dark:text-white">Q. {selectedQuiz.question}</p>
-                                <div className="flex gap-2 text-sm text-slate-600">
-                                    <span>정답: {selectedQuiz.answer}</span>
-                                    <span>|</span>
-                                    <span>{selectedQuiz.explanation}</span>
-                                </div>
-                            </div>
-
-                            {statsLoading ? (
-                                <div className="flex justify-center py-8">
-                                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                                </div>
-                            ) : stats ? (
-                                <div className="space-y-6">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-center">
-                                            <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">총 배포 횟수</div>
-                                            <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">{stats.distributionCount}회</div>
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Answer</label>
+                                            <select
+                                                className="w-full p-2 border rounded-lg text-sm"
+                                                value={manualQuiz.answer}
+                                                onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
+                                            >
+                                                {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
+                                            </select>
                                         </div>
-                                        <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl text-center">
-                                            <div className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">문제 푼 학생</div>
-                                            <div className="text-2xl font-bold text-green-900 dark:text-green-200">{stats.solvers?.length || 0}명</div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="font-bold mb-3 flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-slate-500" />
-                                            풀이 기록
-                                        </h4>
-                                        <div className="space-y-2">
-                                            {stats.solvers && stats.solvers.length > 0 ? (
-                                                stats.solvers.map((s: any, i: number) => (
-                                                    <div key={i} className="flex justify-between items-center p-3 border dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
-                                                        <div>
-                                                            <span className="font-medium mr-2">{s.student_roster?.number}번 {s.student_roster?.name}</span>
-                                                            <span className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${s.is_correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                            {s.is_correct ? '정답' : '오답'}
-                                                        </span>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-center text-slate-400 py-4">아직 문제를 푼 학생이 없습니다.</p>
-                                            )}
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Reward</label>
+                                            <input
+                                                type="number"
+                                                className="w-full p-2 border rounded-lg text-sm"
+                                                value={manualQuiz.reward}
+                                                onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
+                                            />
                                         </div>
                                     </div>
+                                    <button onClick={handleManualSubmit} className="w-full btn-secondary py-2 text-sm">
+                                        리스트에 추가
+                                    </button>
                                 </div>
-                            ) : (
-                                <div className="text-center py-8 text-red-500">데이터를 불러오지 못했습니다.</div>
-                            )}
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Manual Creation Modal */}
-            {
-                showManualModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">퀴즈 직접 만들기</h3>
-                                <button onClick={() => setShowManualModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
                             </div>
-                            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                                <div>
-                                    <label className="block text-sm font-bold mb-1 text-slate-800 dark:text-slate-200">문제</label>
-                                    <textarea
-                                        className="w-full p-2 border rounded-lg"
-                                        rows={2}
-                                        value={manualQuiz.question}
-                                        onChange={e => setManualQuiz({ ...manualQuiz, question: e.target.value })}
-                                        placeholder="문제를 입력하세요"
-                                    />
+                        </div>
+
+                        {/* Generated Preview Area */}
+                        {generatedQuizzes.length > 0 && (
+                            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="font-bold text-lg">생성된 퀴즈 확인 ({generatedQuizzes.length})</h4>
                                 </div>
-                                <div className="grid grid-cols-1 gap-2">
-                                    <label className="block text-sm font-bold mb-1">보기</label>
-                                    {[1, 2, 3, 4].map(num => (
-                                        <input
-                                            key={num}
-                                            type="text"
-                                            placeholder={`보기 ${num}`}
-                                            className="w-full p-2 border rounded-lg text-sm"
-                                            value={(manualQuiz as any)[`option${num}`]}
-                                            onChange={e => setManualQuiz({ ...manualQuiz, [`option${num}`]: e.target.value })}
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto p-1">
+                                    {generatedQuizzes.map((q, i) => (
+                                        <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
+                                            <button
+                                                onClick={() => removeGenerated(i)}
+                                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-1 bg-white rounded-full shadow-sm"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                            <p className="font-bold text-sm mb-2 pr-6 line-clamp-1">{q.question}</p>
+                                            <div className="text-xs text-slate-500 mb-2">
+                                                정답: <span className="font-bold text-blue-600">{q.answer}번</span> | 상금: {q.reward}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-bold mb-1">정답 번호</label>
-                                        <select
-                                            className="w-full p-2 border rounded-lg"
-                                            value={manualQuiz.answer}
-                                            onChange={e => setManualQuiz({ ...manualQuiz, answer: Number(e.target.value) })}
-                                        >
-                                            {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}번</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold mb-1">상금</label>
-                                        <input
-                                            type="number"
-                                            className="w-full p-2 border rounded-lg"
-                                            value={manualQuiz.reward}
-                                            onChange={e => setManualQuiz({ ...manualQuiz, reward: Number(e.target.value) })}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold mb-1">해설</label>
-                                    <textarea
-                                        className="w-full p-2 border rounded-lg"
-                                        rows={2}
-                                        value={manualQuiz.explanation}
-                                        onChange={e => setManualQuiz({ ...manualQuiz, explanation: e.target.value })}
-                                    />
-                                </div>
                             </div>
-                            <div className="mt-6 flex justify-end gap-2">
-                                <button onClick={() => setShowManualModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">취소</button>
-                                <button onClick={handleManualSubmit} className="btn-primary px-6">추가하기</button>
-                            </div>
-                        </div>
+                        )}
                     </div>
-                )
-            }
-        </div>
+
+                    <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 bg-slate-50/50">
+                        <button
+                            onClick={() => setShowManualModal(false)}
+                            className="px-5 py-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors font-medium"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={saveQuizzes}
+                            disabled={saving || generatedQuizzes.length === 0}
+                            className="btn-primary px-8 py-2.5 shadow-lg shadow-blue-200 dark:shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {generatedQuizzes.length}개 퀴즈 저장하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+        </div >
     );
 }

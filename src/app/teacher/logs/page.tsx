@@ -193,22 +193,24 @@ export default function TeacherLogs() {
                                                 <span className={`
                                                     inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
                                                     ${log.type === 'fine' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                        log.type === 'income' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                        (log.type === 'income' || log.type === 'special_allowance') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                                             log.type === 'investment' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
                                                                 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
                                                 `}>
                                                     {log.type === 'fine' ? '벌금' :
                                                         log.type === 'income' ? '수입' :
                                                             log.type === 'expense' ? '지출' :
-                                                                log.type === 'investment' ? '투자' : log.type}
+                                                                log.type === 'special_allowance' ? '특별 수당' :
+                                                                    log.type === 'investment' ? '투자' : log.type}
                                                 </span>
                                             </td>
                                             <td className="p-4 text-slate-600 dark:text-slate-300">
                                                 {log.description}
                                             </td>
-                                            <td className={`p-4 text-right font-bold ${log.amount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'
+                                            <td className={`p-4 text-right font-bold ${log.type === 'fine' ? 'text-red-600 dark:text-red-400' :
+                                                log.amount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-black dark:text-white'
                                                 }`}>
-                                                {log.amount > 0 ? '+' : ''}{log.amount.toLocaleString()}
+                                                {log.type === 'fine' ? '-' : (log.amount > 0 ? '+' : '')}{Math.abs(log.amount).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))
