@@ -95,41 +95,14 @@ export default function StudentRealEstate() {
                         description: `자리 판매 수익 (${seat.row_idx + 1}-${seat.col_idx + 1})`
                     });
 
-                    // Log Tax (Implicitly deducted, but good to verify calculation or log system record?)
-                    // The user requested: "15% tax deducted... verify reflection".
-                    // Since it's omitted from payout, it's effectively burned. 
-                    // To show it in "System Logs" or just to be explicit, we can log it as a 'tax' type transaction for the SELLER (negative?) or just leave it?
-                    // "15% is tax".
-                    // Let's log it for the seller as a 'tax' deduction to explain the gap? 
-                    // Or maybe better: Seller receives Full Price, then pays Tax? 
-                    // Current logic: Seller receives 85%. 
-                    // If we want to be explicit:
-                    // Seller receives +Price. Seller pays -15% Tax.
-                    // Let's stick to current logic (Seller gets Net) but maybe log the tax as a system record?
-                    // Actually, let's just Log a 'tax' record for the Seller with 0 amount or just description?
-                    // Wait, usually 'tax' is money leaving the system. 
-                    // If we want to show it to the teacher/system, maybe insert a transaction for the seller with 0 amount but description "Tax deducted"?
-                    // Or change logic: 
-                    // 1. Seller +Price
-                    // 2. Seller -15% Tax
-                    // This is clearer for logs.
-                    // But I will stick to the requester's implicit "deducted".
-                    // However, to satisfy "make sure it's reflected", good logs help.
-                    // Let's change logic to:
-                    // Payout = Price. 
-                    // Tax = Price * 0.15.
-                    // Net = Price * 0.85.
-                    // Update Seller Balance += Net. (Same as before)
-                    // Log: "Sold for [Price]. Tax [Tax] deducted. Net [Net]."
+                    // Log Tax (15% deduction)
+                    const taxAmount = seat.price - payout;
                     await supabase.from('transactions').insert({
                         student_id: seat.student_id,
-                        amount: -(seat.price - payout), // The tax amount (negative? No, it's never received). 
-                        // Actually, let's just log it as a separate info if needed. 
-                        // Providing a 'tax' type transaction on the SELLER with negative amount is weird if they didn't receive the full amount first.
-                        // But let's add a log for the BUYER? No.
-                        // Let's just update the description for the seller.
+                        amount: -taxAmount,
+                        type: 'tax',
+                        description: `자리 판매 세금 (15%)`
                     });
-                     */
                 }
             }
 
