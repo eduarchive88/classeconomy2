@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Users, GraduationCap, Lock, ArrowRight, School } from 'lucide-react'
@@ -28,13 +28,13 @@ export default function LoginPage() {
   // 현재 세션 상태 확인
   const [currentUser, setCurrentUser] = useState<any>(null)
 
-  useState(() => {
+  useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setCurrentUser(user)
     }
     checkUser()
-  })
+  }, [])
 
   const handleSignOut = async () => {
     setLoading(true)
