@@ -146,6 +146,67 @@ export default function SettingsPage() {
                         <ThemeToggle />
                     </div>
                 </section>
+
+                {/* 데이터 관리 */}
+                <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+                        <Save className="w-5 h-5 text-blue-600" />
+                        데이터 관리
+                    </h2>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-medium text-slate-900 dark:text-slate-100">전체 로그 다운로드 (Excel/CSV)</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">모든 학급의 학생 거래 내역을 다운로드합니다.</p>
+                        </div>
+                        <button
+                            onClick={async () => {
+                                if (!confirm('전체 로그를 다운로드 하시겠습니까?')) return;
+                                try {
+                                    setLoading(true);
+                                    const response = await fetch('/api/teacher/logs/export');
+                                    const { data } = await response.json();
+
+                                    if (!data || data.length === 0) {
+                                        alert('다운로드할 데이터가 없습니다.');
+                                        return;
+                                    }
+
+                                    // JSON to CSV
+                                    const headers = ['날짜', '학급', '이름', '유형', '금액', '설명'];
+                                    const csvContent = [
+                                        headers.join(','),
+                                        ...data.map((row: any) => [
+                                            `"${row.created_at}"`,
+                                            `"${row.class_name}"`,
+                                            `"${row.student_name}"`,
+                                            `"${row.type}"`,
+                                            row.amount,
+                                            `"${row.description}"`
+                                        ].join(','))
+                                    ].join('\n');
+
+                                    // BOM for Excel Korean support
+                                    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `student_economy_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+                                    link.click();
+                                } catch (e) {
+                                    console.error(e);
+                                    alert('다운로드 중 오류가 발생했습니다.');
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                            className="btn-outline flex items-center gap-2"
+                            disabled={loading}
+                        >
+                            <Save className="w-4 h-4" />
+                            다운로드
+                        </button>
+                    </div>
+                </section>
                 {/* AI 설정 */}
                 <section className="glass-panel p-6">
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

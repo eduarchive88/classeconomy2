@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
     const supabase = createClient();
-    const today = new Date().toISOString().split('T')[0];
+    // Use KST (Korea Standard Time) for today's date
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
     // 1. Check Auth (Student)
     const { data: { user }, error: authError } = await supabase.auth.getUser();

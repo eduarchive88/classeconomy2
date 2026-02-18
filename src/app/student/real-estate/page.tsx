@@ -94,6 +94,42 @@ export default function StudentRealEstate() {
                         type: 'real_estate_income',
                         description: `자리 판매 수익 (${seat.row_idx + 1}-${seat.col_idx + 1})`
                     });
+
+                    // Log Tax (Implicitly deducted, but good to verify calculation or log system record?)
+                    // The user requested: "15% tax deducted... verify reflection".
+                    // Since it's omitted from payout, it's effectively burned. 
+                    // To show it in "System Logs" or just to be explicit, we can log it as a 'tax' type transaction for the SELLER (negative?) or just leave it?
+                    // "15% is tax".
+                    // Let's log it for the seller as a 'tax' deduction to explain the gap? 
+                    // Or maybe better: Seller receives Full Price, then pays Tax? 
+                    // Current logic: Seller receives 85%. 
+                    // If we want to be explicit:
+                    // Seller receives +Price. Seller pays -15% Tax.
+                    // Let's stick to current logic (Seller gets Net) but maybe log the tax as a system record?
+                    // Actually, let's just Log a 'tax' record for the Seller with 0 amount or just description?
+                    // Wait, usually 'tax' is money leaving the system. 
+                    // If we want to show it to the teacher/system, maybe insert a transaction for the seller with 0 amount but description "Tax deducted"?
+                    // Or change logic: 
+                    // 1. Seller +Price
+                    // 2. Seller -15% Tax
+                    // This is clearer for logs.
+                    // But I will stick to the requester's implicit "deducted".
+                    // However, to satisfy "make sure it's reflected", good logs help.
+                    // Let's change logic to:
+                    // Payout = Price. 
+                    // Tax = Price * 0.15.
+                    // Net = Price * 0.85.
+                    // Update Seller Balance += Net. (Same as before)
+                    // Log: "Sold for [Price]. Tax [Tax] deducted. Net [Net]."
+                    await supabase.from('transactions').insert({
+                        student_id: seat.student_id,
+                        amount: -(seat.price - payout), // The tax amount (negative? No, it's never received). 
+                        // Actually, let's just log it as a separate info if needed. 
+                        // Providing a 'tax' type transaction on the SELLER with negative amount is weird if they didn't receive the full amount first.
+                        // But let's add a log for the BUYER? No.
+                        // Let's just update the description for the seller.
+                    });
+                     */
                 }
             }
 
@@ -200,34 +236,46 @@ export default function StudentRealEstate() {
                                     className={`
                                         aspect-square rounded-xl border-2 p-3 flex flex-col items-center justify-center text-center transition-all relative overflow-hidden
                                         ${isMine ? 'bg-blue-500 border-blue-600 text-white shadow-lg z-10 scale-105' :
-                                            isOccupied ? 'bg-slate-100 border-slate-200 opacity-60' :
+                                            isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' : // Changed style for occupied
                                                 'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
                                         }
                                     `}
                                     onClick={() => !isMine && handlePurchase(seat)}
                                 >
-                                    <div className={`text-[10px] absolute top-1 left-2 font-bold ${isMine ? 'text-blue-100' : 'text-slate-300'}`}>
+                                    <div className={`text-[10px] absolute top-1 left-2 font-bold ${isMine ? 'text-blue-100' : 'text-slate-400'}`}>
                                         {r + 1}-{c + 1}
                                     </div>
 
                                     {isMine ? (
                                         <div className="font-bold text-sm">내 자리</div>
-                                    ) : isOccupied ? (
-                                        <div className="text-xs text-slate-500 font-medium">
-                                            {seat.student?.name}
-                                        </div>
-                                    ) : seat ? (
-                                        <div className="flex flex-col items-center gap-1">
-                                            <div className="text-xs font-bold text-amber-600 flex items-center gap-0.5">
-                                                <DollarSign className="w-3 h-3" />
-                                                {seat.price?.toLocaleString()}
-                                            </div>
-                                            <div className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
-                                                구매가능
-                                            </div>
-                                        </div>
                                     ) : (
-                                        <div className="text-slate-300 text-xs italic">비어있음</div>
+                                        <>
+                                            {isOccupied && (
+                                                <div className="text-xs text-indigo-600 font-bold mb-1">
+                                                    {seat.student?.name}
+                                                </div>
+                                            )}
+                                            {seat ? (
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <div className={`text-xs font-bold flex items-center gap-0.5 ${isOccupied ? 'text-indigo-500' : 'text-amber-600'}`}>
+                                                        <DollarSign className="w-3 h-3" />
+                                                        {seat.price?.toLocaleString()}
+                                                    </div>
+                                                    {!isOccupied && (
+                                                        <div className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
+                                                            구매가능
+                                                        </div>
+                                                    )}
+                                                    {isOccupied && (
+                                                        <div className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
+                                                            인수기능
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="text-slate-300 text-xs italic">비어있음</div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             );

@@ -412,8 +412,8 @@ function StudentLogModal({ studentId, studentName, onClose }: { studentId: strin
                                             {new Date(log.created_at).toLocaleString()}
                                         </div>
                                     </div>
-                                    <div className={`font-bold ${log.amount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
-                                        {log.amount > 0 ? '+' : ''}{log.amount.toLocaleString()}
+                                    <div className={`font-bold ${log.amount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'} ${log.type === 'fine' ? '!text-red-600' : ''}`}>
+                                        {log.amount > 0 && log.type !== 'fine' ? '+' : ''}{log.amount.toLocaleString()}
                                     </div>
                                 </div>
                             ))}

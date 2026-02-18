@@ -148,7 +148,10 @@ export default function StudentBank() {
         return <div className="p-8 text-center">Loading...</div>;
     }
 
-    const { student, classmates, accounts, transactions } = data;
+    const student = data?.student || { balance: 0 };
+    const classmates = data?.classmates || [];
+    const accounts = data?.accounts || [];
+    const transactions = data?.transactions || [];
     const totalSavings = accounts.reduce((sum: number, acc: any) => sum + acc.amount, 0);
 
     return (

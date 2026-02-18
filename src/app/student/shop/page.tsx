@@ -116,6 +116,9 @@ export default function StudentShop() {
                 <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
                     <ShoppingBag className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-slate-500">현재 판매 중인 상품이 없습니다.</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                        (선생님이 상품을 등록했는지, 재고가 있는지 확인해주세요)
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
