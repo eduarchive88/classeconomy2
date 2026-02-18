@@ -78,9 +78,19 @@ export default function StudentQuiz() {
 
         setSubmitting(prev => ({ ...prev, [dailyQuizId]: true }));
         try {
+            // Get student ID from local storage for fallback auth
+            let headers: any = { 'Content-Type': 'application/json' };
+            const sessionStr = localStorage.getItem('student_session');
+            if (sessionStr) {
+                const session = JSON.parse(sessionStr);
+                if (session?.student?.id) {
+                    headers['x-student-id'] = session.student.id;
+                }
+            }
+
             const res = await fetch('/api/student/quiz', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({ dailyQuizId, answer }),
             });
 
