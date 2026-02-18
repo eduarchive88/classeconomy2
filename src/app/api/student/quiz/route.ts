@@ -181,7 +181,8 @@ export async function POST(request: Request) {
         .insert({
             daily_quiz_id: dailyQuizId,
             student_id: rosterId,
-            is_correct: isCorrect
+            is_correct: isCorrect,
+            choice: parseInt(answer)
         });
 
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
