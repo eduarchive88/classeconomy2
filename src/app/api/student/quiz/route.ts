@@ -2,6 +2,8 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import { getStudentFromAuth } from '@/utils/student-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
     const supabase = createClient();
     // Use KST (Korea Standard Time) for today's date
