@@ -11,7 +11,8 @@ export async function getStudentFromAuth(supabase: SupabaseClient, user: any) {
 
     // Fallback logic
     const email = user.email || '';
-    const sessionCode = email.split('_')[0];
+    // Extract session code: handle formats like "class1_student@..." or just "class1@..."
+    const sessionCode = email.split('@')[0].split('_')[0];
     const { data: cls } = await supabase.from('classes').select('id').ilike('session_code', sessionCode).maybeSingle();
 
     if (cls) {
