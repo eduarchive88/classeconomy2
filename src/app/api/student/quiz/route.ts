@@ -1,6 +1,6 @@
-
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { getStudentFromAuth } from '@/utils/student-auth';
 
 export async function GET(request: Request) {
     const supabase = createClient();
@@ -10,43 +10,24 @@ export async function GET(request: Request) {
     // 1. Check Auth (Student)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+        console.error('GET /api/student/quiz: Unauthorized access attempt.', { authError: authError?.message });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Resolve Student Roster ID & Class ID
-    let rosterId = user.user_metadata?.roster_id;
-    let classId = user.user_metadata?.class_id;
+    // 2. Resolve Student ID & Class ID using shared utility
+    const { rosterId, classId } = await getStudentFromAuth(supabase, user);
 
     if (!rosterId || !classId) {
-        // Fallback: Resolve using email and metadata name
-        const email = user.email || '';
-        const sessionCode = email.split('@')[0].split('_')[0]; // Handle session_student@ or similar
-
-        // 1. Try to find class by session_code
-        const { data: cls } = await supabase
-            .from('classes')
-            .select('id')
-            .eq('session_code', sessionCode)
-            .maybeSingle();
-
-        if (cls) {
-            classId = cls.id;
-            // 2. Find roster by name and class_id
-            const { data: roster } = await supabase
-                .from('student_roster')
-                .select('id')
-                .eq('class_id', classId)
-                .eq('name', user.user_metadata.name)
-                .maybeSingle();
-
-            if (roster) rosterId = roster.id;
-        }
-    }
-
-    if (!rosterId || !classId) {
-        // Log for debugging if needed, but return structured error
-        console.error('Failed to resolve student info:', { email: user.email, metadata: user.user_metadata });
-        return NextResponse.json({ error: '학생 정보를 찾을 수 없습니다. (학급 코드 또는 이름 불일치)' }, { status: 404 });
+        console.error('GET /api/student/quiz: Failed to resolve student info.', {
+            email: user.email,
+            metadata: user.user_metadata,
+            rosterId,
+            classId
+        });
+        return NextResponse.json({
+            error: '학생 정보를 찾을 수 없습니다.',
+            debug: { email: user.email, metadata: user.user_metadata, foundClass: !!classId, foundRoster: !!rosterId }
+        }, { status: 404 });
     }
 
     // 3. Fetch Daily Quizzes for this Class & Date
@@ -89,7 +70,7 @@ export async function GET(request: Request) {
     // 5. Merge & Format
     const results = dailyQuizzes.map(dq => {
         const sub = submissions.find(s => s.daily_quiz_id === dq.id);
-        const quiz = dq.quizzes; // Should be object
+        const quiz: any = dq.quizzes; // Cast to any for easier access
 
         const isSubmitted = !!sub;
 
@@ -97,10 +78,9 @@ export async function GET(request: Request) {
             daily_quiz_id: dq.id,
             quiz_id: quiz?.id,
             question: quiz?.question,
-            options: quiz?.options, // JSONB?
+            options: quiz?.options,
             reward: quiz?.reward,
             status: isSubmitted ? (sub.is_correct ? 'correct' : 'incorrect') : 'pending',
-            // Only show answer/explanation if submitted
             answer: isSubmitted ? quiz?.answer : null,
             explanation: isSubmitted ? quiz?.explanation : null,
         };
@@ -110,7 +90,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const { dailyQuizId, answer } = await request.json(); // answer is index (1-based usually)
+    const { dailyQuizId, answer } = await request.json();
     const supabase = createClient();
 
     // 1. Auth
@@ -118,31 +98,11 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // 2. Resolve Roster ID
-    let rosterId = user.user_metadata?.roster_id;
-    if (!rosterId) {
-        const email = user.email || '';
-        const sessionCode = email.split('@')[0].split('_')[0];
-        const { data: cls } = await supabase
-            .from('classes')
-            .select('id')
-            .eq('session_code', sessionCode)
-            .maybeSingle();
+    const { rosterId } = await getStudentFromAuth(supabase, user);
 
-        if (cls) {
-            const { data: roster } = await supabase
-                .from('student_roster')
-                .select('id')
-                .eq('class_id', cls.id)
-                .eq('name', user.user_metadata.name)
-                .maybeSingle();
-            if (roster) rosterId = roster.id;
-        }
-    }
-
-    if (!rosterId) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    if (!rosterId) return NextResponse.json({ error: 'Student info not found' }, { status: 404 });
 
     // 3. Verify Quiz & Answer
-    // Get daily quiz + quiz answer
     const { data: dq } = await supabase
         .from('daily_quizzes')
         .select('*, quizzes(answer, reward)')
@@ -151,7 +111,8 @@ export async function POST(request: Request) {
 
     if (!dq || !dq.quizzes) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
 
-    const correctAnswer = dq.quizzes.answer; // 1-based index usually
+    const quiz: any = dq.quizzes;
+    const correctAnswer = quiz.answer;
     const isCorrect = parseInt(answer) === correctAnswer;
 
     // 4. Check double submission
@@ -160,7 +121,7 @@ export async function POST(request: Request) {
         .select('id')
         .eq('daily_quiz_id', dailyQuizId)
         .eq('student_id', rosterId)
-        .single();
+        .maybeSingle();
 
     if (existing) return NextResponse.json({ error: 'Already submitted' }, { status: 400 });
 
@@ -178,13 +139,8 @@ export async function POST(request: Request) {
 
     // 6. Reward if correct
     if (isCorrect) {
-        const reward = dq.quizzes.reward || 0;
+        const reward = quiz.reward || 0;
         if (reward > 0) {
-            // Update roster balance
-            // We use RPC or direct update? 
-            // My finance API uses direct update + transaction.
-
-            // 6.1 Transaction
             await supabase.from('transactions').insert({
                 student_id: rosterId,
                 amount: reward,
@@ -192,8 +148,6 @@ export async function POST(request: Request) {
                 description: '퀴즈 정답 보상'
             });
 
-            // 6.2 Balance Update
-            // Fetch current first
             const { data: r } = await supabase.from('student_roster').select('balance').eq('id', rosterId).single();
             if (r) {
                 await supabase.from('student_roster').update({ balance: (r.balance || 0) + reward }).eq('id', rosterId);
@@ -204,7 +158,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
         success: true,
         isCorrect,
-        correctAnswer: correctAnswer,
-        reward: isCorrect ? dq.quizzes.reward : 0
+        correctAnswer,
+        reward: isCorrect ? quiz.reward : 0
     });
 }
