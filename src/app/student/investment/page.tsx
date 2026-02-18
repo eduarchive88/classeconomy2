@@ -7,6 +7,10 @@ import Link from 'next/link';
 const STOCKS = [
     { symbol: 'AAPL', name: '애플 (Apple)' },
     { symbol: 'TSLA', name: '테슬라 (Tesla)' },
+    { symbol: '005930.KS', name: '삼성전자' },
+    { symbol: '000660.KS', name: 'SK하이닉스' },
+    { symbol: '005380.KS', name: '현대차' },
+    { symbol: '035420.KS', name: 'NAVER' },
     { symbol: 'BTC-USD', name: '비트코인 (Bitcoin)' },
     { symbol: 'ETH-USD', name: '이더리움 (Ethereum)' }
 ];
@@ -114,7 +118,7 @@ export default function InvestmentPage() {
         <div className="container mx-auto p-4 max-w-4xl pb-24">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                    <Link href="/student/dashboard" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                    <Link href="/student" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
                         <ArrowLeft className="w-6 h-6" />
                     </Link>
                     <h1 className="text-2xl font-bold">투자 시장</h1>
@@ -177,7 +181,7 @@ export default function InvestmentPage() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
                 <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <Newspaper className="w-6 h-6 text-indigo-500" />
-                    오늘의 경제 뉴스 (AI 요약)
+                    오늘의 경제 뉴스
                 </h2>
 
                 {newsLoading ? (

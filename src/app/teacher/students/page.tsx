@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
-import { Upload, UserPlus, Save, Trash2, ArrowLeft } from 'lucide-react';
+import { Upload, UserPlus, Save, Trash2, ArrowLeft, History } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -13,6 +13,8 @@ export default function StudentManagement() {
     const [loading, setLoading] = useState(false);
     const [classInfo, setClassInfo] = useState({ grade: '', class: '', sessionCode: '' });
     const [newStudent, setNewStudent] = useState({ grade: '', class: '', number: '', name: '', allowance: 30000, password: '1234' });
+    const [logModalOpen, setLogModalOpen] = useState(false);
+    const [selectedStudentLogs, setSelectedStudentLogs] = useState<{ id: string, name: string } | null>(null);
     const supabase = createClient();
 
     // 비밀번호 변경 핸들러
@@ -292,7 +294,17 @@ export default function StudentManagement() {
                                             </button>
                                         </td>
                                         <td className="p-3">{s.allowance ? s.allowance.toLocaleString() : 0} 원</td>
-                                        <td className="p-3">
+                                        <td className="p-3 flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedStudentLogs({ id: s.id!, name: s.name });
+                                                    setLogModalOpen(true);
+                                                }}
+                                                className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                                                title="활동 기록 보기"
+                                            >
+                                                <History className="w-4 h-4" />
+                                            </button>
                                             {uploadQueue.length === 0 && (
                                                 <button
                                                     onClick={async () => {
@@ -304,6 +316,7 @@ export default function StudentManagement() {
                                                         fetchStudents();
                                                     }}
                                                     className="p-1 text-slate-300 hover:text-red-600 transition-colors"
+                                                    title="학생 삭제"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -313,7 +326,7 @@ export default function StudentManagement() {
                                 ))}
                                 {students.length === 0 && uploadQueue.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                                        <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-500">
                                             등록된 학생이 없습니다. 왼쪽에서 엑셀 파일을 업로드해주세요.
                                         </td>
                                     </tr>
@@ -321,6 +334,91 @@ export default function StudentManagement() {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            {/* Log Modal */}
+            {logModalOpen && selectedStudentLogs && (
+                <StudentLogModal
+                    studentId={selectedStudentLogs.id}
+                    studentName={selectedStudentLogs.name}
+                    onClose={() => setLogModalOpen(false)}
+                />
+            )}
+        </div>
+    );
+}
+
+function StudentLogModal({ studentId, studentName, onClose }: { studentId: string, studentName: string, onClose: () => void }) {
+    const [logs, setLogs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const supabase = createClient();
+
+    useEffect(() => {
+        const fetchLogs = async () => {
+            setLoading(true);
+            const { data } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('student_id', studentId)
+                .order('created_at', { ascending: false })
+                .limit(50);
+            setLogs(data || []);
+            setLoading(false);
+        };
+        fetchLogs();
+    }, [studentId]);
+
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+            case 'allowance': return '용돈';
+            case 'special_allowance': return '특별 용돈';
+            case 'fine': return '벌금';
+            case 'quiz_reward': return '퀴즈 상금';
+            case 'stock_profit': return '투자 수익';
+            case 'stock_loss': return '투자 손실';
+            case 'real_estate_income': return '임대 수익';
+            case 'real_estate_purchase': return '부동산 구매';
+            case 'market_purchase': return '상점 구매';
+            case 'tax': return '세금';
+            default: return type;
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                    <h3 className="font-bold text-lg dark:text-white">{studentName} 학생 활동 기록</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                        ✖
+                    </button>
+                </div>
+                <div className="p-4 overflow-y-auto flex-1">
+                    {loading ? (
+                        <div className="text-center py-8">로딩 중...</div>
+                    ) : logs.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">기록이 없습니다.</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {logs.map((log) => (
+                                <div key={log.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                    <div>
+                                        <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{log.description}</div>
+                                        <div className="text-xs text-slate-500 mt-1">
+                                            <span className="bg-white dark:bg-slate-600 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-500 mr-2">
+                                                {getTypeLabel(log.type)}
+                                            </span>
+                                            {new Date(log.created_at).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div className={`font-bold ${log.amount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
+                                        {log.amount > 0 ? '+' : ''}{log.amount.toLocaleString()}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

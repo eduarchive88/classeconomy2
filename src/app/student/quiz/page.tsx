@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Lightbulb, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Lightbulb, CheckCircle, XCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function StudentQuiz() {
     const [quizzes, setQuizzes] = useState<any[]>([]);
@@ -79,11 +80,16 @@ export default function StudentQuiz() {
 
     return (
         <div className="p-4 md:p-8 max-w-3xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <Lightbulb className="w-8 h-8 text-yellow-500" />
-                오늘의 퀴즈
-                <span className="text-sm font-normal text-slate-500 ml-2">매일 아침 8시, 2문제가 도착합니다!</span>
-            </h1>
+            <div className="flex items-center gap-4 mb-6">
+                <Link href="/student" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                    <ArrowLeft className="w-6 h-6" />
+                </Link>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Lightbulb className="w-8 h-8 text-yellow-500" />
+                    오늘의 퀴즈
+                    <span className="text-sm font-normal text-slate-500 ml-2">매일 아침 8시, 2문제가 도착합니다!</span>
+                </h1>
+            </div>
 
             {quizzes.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">

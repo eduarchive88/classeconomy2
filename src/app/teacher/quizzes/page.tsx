@@ -348,10 +348,31 @@ export default function QuizManagement() {
 
                         <button
                             onClick={() => setShowManualModal(true)}
-                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2 mb-6"
+                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2 mb-4"
                         >
                             <Plus className="w-4 h-4" />
                             퀴즈 직접 추가하기
+                        </button>
+
+                        <button
+                            onClick={async () => {
+                                if (!confirm('오늘의 퀴즈를 수동으로 배포하시겠습니까?\n(이미 배포된 반은 제외됩니다.)')) return;
+                                try {
+                                    const res = await fetch('/api/cron/daily-quiz');
+                                    const data = await res.json();
+                                    if (data.success) {
+                                        alert('퀴즈 배포가 완료되었습니다.');
+                                    } else {
+                                        alert('배포 실패: ' + JSON.stringify(data));
+                                    }
+                                } catch (e: any) {
+                                    alert('오류: ' + e.message);
+                                }
+                            }}
+                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2 bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            오늘의 퀴즈 즉시 배포 (수동)
                         </button>
 
                         {/* Tabs or Sections */}

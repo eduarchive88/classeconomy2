@@ -26,7 +26,7 @@ export async function GET() {
         const summarizedNews = await Promise.all(topItems.map(async (item) => {
             try {
                 // Use Gemini to summarize
-                const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+                const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
                 const prompt = `다음 뉴스 기사 제목과 내용을 초등학생도 이해하기 쉽게 2문장으로 요약해줘. 이모지 하나를 앞에 붙여줘.\n\n제목: ${item.title}\n내용: ${item.contentSnippet || item.content || ''}`;
 
                 const result = await model.generateContent(prompt);

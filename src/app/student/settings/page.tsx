@@ -67,7 +67,7 @@ export default function StudentSettings() {
     return (
         <div className="container mx-auto p-4 max-w-2xl">
             <div className="flex items-center gap-4 mb-6">
-                <Link href="/student/dashboard" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                <Link href="/student" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
                     <ArrowLeft className="w-6 h-6" />
                 </Link>
                 <h1 className="text-2xl font-bold">환경 설정</h1>

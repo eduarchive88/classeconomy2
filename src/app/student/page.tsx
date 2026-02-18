@@ -83,13 +83,20 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="md:col-span-2 card bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none p-8 flex justify-between items-center shadow-lg rounded-2xl">
-                        <div>
-                            <p className="text-blue-100 text-sm font-medium mb-1">나의 현재 잔액</p>
-                            <h2 className="text-4xl font-bold">{balance.toLocaleString()} 원</h2>
+                    <div className="md:col-span-2 card bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none p-8 flex flex-col justify-between shadow-lg rounded-2xl relative overflow-hidden">
+                        <div className="relative z-10">
+                            <h2 className="text-2xl font-bold mb-2">
+                                {student?.name || '학생'}님 환영해요! 👋
+                            </h2>
+                            <p className="text-blue-100 text-sm font-medium mb-4">오늘도 현명한 경제 생활을 해보세요.</p>
+
+                            <div className="mt-4">
+                                <p className="text-blue-200 text-xs font-medium mb-1">나의 현재 잔액</p>
+                                <h2 className="text-4xl font-bold">{balance.toLocaleString()} 원</h2>
+                            </div>
                         </div>
-                        <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md">
-                            <Wallet className="w-10 h-10" />
+                        <div className="absolute right-[-20px] bottom-[-20px] text-white/10 rotate-12">
+                            <Wallet className="w-40 h-40" />
                         </div>
                     </div>
                 </div>
@@ -145,10 +152,21 @@ export default function StudentDashboard() {
                             <MapPin className="w-6 h-6" />
                         </div>
                         <div className="text-left flex-1">
-                            <h4 className="font-bold text-slate-900 dark:text-white">교실 부동산 시장</h4>
+                            <h4 className="font-bold text-slate-900 dark:text-white">교실 부동산</h4>
                             <p className="text-sm text-slate-500 dark:text-slate-400">자리 거래하기</p>
                         </div>
                         <ArrowRight className="w-5 h-5 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-rose-500" />
+                    </Link>
+
+                    <Link href="/student/log" className="p-6 rounded-2xl bg-white dark:bg-slate-800 border-2 border-transparent hover:border-slate-500 transition-all flex items-center gap-4 group shadow-sm hover:shadow-md">
+                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 group-hover:bg-slate-600 group-hover:text-white transition-colors">
+                            <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div className="text-left flex-1">
+                            <h4 className="font-bold text-slate-900 dark:text-white">활동 기록</h4>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">내 거래 내역 보기</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-slate-500" />
                     </Link>
                 </div>
             </div>

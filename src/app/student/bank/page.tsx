@@ -154,7 +154,7 @@ export default function StudentBank() {
     return (
         <div className="container mx-auto p-4 max-w-4xl pb-24">
             <div className="flex items-center gap-4 mb-6">
-                <Link href="/student/dashboard" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                <Link href="/student" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
                     <ArrowLeft className="w-6 h-6" />
                 </Link>
                 <h1 className="text-2xl font-bold">은행</h1>
@@ -168,7 +168,7 @@ export default function StudentBank() {
                         <span className="font-medium opacity-90">사용 가능 잔액</span>
                     </div>
                     <div className="text-3xl font-bold">
-                        {student.balance.toLocaleString()} 미소
+                        {student.balance.toLocaleString()} 원
                     </div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
@@ -177,7 +177,7 @@ export default function StudentBank() {
                         <span className="font-medium">총 저축액 (이자 제외)</span>
                     </div>
                     <div className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                        {totalSavings.toLocaleString()} 미소
+                        {totalSavings.toLocaleString()} 원
                     </div>
                 </div>
             </div>
@@ -241,7 +241,13 @@ export default function StudentBank() {
                                                             tx.type === 'deposit' ? '저축 가입' :
                                                                 tx.type === 'withdraw' ? '저축 만기 출금' :
                                                                     tx.type === 'allowance' ? '용돈' :
-                                                                        tx.type === 'fine' ? '벌금' : tx.type}
+                                                                        tx.type === 'special_allowance' ? '특별 용돈' :
+                                                                            tx.type === 'fine' ? '벌금' :
+                                                                                tx.type === 'quiz_reward' ? '퀴즈 상금' :
+                                                                                    tx.type === 'stock_profit' ? '투자 수익' :
+                                                                                        tx.type === 'stock_loss' ? '투자 손실' :
+                                                                                            tx.type === 'real_estate_income' ? '임대 수익' :
+                                                                                                tx.type === 'tax' ? '세금' : tx.type}
                                                 </div>
                                                 <div className="text-sm text-slate-500 dark:text-slate-400">
                                                     {new Date(tx.created_at).toLocaleDateString()} {tx.description && `• ${tx.description}`}
@@ -249,7 +255,7 @@ export default function StudentBank() {
                                             </div>
                                         </div>
                                         <div className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()}
+                                            예상 금액: {Math.floor(Number(quantity) * selectedStock.price).toLocaleString()} 원
                                         </div>
                                     </div>
                                 ))}
@@ -357,7 +363,7 @@ export default function StudentBank() {
                                                 <div key={acc.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <div>
-                                                            <div className="font-bold">{acc.amount.toLocaleString()} 미소</div>
+                                                            <div className="font-bold">{acc.amount.toLocaleString()} 원</div>
                                                             <div className="text-xs text-slate-500">
                                                                 {new Date(acc.created_at).toLocaleDateString()} 가입
                                                             </div>

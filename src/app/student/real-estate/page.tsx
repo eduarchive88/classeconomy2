@@ -48,66 +48,79 @@ export default function StudentRealEstate() {
 
     const handlePurchase = async (seat: any) => {
         if (!roster) return;
-        if (seat.student_id) return; // Already occupied
+
+        // Prevent buying own seat
+        if (seat.student_id === roster.id) {
+            alert('이미 본인의 자리입니다.');
+            return;
+        }
 
         if (roster.balance < seat.price) {
             alert('잔액이 부족합니다.');
             return;
         }
 
-        if (!confirm(`${seat.price.toLocaleString()}원에 이 자리를 구매하시겠습니까?`)) return;
+        const isOccupied = !!seat.student_id;
+        const confirmMsg = isOccupied
+            ? `${seat.price.toLocaleString()}원에 이 자리를 인수하시겠습니까?\n(원주인에게 85% 지급, 15%는 세금)`
+            : `${seat.price.toLocaleString()}원에 이 자리를 구매하시겠습니까?`;
+
+        if (!confirm(confirmMsg)) return;
 
         setSubmitting(true);
         try {
-            // 1. Check if class has auto-purchase enabled
-            const { data: classData } = await supabase.from('classes').select('is_auto_real_estate').eq('id', roster.class_id).single();
+            // 1. Deduct from buyer
+            const { error: buyerError } = await supabase.from('student_roster')
+                .update({ balance: roster.balance - seat.price })
+                .eq('id', roster.id);
+            if (buyerError) throw buyerError;
 
-            if (classData?.is_auto_real_estate) {
-                // Direct purchase (Immediate)
-                // In a real app, use an RPC or transaction
+            // 2. Pay seller if occupied
+            if (isOccupied) {
+                // Fetch seller's current balance to update correctly
+                const { data: seller } = await supabase.from('student_roster').select('*').eq('id', seat.student_id).single();
 
-                // Update balance
-                const { error: balError } = await supabase.from('student_roster')
-                    .update({ balance: roster.balance - seat.price })
-                    .eq('id', roster.id);
-                if (balError) throw balError;
+                if (seller) {
+                    const payout = Math.floor(seat.price * 0.85);
 
-                // Calculate new price (5% increase, minimum 5% higher than current price)
-                const newPrice = Math.ceil(seat.price * 1.05);
+                    await supabase.from('student_roster')
+                        .update({ balance: seller.balance + payout })
+                        .eq('id', seat.student_id);
 
-                // Update seat with new owner and increased price
-                const { error: seatError } = await supabase.from('seats')
-                    .update({
-                        student_id: roster.id,
-                        price: newPrice
-                    })
-                    .eq('id', seat.id);
-                if (seatError) throw seatError;
-
-                // Record transaction
-                await supabase.from('transactions').insert({
-                    student_id: roster.id,
-                    amount: seat.price,
-                    type: 'real_estate_purchase',
-                    description: `자리 구매 (${seat.row_idx + 1}-${seat.col_idx + 1})`
-                });
-
-                alert('구매가 완료되었습니다!');
-            } else {
-                // Trade Request (Requires Approval)
-                const { error: tradeError } = await supabase.from('seat_trades').insert({
-                    class_id: roster.class_id,
-                    seat_id: seat.id,
-                    buyer_id: roster.id,
-                    seller_id: null, // Bank purchase
-                    price: seat.price,
-                    status: 'pending'
-                });
-                if (tradeError) throw tradeError;
-                alert('구매 요청을 보냈습니다. 선생님의 승인을 기다려주세요.');
+                    // Log for seller
+                    await supabase.from('transactions').insert({
+                        student_id: seat.student_id,
+                        amount: payout,
+                        type: 'real_estate_income',
+                        description: `자리 판매 수익 (${seat.row_idx + 1}-${seat.col_idx + 1})`
+                    });
+                }
             }
+
+            // 3. Update Seat (New Owner, Price Increase)
+            // Increase price by 10% + 100 won padding
+            const nextPrice = Math.floor(seat.price * 1.1) + 100;
+
+            const { error: seatError } = await supabase.from('seats')
+                .update({
+                    student_id: roster.id,
+                    price: nextPrice
+                })
+                .eq('id', seat.id);
+            if (seatError) throw seatError;
+
+            // 4. Log for buyer
+            await supabase.from('transactions').insert({
+                student_id: roster.id,
+                amount: -seat.price,
+                type: 'real_estate_purchase',
+                description: `자리 구매 (${seat.row_idx + 1}-${seat.col_idx + 1})`
+            });
+
+            alert('구매가 완료되었습니다!');
             fetchData();
         } catch (e: any) {
+            console.error(e);
             alert('오류 발생: ' + e.message);
         } finally {
             setSubmitting(false);
@@ -191,7 +204,7 @@ export default function StudentRealEstate() {
                                                 'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
                                         }
                                     `}
-                                    onClick={() => !isOccupied && !isMine && handlePurchase(seat)}
+                                    onClick={() => !isMine && handlePurchase(seat)}
                                 >
                                     <div className={`text-[10px] absolute top-1 left-2 font-bold ${isMine ? 'text-blue-100' : 'text-slate-300'}`}>
                                         {r + 1}-{c + 1}
