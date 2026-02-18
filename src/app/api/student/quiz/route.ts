@@ -88,7 +88,17 @@ export async function GET(request: Request) {
         };
     });
 
-    return NextResponse.json({ quizzes: results });
+    return NextResponse.json({
+        quizzes: results,
+        debug: {
+            resolvedClassId: classId,
+            resolvedRosterId: rosterId,
+            queryDate: today,
+            foundQuizzesCount: dailyQuizzes.length,
+            userEmail: user.email,
+            serverTime: new Date().toISOString()
+        }
+    });
 }
 
 export async function POST(request: Request) {
