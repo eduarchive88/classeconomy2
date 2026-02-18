@@ -85,7 +85,19 @@ export async function GET(request: Request) {
         .order('date', { ascending: false });
 
     if (dqError || !dailyQuizzes) {
-        return NextResponse.json({ quizzes: [] });
+        console.error('GET /api/student/quiz: Database error.', dqError);
+        return NextResponse.json({
+            quizzes: [],
+            debug: {
+                resolvedClassId: classId,
+                resolvedRosterId: rosterId,
+                queryDate: today,
+                queryYesterday: yesterday,
+                error: dqError?.message || 'No data returned',
+                authMethod,
+                serverTime: new Date().toISOString()
+            }
+        });
     }
 
     // 4. Fetch Submissions for this Student
@@ -127,8 +139,10 @@ export async function GET(request: Request) {
             resolvedClassId: classId,
             resolvedRosterId: rosterId,
             queryDate: today,
+            queryYesterday: yesterday,
             foundQuizzesCount: dailyQuizzes.length,
-            userEmail: user.email,
+            userEmail: user?.email,
+            authMethod,
             serverTime: new Date().toISOString()
         }
     });
