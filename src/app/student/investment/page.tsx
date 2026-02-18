@@ -233,27 +233,26 @@ export default function InvestmentPage() {
                         <form onSubmit={handleTrade}>
                             <div className="mb-6">
                                 <label className="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
-                                    수량 (주/코인)
+                                    수량 (주)
                                 </label>
                                 <div className="relative">
                                     <input
                                         type="number"
-                                        step="0.0001"
+                                        min="1"
+                                        step="1"
                                         value={quantity}
                                         onChange={(e) => setQuantity(e.target.value)}
-                                        className="w-full p-4 pl-12 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none text-lg font-bold transition-all"
-                                        placeholder="0.0"
+                                        className="w-full p-4 pl-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none text-lg font-bold transition-all text-right pr-12"
+                                        placeholder="0"
                                         required
                                     />
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                        <DollarSign className="w-5 h-5" />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                                        주
                                     </div>
                                 </div>
-                                {quantity && selectedStock.price && (
-                                    <div className="mt-2 text-right text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                                        예상 금액: {Math.floor(Number(quantity) * selectedStock.price).toLocaleString()} 미소
-                                    </div>
-                                )}
+                                <div className="mt-2 text-right text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                                    예상 금액: {(Number(quantity) * selectedStock.price).toLocaleString()} 원
+                                </div>
                             </div>
 
                             <div className="flex gap-3">

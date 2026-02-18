@@ -144,7 +144,13 @@ export default function StudentBank() {
         }
     };
 
-    if (loading || !data) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted || loading || !data) {
         return <div className="p-8 text-center">Loading...</div>;
     }
 

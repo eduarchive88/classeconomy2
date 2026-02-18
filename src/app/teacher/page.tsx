@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { Users, Coins, BookOpen, Settings, ChevronRight, LogOut, Plus, MapPin, ShoppingBag } from 'lucide-react';
+import { Users, Coins, BookOpen, Settings, ChevronRight, LogOut, Plus, MapPin, ShoppingBag, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeacherDashboard() {
@@ -184,6 +184,17 @@ export default function TeacherDashboard() {
                             </div>
                             <h2 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">시스템 설정</h2>
                             <p className="text-slate-500 dark:text-slate-400 text-sm">API 키 및 전체 학급 정보를 관리합니다.</p>
+                        </Link>
+
+                        <Link href="/teacher/logs" className="card group hover:border-gray-500 transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 rounded-lg bg-gray-100 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400 group-hover:bg-gray-600 group-hover:text-white transition-colors">
+                                    <FileSpreadsheet className="w-6 h-6" />
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-gray-500" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">활동 로그</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">학생들의 모든 경제 활동 기록을 엑셀로 조회합니다.</p>
                         </Link>
                     </div>
                 )}

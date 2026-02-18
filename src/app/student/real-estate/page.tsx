@@ -241,7 +241,7 @@ export default function StudentRealEstate() {
                                                     )}
                                                     {isOccupied && (
                                                         <div className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
-                                                            인수기능
+                                                            인수 가능
                                                         </div>
                                                     )}
                                                 </div>
@@ -261,9 +261,11 @@ export default function StudentRealEstate() {
                 <p className="font-bold mb-2">💡 자리 구매 안내</p>
                 <ul className="list-disc ml-5 space-y-1">
                     <li>원하는 빈 자리를 클릭하여 구매할 수 있습니다.</li>
-                    <li>자리 구매 시 현재 잔액에서 가격만큼 차감됩니다.</li>
-                    <li>선생님 설정에 따라 즉시 구매되거나, 승인이 필요할 수 있습니다.</li>
-                    <li>한 번 구매한 자리는 다른 사람이 구매할 수 없습니다.</li>
+                    <li>
+                        <span className="font-bold text-indigo-600">적대적 인수:</span> 이미 다른 친구가 구매한 자리도 더 비싼 가격에 인수할 수 있습니다.
+                    </li>
+                    <li>인수 시 원래 주인에게 구매 금액의 85%가 지급되며, 15%는 세금으로 차감됩니다.</li>
+                    <li>자리를 뺏긴 친구는 자동으로 자리를 잃게 되며, 자리 가격은 10% 상승하여 다음 주인을 기다립니다.</li>
                 </ul>
             </div>
         </div>
