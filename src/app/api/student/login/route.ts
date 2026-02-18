@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 
@@ -69,9 +69,53 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 401 });
     }
 
-    // 4. 세션 토큰 생성 (간단한 방식)
-    const sessionToken = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24시간 후
+    // 4. Supabase Auth 세션 생성 (다른 API와의 호환성을 위해)
+    const fakeEmail = `${sessionCode}_${studentId}@student.local`.toLowerCase();
+    const authPassword = `pwd_${sessionCode}_${studentId}`; // 가상 계정용 고정 비밀번호
+
+    // 먼저 로그인 시도
+    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: fakeEmail,
+        password: authPassword,
+    });
+
+    if (authError) {
+        // 로그인 실패 시(계정 없음) 회원가입 시도
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: fakeEmail,
+            password: authPassword,
+            options: {
+                data: {
+                    role: 'student',
+                    roster_id: student.id,
+                    class_id: classData.id,
+                    name: student.name,
+                    student_id: studentId
+                }
+            }
+        });
+
+        if (!signUpError) {
+            // 회원가입 성공 시 다시 로그인하여 쿠키 생성
+            const { data: retryData } = await supabase.auth.signInWithPassword({
+                email: fakeEmail,
+                password: authPassword,
+            });
+            authData = retryData;
+        }
+    } else {
+        // 이미 계정이 있는 경우, 메타데이터 업데이트 (최신 정보 유지)
+        const adminSupabase = createAdminClient();
+        await adminSupabase.auth.admin.updateUserById(authData.user!.id, {
+            user_metadata: {
+                role: 'student',
+                roster_id: student.id,
+                class_id: classData.id,
+                name: student.name,
+                student_id: studentId
+            }
+        });
+    }
 
     // 5. 세션 정보를 로컬스토리지에 저장하도록 클라이언트에 반환
     return NextResponse.json({
@@ -86,8 +130,6 @@ export async function POST(request: Request) {
             class_id: classData.id,
             class_name: classData.name,
         },
-        sessionToken,
-        expiresAt: expiresAt.toISOString(),
         message: '로그인 성공'
     });
 }
