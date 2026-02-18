@@ -15,17 +15,17 @@ export async function GET(request: Request) {
     }
 
     const results = [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
     for (const cls of classes) {
-        // 2. Check existing daily quizzes
+        // 2. 현재 해당 학급에 오늘 배포된 퀴즈 확인
         const { data: existingDaily } = await supabase
             .from('daily_quizzes')
             .select('quiz_id')
             .eq('class_id', cls.id)
             .eq('date', today);
 
-        const existingQuizIds = existingDaily ? existingDaily.map(d => d.quiz_id) : [];
+        const existingQuizIds = existingDaily ? existingDaily.map((d: any) => d.quiz_id) : [];
         const count = existingQuizIds.length;
 
         if (count >= 2) {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
         const needed = 2 - count;
 
-        // 3. Fetch candidate quizzes
+        // 3. 후보 퀴즈 가져오기 (배포 횟수 계산 포함)
         const { data: allQuizzes } = await supabase
             .from('quizzes')
             .select('id')
@@ -46,21 +46,34 @@ export async function GET(request: Request) {
             continue;
         }
 
-        // Filter out existing
-        const candidates = allQuizzes.filter(q => !existingQuizIds.includes(q.id));
+        // 전체 배포 횟수 정보 가져오기
+        const { data: allDistributions } = await supabase
+            .from('daily_quizzes')
+            .select('quiz_id');
 
-        if (candidates.length === 0) {
-            results.push({ class_id: cls.id, status: 'no_more_unique_quizzes' });
-            continue;
-        }
+        const distCounts: { [key: string]: number } = {};
+        allDistributions?.forEach((d: any) => {
+            distCounts[d.quiz_id] = (distCounts[d.quiz_id] || 0) + 1;
+        });
 
-        // Pick random
-        const shuffled = candidates.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, needed);
+        // 오늘 이미 배포된 퀴즈 제외 및 배포 횟수 기반 정렬
+        const candidates = allQuizzes
+            .filter((q: any) => !existingQuizIds.includes(q.id))
+            .map((q: any) => ({
+                id: q.id,
+                count: distCounts[q.id] || 0
+            }))
+            .sort((a: any, b: any) => {
+                // 배포 횟수가 적은 순, 횟수가 같으면 랜덤
+                if (a.count !== b.count) return a.count - b.count;
+                return 0.5 - Math.random();
+            });
 
-        // 4. Insert
+        const selected = candidates.slice(0, needed);
+
+        // 4. 배포 처리
         if (selected.length > 0) {
-            const inserts = selected.map(q => ({
+            const inserts = selected.map((q: any) => ({
                 class_id: cls.id,
                 quiz_id: q.id,
                 date: today
