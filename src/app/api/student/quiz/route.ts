@@ -40,7 +40,12 @@ export async function GET(request: Request) {
         }, { status: 200 }); // Return 200 to ensure client parses JSON and shows debug info
     }
 
-    // 3. Fetch Daily Quizzes for this Class & Date
+    // 3. Fetch Daily Quizzes for this Class
+    // 날짜 매칭 실패를 대비해 오늘뿐만 아니라 어제 날짜도 포함하거나, 날짜 문자열 처리를 더 유연하게 합니다.
+    const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+
+    console.log(`Fetching quizzes for class ${classId} on dates: ${today}, ${yesterday}`);
+
     const { data: dailyQuizzes, error: dqError } = await supabase
         .from('daily_quizzes')
         .select(`
@@ -57,7 +62,8 @@ export async function GET(request: Request) {
             )
         `)
         .eq('class_id', classId)
-        .eq('date', today);
+        .in('date', [today, yesterday]) // 오늘과 어제 퀴즈를 모두 조회 (미해결 퀴즈 대응)
+        .order('date', { ascending: false });
 
     if (dqError || !dailyQuizzes) {
         return NextResponse.json({ quizzes: [] });
