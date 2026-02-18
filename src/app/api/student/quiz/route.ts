@@ -18,50 +18,35 @@ export async function GET(request: Request) {
     let classId = user.user_metadata?.class_id;
 
     if (!rosterId || !classId) {
-        // Fallback: Find by metadata matching
-        // Note: This relies on matching names/numbers as stored in metadata during signup
-        const { data: roster, error: rosterError } = await supabase
-            .from('student_roster')
-            .select('id, class_id')
-            .match({
-                name: user.user_metadata.name,
-                number: user.user_metadata.number,
-                grade: user.user_metadata.grade,
-                // class_info in metadata is class NAME (e.g. "1반"). 
-                // But in roster it is often "1". This match might be flaky if formats differ.
-                // However, let's try matching without class_info if it fails, or rely on grade/number/name uniqueness.
-                grade: user.user_metadata.grade
-            })
-            .eq('teacher_id', (await supabase.from('classes').select('teacher_id').eq('id', classId || '00000000-0000-0000-0000-000000000000').single()).data?.teacher_id) // Circular dependency if we don't have classId...
+        // Fallback: Resolve using email and metadata name
+        const email = user.email || '';
+        const sessionCode = email.split('@')[0].split('_')[0]; // Handle session_student@ or similar
+
+        // 1. Try to find class by session_code
+        const { data: cls } = await supabase
+            .from('classes')
+            .select('id')
+            .eq('session_code', sessionCode)
             .maybeSingle();
 
-        // Better fallback: If we can't find by strict match, maybe utilize session code from email?
-        // But for now, let's assume metadata works or the user is new.
-        // If really stuck, return error.
-        if (roster) {
-            rosterId = roster.id;
-            classId = roster.class_id;
-        } else {
-            // Second fallback: Use email parsing if available
-            const email = user.email || '';
-            // "session_student@..."
-            const sessionCode = email.split('_')[0];
-            const { data: cls } = await supabase.from('classes').select('id').eq('session_code', sessionCode).single();
-            if (cls) {
-                classId = cls.id;
-                // Now find roster by simple number/name match in this class
-                const { data: r } = await supabase.from('student_roster')
-                    .select('id')
-                    .eq('class_id', cls.id)
-                    .eq('name', user.user_metadata.name)
-                    .maybeSingle();
-                if (r) rosterId = r.id;
-            }
+        if (cls) {
+            classId = cls.id;
+            // 2. Find roster by name and class_id
+            const { data: roster } = await supabase
+                .from('student_roster')
+                .select('id')
+                .eq('class_id', classId)
+                .eq('name', user.user_metadata.name)
+                .maybeSingle();
+
+            if (roster) rosterId = roster.id;
         }
     }
 
     if (!rosterId || !classId) {
-        return NextResponse.json({ error: 'Student information not found' }, { status: 404 });
+        // Log for debugging if needed, but return structured error
+        console.error('Failed to resolve student info:', { email: user.email, metadata: user.user_metadata });
+        return NextResponse.json({ error: '학생 정보를 찾을 수 없습니다. (학급 코드 또는 이름 불일치)' }, { status: 404 });
     }
 
     // 3. Fetch Daily Quizzes for this Class & Date
@@ -132,21 +117,25 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // 2. Resolve Roster ID (Reuse logic or assume passed? Better to resolve securely)
+    // 2. Resolve Roster ID
     let rosterId = user.user_metadata?.roster_id;
-    // ... same fallback logic as GET ...
-    // For brevity, using simplified fallback here. 
     if (!rosterId) {
         const email = user.email || '';
-        const sessionCode = email.split('_')[0];
-        const { data: cls } = await supabase.from('classes').select('id').eq('session_code', sessionCode).single();
+        const sessionCode = email.split('@')[0].split('_')[0];
+        const { data: cls } = await supabase
+            .from('classes')
+            .select('id')
+            .eq('session_code', sessionCode)
+            .maybeSingle();
+
         if (cls) {
-            const { data: r } = await supabase.from('student_roster')
+            const { data: roster } = await supabase
+                .from('student_roster')
                 .select('id')
                 .eq('class_id', cls.id)
                 .eq('name', user.user_metadata.name)
                 .maybeSingle();
-            if (r) rosterId = r.id;
+            if (roster) rosterId = roster.id;
         }
     }
 

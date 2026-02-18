@@ -268,6 +268,36 @@ export default function QuizManagement() {
         reader.readAsBinaryString(file);
     };
 
+    const downloadSampleFile = () => {
+        const sampleData = [
+            {
+                '문제': '인플레이션이 발생했을 때 나타나는 현상으로 옳은 것은?',
+                '보기1': '물가가 하락한다',
+                '보기2': '화폐 가치가 하락한다',
+                '보기3': '수출이 유리해진다',
+                '보기4': '저축의 실질 가치가 상승한다',
+                '정답': 2,
+                '상금': 1000,
+                '해설': '인플레이션은 물가가 지속적으로 상승하여 화폐 가치가 떨어지는 현상입니다.'
+            },
+            {
+                '문제': '수요와 공급의 법칙에 대한 설명으로 옳은 것은?',
+                '보기1': '가격이 오르면 수요량은 늘어난다',
+                '보기2': '가격이 내리면 공급량은 늘어난다',
+                '보기3': '수요가 공급보다 많으면 가격이 오른다',
+                '보기4': '공급이 수요보다 많으면 가격이 오른다',
+                '정답': 3,
+                '상금': 500,
+                '해설': '수요가 공급보다 많으면(초과 수요) 가격이 상승하는 요인이 됩니다.'
+            }
+        ];
+
+        const worksheet = XLSX.utils.json_to_sheet(sampleData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Quiz_Sample");
+        XLSX.writeFile(workbook, "퀴즈_업로드_양식_샘플.xlsx");
+    };
+
     const generateAIQuizzes = async () => {
         if (!topic) return alert('주제를 입력해주세요.');
 
@@ -588,14 +618,23 @@ export default function QuizManagement() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <label className="cursor-pointer bg-slate-50 dark:bg-slate-900/40 p-6 rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 hover:border-blue-400 transition-all group text-center">
-                                        <XLSX_Icon />
-                                        <span className="block font-black text-sm text-slate-600 dark:text-slate-300 mt-3">엑셀 업로드</span>
-                                        <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleFileUpload} />
-                                    </label>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="cursor-pointer bg-slate-50 dark:bg-slate-900/40 p-6 rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 hover:border-blue-400 transition-all group text-center flex-1 flex flex-col justify-center items-center">
+                                            <XLSX_Icon />
+                                            <span className="block font-black text-sm text-slate-600 dark:text-slate-300 mt-3">엑셀 업로드</span>
+                                            <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleFileUpload} />
+                                        </label>
+                                        <button
+                                            onClick={downloadSampleFile}
+                                            className="text-[10px] font-bold text-slate-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1"
+                                        >
+                                            <Upload className="w-3 h-3" />
+                                            샘플 양식 다운로드
+                                        </button>
+                                    </div>
                                     <button
                                         onClick={() => { setShowRegistrationModal(false); setShowManualModal(true); }}
-                                        className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 hover:border-blue-400 transition-all text-center"
+                                        className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-[2rem] border-2 border-slate-100 dark:border-slate-800 hover:border-blue-400 transition-all text-center flex flex-col justify-center items-center"
                                     >
                                         <Plus className="w-8 h-8 text-slate-300 mx-auto" />
                                         <span className="block font-black text-sm text-slate-600 dark:text-slate-300 mt-3">직접 입력</span>
