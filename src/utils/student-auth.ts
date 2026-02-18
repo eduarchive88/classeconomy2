@@ -2,7 +2,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
 export async function getStudentFromAuth(supabase: SupabaseClient, user: any) {
-    if (!user) return { rosterId: null, classId: null };
+    // 0. If teacher, don't try to be a student
+    if (user.user_metadata?.role === 'teacher') {
+        return { rosterId: null, classId: null };
+    }
 
     // 1. Try metadata first (fastest) - Support both snake_case and camelCase for compatibility
     let rosterId = user.user_metadata?.roster_id || user.user_metadata?.rosterId;

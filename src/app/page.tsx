@@ -25,6 +25,26 @@ export default function LoginPage() {
   const [sessionCode, setSessionCode] = useState('')
   const [studentPassword, setStudentPassword] = useState('')
 
+  // 현재 세션 상태 확인
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  useState(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUser(user)
+    }
+    checkUser()
+  })
+
+  const handleSignOut = async () => {
+    setLoading(true)
+    await supabase.auth.signOut()
+    setCurrentUser(null)
+    localStorage.removeItem('student_session')
+    setLoading(false)
+    window.location.reload() // 세션 정리를 위해 새로고침 강제
+  }
+
   const handleTeacherAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -91,13 +111,31 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-slate-900 dark:to-slate-800">
       <div className="w-full max-w-md">
-        <div className="text-center mb-12 animate-slide-in">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-xl mb-6 transform hover:scale-105 transition-transform duration-300">
-            <School className="w-10 h-10 text-white" />
+        <div className="text-center mb-8 animate-slide-in">
+          {currentUser && (
+            <div className="mb-6 p-3 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-blue-200 dark:border-blue-900/50 backdrop-blur-sm shadow-sm inline-flex items-center gap-3">
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">현재 로그인 계정</span>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{currentUser.email} ({currentUser.user_metadata?.role === 'teacher' ? '선생님' : '학생'})</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                disabled={loading}
+                className="ml-2 p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold border border-red-100"
+              >
+                <Lock className="w-3 h-3" />
+                로그아웃
+              </button>
+            </div>
+          )}
+          <div className="flex flex-col items-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-xl mb-6 transform hover:scale-105 transition-transform duration-300">
+              <School className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 mb-3 tracking-tight">
+              ClassEconomy
+            </h1>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 mb-3 tracking-tight">
-            ClassEconomy
-          </h1>
           <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 font-medium">학급 관리 프로그램</p>
         </div>
 
