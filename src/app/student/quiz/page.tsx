@@ -191,18 +191,15 @@ export default function StudentQuiz() {
                     })}
                 </div>
             )}
+
+            {/* Debug Info Section - Only visible if there are issues or empty */}
+            {(quizzes.length === 0 || debugInfo) && (
+                <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs text-slate-500 font-mono">
+                    <p className="font-bold mb-2">Debug Info (개발자 확인용)</p>
+                    <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+                    <p className="mt-2">Quizzes Loaded: {quizzes.length}</p>
+                </div>
+            )}
         </div>
-            
-            {/* Debug Info Section - Only visible if there are issues or empty */ }
-    {
-        (quizzes.length === 0 || debugInfo) && (
-            <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs text-slate-500 font-mono">
-                <p className="font-bold mb-2">Debug Info (개발자 확인용)</p>
-                <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-                <p className="mt-2">Quizzes Loaded: {quizzes.length}</p>
-            </div>
-        )
-    }
-        </div >
     );
 }
