@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         return NextResponse.json({
             error: '학생 정보를 찾을 수 없습니다.',
             debug: { email: user.email, metadata: user.user_metadata, foundClass: !!classId, foundRoster: !!rosterId }
-        }, { status: 404 });
+        }, { status: 200 }); // Return 200 to ensure client parses JSON and shows debug info
     }
 
     // 3. Fetch Daily Quizzes for this Class & Date
