@@ -63,7 +63,11 @@ export async function GET(request: Request) {
     // 사용자 요청: 오늘 날짜 퀴즈만 표시
     console.log(`Fetching quizzes for class ${classId} on date: ${today}`);
 
-    const { data: dailyQuizzes, error: dqError } = await supabase
+    // Use Admin Client to bypass RLS on 'quizzes' table
+    // Sometimes 'anon' user or partial auth cannot read 'quizzes' depending on strict policies.
+    const adminSupabase = createAdminClient();
+
+    const { data: dailyQuizzes, error: dqError } = await adminSupabase
         .from('daily_quizzes')
         .select(`
             id,
