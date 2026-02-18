@@ -4,8 +4,9 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export async function getStudentFromAuth(supabase: SupabaseClient, user: any) {
     if (!user) return { rosterId: null, classId: null };
 
-    let rosterId = user.user_metadata?.roster_id;
-    let classId = user.user_metadata?.class_id;
+    // 1. Try metadata first (fastest) - Support both snake_case and camelCase for compatibility
+    let rosterId = user.user_metadata?.roster_id || user.user_metadata?.rosterId;
+    let classId = user.user_metadata?.class_id || user.user_metadata?.classId;
 
     if (rosterId && classId) return { rosterId, classId };
 
