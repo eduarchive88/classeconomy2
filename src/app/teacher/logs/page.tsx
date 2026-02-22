@@ -96,6 +96,8 @@ export default function TeacherLogs() {
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
             case 'tax': return '세금';
+            case 'transfer_sent': return '송금 보냄';
+            case 'transfer_received': return '송금 받음';
             case 'transfer': return '송금';
             case 'deposit': return '예탁 입금';
             case 'withdrawal': return '예탁 출금';
@@ -219,8 +221,8 @@ export default function TeacherLogs() {
                                                 <span className={`
                                                     inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
                                                     ${log.type === 'fine' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                        (log.type === 'income' || log.type === 'special_allowance' || log.type === 'allowance' || log.type === 'quiz_reward') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                            (log.type === 'expense' || log.type === 'market_purchase' || log.type === 'tax' || log.type === 'withdrawal') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                                        (log.type === 'income' || log.type === 'special_allowance' || log.type === 'allowance' || log.type === 'quiz_reward' || log.type === 'transfer_received') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                            (log.type === 'expense' || log.type === 'market_purchase' || log.type === 'tax' || log.type === 'withdrawal' || log.type === 'transfer_sent') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                                                                 (log.type === 'investment' || log.type === 'stock_buy' || log.type === 'stock_sell') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
                                                                     'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
                                                 `}>

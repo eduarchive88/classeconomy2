@@ -15,26 +15,14 @@ export default function StudentRealEstate() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const response = await fetch('/api/student/real-estate');
+            if (!response.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
 
-            // 1. Get student roster info
-            const classId = user.user_metadata.class_id;
-            const { data: rosterData } = await supabase
-                .from('student_roster')
-                .select('*')
-                .eq('profile_id', user.id)
-                .single();
+            const data = await response.json();
 
-            if (rosterData) setRoster(rosterData);
+            if (data.roster) setRoster(data.roster);
+            if (data.seats) setSeats(data.seats);
 
-            // 2. Get seats for this class
-            const { data: seatsData } = await supabase
-                .from('seats')
-                .select('*, student:student_id(name, number)')
-                .eq('class_id', classId);
-
-            if (seatsData) setSeats(seatsData);
         } catch (e) {
             console.error(e);
         } finally {
@@ -69,62 +57,17 @@ export default function StudentRealEstate() {
 
         setSubmitting(true);
         try {
-            // 1. Deduct from buyer
-            const { error: buyerError } = await supabase.from('student_roster')
-                .update({ balance: roster.balance - seat.price })
-                .eq('id', roster.id);
-            if (buyerError) throw buyerError;
-
-            // 2. Pay seller if occupied
-            if (isOccupied) {
-                // Fetch seller's current balance to update correctly
-                const { data: seller } = await supabase.from('student_roster').select('*').eq('id', seat.student_id).single();
-
-                if (seller) {
-                    const payout = Math.floor(seat.price * 0.85);
-
-                    await supabase.from('student_roster')
-                        .update({ balance: seller.balance + payout })
-                        .eq('id', seat.student_id);
-
-                    // Log for seller
-                    await supabase.from('transactions').insert({
-                        student_id: seat.student_id,
-                        amount: payout,
-                        type: 'real_estate_income',
-                        description: `자리 판매 수익 (${seat.row_idx + 1}-${seat.col_idx + 1})`
-                    });
-
-                    // Log Tax (15% deduction)
-                    const taxAmount = seat.price - payout;
-                    await supabase.from('transactions').insert({
-                        student_id: seat.student_id,
-                        amount: -taxAmount,
-                        type: 'tax',
-                        description: `자리 판매 세금 (15%)`
-                    });
-                }
-            }
-
-            // 3. Update Seat (New Owner, Price Increase)
-            // Increase price by 10% + 100 won padding
-            const nextPrice = Math.floor(seat.price * 1.1) + 100;
-
-            const { error: seatError } = await supabase.from('seats')
-                .update({
-                    student_id: roster.id,
-                    price: nextPrice
-                })
-                .eq('id', seat.id);
-            if (seatError) throw seatError;
-
-            // 4. Log for buyer
-            await supabase.from('transactions').insert({
-                student_id: roster.id,
-                amount: -seat.price,
-                type: 'real_estate_purchase',
-                description: `자리 구매 (${seat.row_idx + 1}-${seat.col_idx + 1})`
+            const response = await fetch('/api/student/real-estate/buy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seatId: seat.id })
             });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || '구매 중 오류가 발생했습니다.');
+            }
 
             alert('구매가 완료되었습니다!');
             fetchData();

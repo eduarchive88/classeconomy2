@@ -143,10 +143,10 @@ export default function RealEstateManagement() {
         try {
             const { data: roster } = await supabase
                 .from('student_roster')
-                .select('currency, allowance')
+                .select('balance, allowance')
                 .eq('class_id', selectedClassId);
 
-            const totalAssets = roster?.reduce((sum, s) => sum + (s.currency || 0), 0) || 0;
+            const totalAssets = roster?.reduce((sum, s) => sum + (s.balance || 0), 0) || 0;
             const studentCount = roster?.length || 1;
 
             const basePrice = Math.floor((totalAssets * 0.6) / studentCount);
