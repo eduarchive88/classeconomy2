@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { ShoppingBag, ArrowLeft, Loader2, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
@@ -9,7 +8,6 @@ export default function StudentShop() {
     const [loading, setLoading] = useState(true);
     const [roster, setRoster] = useState<any>(null);
     const [purchasing, setPurchasing] = useState<string | null>(null);
-    const supabase = createClient();
 
     useEffect(() => {
         fetchShopData();
@@ -17,28 +15,20 @@ export default function StudentShop() {
 
     const fetchShopData = async () => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const sessionStr = localStorage.getItem('student_session');
+            if (!sessionStr) return;
+            const session = JSON.parse(sessionStr);
+            const studentId = session.student?.id;
 
-            // 1. Get Student Info
-            const { data: studentData } = await supabase
-                .from('student_roster')
-                .select('*')
-                .eq('profile_id', user.id)
-                .single();
-
-            if (studentData) {
-                setRoster(studentData);
-
-                // 2. Get Market Items for Class
-                const { data: marketItems } = await supabase
-                    .from('market_items')
-                    .select('*')
-                    .eq('class_id', studentData.class_id)
-                    .gt('stock', 0) // Only show items in stock
-                    .order('price', { ascending: true });
-
-                if (marketItems) setItems(marketItems);
+            if (studentId) {
+                const res = await fetch(`/api/student/shop?studentId=${studentId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setRoster(data.roster);
+                    setItems(data.items || []);
+                } else {
+                    console.error('Failed to fetch shop data');
+                }
             }
         } catch (e) {
             console.error(e);
@@ -57,34 +47,28 @@ export default function StudentShop() {
 
         setPurchasing(item.id);
         try {
-            // 1. Deduct Balance
-            const { error: balanceError } = await supabase
-                .from('student_roster')
-                .update({ balance: roster.balance - item.price })
-                .eq('id', roster.id);
-            if (balanceError) throw balanceError;
+            const sessionStr = localStorage.getItem('student_session');
+            const session = sessionStr ? JSON.parse(sessionStr) : null;
+            const studentId = session?.student?.id;
 
-            // 2. Decrement Stock
-            const { error: stockError } = await supabase
-                .from('market_items')
-                .update({ stock: item.stock - 1 })
-                .eq('id', item.id);
-            if (stockError) throw stockError;
+            if (!studentId) throw new Error('학생 정보를 찾을 수 없습니다.');
 
-            // 3. Log Transaction
-            await supabase.from('transactions').insert({
-                student_id: roster.id,
-                amount: -item.price,
-                type: 'market_purchase',
-                description: `상점 구매: ${item.name}`
+            const res = await fetch('/api/student/shop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentId,
+                    itemId: item.id
+                })
             });
 
-            // 4. (Optional) Add to Inventory? 
-            // Assuming no inventory table for now, just logging it.
-            // If inventory needed, we would insert into 'student_items'.
-
-            alert('구매가 완료되었습니다!');
-            fetchShopData(); // Refresh data
+            const json = await res.json();
+            if (res.ok) {
+                alert('구매가 완료되었습니다!');
+                fetchShopData(); // Refresh data
+            } else {
+                throw new Error(json.error || '구매 실패');
+            }
         } catch (e: any) {
             alert('구매 실패: ' + e.message);
         } finally {

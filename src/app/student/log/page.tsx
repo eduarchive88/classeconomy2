@@ -36,6 +36,10 @@ export default function StudentLog() {
     const getTypeLabel = (type: string) => {
         switch (type) {
             case 'allowance': return '용돈';
+            case 'transfer_sent': return '송금 보냄';
+            case 'transfer_received': return '송금 받음';
+            case 'deposit': return '저축 가입';
+            case 'withdraw': return '저축 출금';
             case 'special_allowance': return '특별 용돈';
             case 'fine': return '벌금';
             case 'quiz_reward': return '퀴즈 상금';
@@ -44,9 +48,26 @@ export default function StudentLog() {
             case 'real_estate_income': return '임대 수익';
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
+            case 'stock_buy': return '주식 매수';
+            case 'stock_sell': return '주식 매도';
             case 'tax': return '세금';
             default: return type;
         }
+    };
+
+    const formatDescription = (desc: string) => {
+        if (!desc) return '';
+        if (desc.startsWith('To: ')) return desc.replace('To: ', '') + '에게 송금';
+        if (desc.startsWith('From: ')) return desc.replace('From: ', '') + '에게 받음';
+        if (desc.startsWith('Savings Deposit')) return '학생 우대 정기 예금 가입';
+        if (desc.startsWith('Savings Withdrawal (Principal: ')) {
+            const match = desc.match(/Principal: (\d+), Interest: (\d+)/);
+            if (match) {
+                return `저축 만기 출금 (원금: ${Number(match[1]).toLocaleString()}원, 이자: ${Number(match[2]).toLocaleString()}원)`;
+            }
+            return '저축 만기 출금';
+        }
+        return desc;
     };
 
     return (
@@ -79,9 +100,10 @@ export default function StudentLog() {
                     transactions.map((tx) => (
                         <div key={tx.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
                             <div>
-                                <div className="font-bold text-slate-800 mb-1">{tx.description}</div>
+                                <div className="font-bold text-slate-800 mb-1">{formatDescription(tx.description)}</div>
                                 <div className="text-xs text-slate-500 flex items-center gap-2">
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium">
+                                    <span className={`px-2 py-0.5 rounded font-medium ${tx.amount > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
                                         {getTypeLabel(tx.type)}
                                     </span>
                                     {new Date(tx.created_at).toLocaleString()}

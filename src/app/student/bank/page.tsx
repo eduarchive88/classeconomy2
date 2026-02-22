@@ -162,6 +162,8 @@ export default function StudentBank() {
     const transactions = data?.transactions || [];
     const totalSavings = accounts.reduce((sum: number, acc: any) => sum + acc.amount, 0);
 
+    const sortedClassmates = [...classmates].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+
     return (
         <div className="container mx-auto p-4 max-w-4xl pb-24">
             <div className="flex items-center gap-4 mb-6">
@@ -287,7 +289,7 @@ export default function StudentBank() {
                             <div>
                                 <label className="block text-sm font-medium mb-3 text-slate-600 dark:text-slate-400">받는 친구 선택 (여러 명 동시 선택 가능)</label>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-1">
-                                    {classmates.map((mate: any) => {
+                                    {sortedClassmates.map((mate: any) => {
                                         const isSelected = targetIds.includes(mate.id);
                                         return (
                                             <button
@@ -308,7 +310,7 @@ export default function StudentBank() {
                                         );
                                     })}
                                 </div>
-                                {classmates.length === 0 && (
+                                {sortedClassmates.length === 0 && (
                                     <div className="text-center p-4 bg-slate-50 rounded-xl text-slate-500 text-sm">
                                         같은 반 친구가 없습니다.
                                     </div>
