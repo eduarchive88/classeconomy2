@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, PiggyBank, History, Coins } from 'lucide-react';
+import { ArrowLeft, Send, PiggyBank, History, Coins, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentBank() {
@@ -255,8 +255,12 @@ export default function StudentBank() {
                                                                                 tx.type === 'quiz_reward' ? '퀴즈 상금' :
                                                                                     tx.type === 'stock_profit' ? '투자 수익' :
                                                                                         tx.type === 'stock_loss' ? '투자 손실' :
-                                                                                            tx.type === 'real_estate_income' ? '임대 수익' :
-                                                                                                tx.type === 'tax' ? '세금' : tx.type}
+                                                                                            tx.type === 'market_purchase' ? '상품 구입' :
+                                                                                                tx.type === 'real_estate_purchase' ? '부동산 구입' :
+                                                                                                    tx.type === 'stock_buy' ? '주식 매수' :
+                                                                                                        tx.type === 'stock_sell' ? '주식 매도' :
+                                                                                                            tx.type === 'real_estate_income' ? '임대/매각 수익' :
+                                                                                                                tx.type === 'tax' ? '세금' : tx.type}
                                                 </div>
                                                 <div className="text-sm text-slate-500 dark:text-slate-400">
                                                     {new Date(tx.created_at).toLocaleDateString()} {tx.description && `• ${tx.description}`}
@@ -279,18 +283,27 @@ export default function StudentBank() {
                         <h3 className="font-bold text-lg mb-6 text-center">친구에게 송금하기</h3>
                         <form onSubmit={handleTransfer} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">받는 친구</label>
-                                <select
-                                    value={targetId}
-                                    onChange={(e) => setTargetId(e.target.value)}
-                                    className="w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                                    required
-                                >
-                                    <option value="">친구를 선택하세요</option>
+                                <label className="block text-sm font-medium mb-3 text-slate-600 dark:text-slate-400">받는 친구 선택</label>
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-1">
                                     {classmates.map((mate: any) => (
-                                        <option key={mate.id} value={mate.id}>{mate.name}</option>
+                                        <button
+                                            key={mate.id}
+                                            type="button"
+                                            onClick={() => setTargetId(mate.id)}
+                                            className={`p-3 rounded-xl border text-sm font-bold transition-all ${targetId === mate.id
+                                                    ? 'bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-300'
+                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'
+                                                }`}
+                                        >
+                                            {mate.name}
+                                        </button>
                                     ))}
-                                </select>
+                                </div>
+                                {classmates.length === 0 && (
+                                    <div className="text-center p-4 bg-slate-50 rounded-xl text-slate-500 text-sm">
+                                        같은 반 친구가 없습니다.
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">보낼 금액</label>

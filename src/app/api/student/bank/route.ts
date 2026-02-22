@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -88,26 +88,32 @@ export async function POST(request: Request) {
 
         if (deductError) return NextResponse.json({ error: 'Transfer failed (sender)' }, { status: 500 });
 
+        // 3. Add to receiver (Get name for log)
+        const { data: receiver } = await adminSupabase.from('student_roster').select('balance, name').eq('id', targetId).single();
+
+        if (!receiver) {
+            // rollback sender balance if receiver not found
+            await adminSupabase.from('student_roster').update({ balance: sender.balance }).eq('id', studentId);
+            return NextResponse.json({ error: 'Receiver not found' }, { status: 404 });
+        }
+
         // 2. Log transaction for sender
         await adminSupabase.from('transactions').insert({
             student_id: studentId,
             type: 'transfer_sent',
             amount: -amount,
-            description: `To: ${targetId}` // Ideally name, but keeping it simple for now
+            description: `To: ${receiver.name}`
         });
 
-        // 3. Add to receiver
-        const { data: receiver } = await adminSupabase.from('student_roster').select('balance').eq('id', targetId).single();
-        if (receiver) {
-            await adminSupabase.from('student_roster').update({ balance: receiver.balance + amount }).eq('id', targetId);
-            // 4. Log transaction for receiver
-            await adminSupabase.from('transactions').insert({
-                student_id: targetId,
-                type: 'transfer_received',
-                amount: amount,
-                description: `From: ${sender.name}`
-            });
-        }
+        await adminSupabase.from('student_roster').update({ balance: receiver.balance + amount }).eq('id', targetId);
+
+        // 4. Log transaction for receiver
+        await adminSupabase.from('transactions').insert({
+            student_id: targetId,
+            type: 'transfer_received',
+            amount: amount,
+            description: `From: ${sender.name}`
+        });
 
         return NextResponse.json({ success: true, message: 'Transfer successful' });
 
