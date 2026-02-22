@@ -1,9 +1,18 @@
 
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-    const supabase = createClient();
+    // Vercel Cron Authentication (optional but recommended)
+    const authHeader = request.headers.get('authorization');
+    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        // Only block if CRON_SECRET is defined and doesn't match
+        console.warn('Unauthorized cron invocation attempt');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Use admin client to bypass RLS since cron has no user context
+    const supabase = createAdminClient();
 
     // 1. Get all classes
     const { data: classes, error: classError } = await supabase
