@@ -1,35 +1,26 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { ArrowLeft, History, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentLog() {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const supabase = createClient();
 
     const fetchLogs = async () => {
         setLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const sessionStr = localStorage.getItem('student_session');
+            if (!sessionStr) return;
+            const session = JSON.parse(sessionStr);
+            const studentId = session.student?.id;
 
-            const { data: student } = await supabase
-                .from('student_roster')
-                .select('id')
-                .eq('profile_id', user.id)
-                .single();
-
-            if (student) {
-                const { data } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .eq('student_id', student.id)
-                    .order('created_at', { ascending: false })
-                    .limit(50); // Last 50 logs
-
-                if (data) setTransactions(data);
+            if (studentId) {
+                const res = await fetch(`/api/student/log?studentId=${studentId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setTransactions(data.transactions || []);
+                }
             }
         } catch (e) {
             console.error(e);

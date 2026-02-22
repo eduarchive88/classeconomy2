@@ -11,7 +11,7 @@ export default function StudentBank() {
     const [studentId, setStudentId] = useState<string | null>(null);
 
     // Transfer State
-    const [targetId, setTargetId] = useState('');
+    const [targetIds, setTargetIds] = useState<string[]>([]);
     const [transferAmount, setTransferAmount] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
 
@@ -48,9 +48,11 @@ export default function StudentBank() {
 
     const handleTransfer = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!transferAmount || !targetId) return;
-        if (Number(transferAmount) > data.student.balance) {
-            return alert('잔액이 부족합니다.');
+        if (!transferAmount || targetIds.length === 0) return;
+
+        const totalAmount = Number(transferAmount) * targetIds.length;
+        if (totalAmount > data.student.balance) {
+            return alert(`잔액이 부족합니다. (총 송금액: ${totalAmount.toLocaleString()}원)`);
         }
 
         setTransferLoading(true);
@@ -61,7 +63,7 @@ export default function StudentBank() {
                 body: JSON.stringify({
                     action: 'transfer',
                     studentId,
-                    targetId,
+                    targetIds,
                     amount: Number(transferAmount)
                 })
             });
@@ -69,7 +71,7 @@ export default function StudentBank() {
             if (res.ok) {
                 alert('송금이 완료되었습니다.');
                 setTransferAmount('');
-                setTargetId('');
+                setTargetIds([]);
                 fetchData(studentId!); // Refresh
                 setActiveTab('overview');
             } else {
@@ -283,21 +285,28 @@ export default function StudentBank() {
                         <h3 className="font-bold text-lg mb-6 text-center">친구에게 송금하기</h3>
                         <form onSubmit={handleTransfer} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-3 text-slate-600 dark:text-slate-400">받는 친구 선택</label>
+                                <label className="block text-sm font-medium mb-3 text-slate-600 dark:text-slate-400">받는 친구 선택 (여러 명 동시 선택 가능)</label>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-1">
-                                    {classmates.map((mate: any) => (
-                                        <button
-                                            key={mate.id}
-                                            type="button"
-                                            onClick={() => setTargetId(mate.id)}
-                                            className={`p-3 rounded-xl border text-sm font-bold transition-all ${targetId === mate.id
+                                    {classmates.map((mate: any) => {
+                                        const isSelected = targetIds.includes(mate.id);
+                                        return (
+                                            <button
+                                                key={mate.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setTargetIds(prev =>
+                                                        prev.includes(mate.id) ? prev.filter(id => id !== mate.id) : [...prev, mate.id]
+                                                    );
+                                                }}
+                                                className={`p-3 rounded-xl border text-sm font-bold transition-all ${isSelected
                                                     ? 'bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-300'
                                                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'
-                                                }`}
-                                        >
-                                            {mate.name}
-                                        </button>
-                                    ))}
+                                                    }`}
+                                            >
+                                                {mate.name}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                                 {classmates.length === 0 && (
                                     <div className="text-center p-4 bg-slate-50 rounded-xl text-slate-500 text-sm">
@@ -306,7 +315,7 @@ export default function StudentBank() {
                                 )}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">보낼 금액</label>
+                                <label className="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-400">보낼 금액 (1인당)</label>
                                 <input
                                     type="number"
                                     value={transferAmount}
@@ -316,6 +325,11 @@ export default function StudentBank() {
                                     min="1"
                                     required
                                 />
+                                {targetIds.length > 0 && transferAmount && (
+                                    <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
+                                        총 {targetIds.length}명에게 <b>{(Number(transferAmount) * targetIds.length).toLocaleString()} 원</b>을 보냅니다.
+                                    </p>
+                                )}
                             </div>
                             <button
                                 type="submit"

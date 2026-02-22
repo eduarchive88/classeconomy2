@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "results": [
+    {
+      "class_id": "42965261-e320-4e08-8822-6f586a91be59",
+      "distributed": 1
+    },
+    {
+      "class_id": "dbd79948-4d6a-49b7-ae02-13e7ac741cda",
+      "status": "no_quizzes_available"
+    }
+  ]
+}

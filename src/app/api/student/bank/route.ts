@@ -5,6 +5,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('studentId');
     const supabase = createClient();
+    const adminSupabase = createAdminClient();
 
     if (!studentId) {
         return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
@@ -30,14 +31,14 @@ export async function GET(request: Request) {
         .neq('id', studentId); // Exclude self
 
     // 3. Get my bank accounts (savings)
-    const { data: accounts, error: accountsError } = await supabase
+    const { data: accounts, error: accountsError } = await adminSupabase
         .from('bank_accounts')
         .select('*')
         .eq('student_id', studentId)
         .eq('status', 'active');
 
     // 4. Get recent transactions
-    const { data: transactions, error: txError } = await supabase
+    const { data: transactions, error: txError } = await adminSupabase
         .from('transactions')
         .select('*')
         .eq('student_id', studentId)
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const { action, studentId, targetId, amount, accountId } = await request.json();
+    const { action, studentId, targetIds, amount, accountId } = await request.json();
     const supabase = createClient();
     const adminSupabase = createAdminClient();
 
@@ -73,49 +74,59 @@ export async function POST(request: Request) {
     }
 
     if (action === 'transfer') {
-        if (!targetId || !amount || amount <= 0) {
+        if (!targetIds || !Array.isArray(targetIds) || targetIds.length === 0 || !amount || amount <= 0) {
             return NextResponse.json({ error: 'Invalid transfer details' }, { status: 400 });
         }
-        if (sender.balance < amount) {
+
+        const totalAmount = amount * targetIds.length;
+        if (sender.balance < totalAmount) {
             return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
         }
 
         // 1. Deduct from sender
         const { error: deductError } = await adminSupabase
             .from('student_roster')
-            .update({ balance: sender.balance - amount })
+            .update({ balance: sender.balance - totalAmount })
             .eq('id', studentId);
 
         if (deductError) return NextResponse.json({ error: 'Transfer failed (sender)' }, { status: 500 });
 
-        // 3. Add to receiver (Get name for log)
-        const { data: receiver } = await adminSupabase.from('student_roster').select('balance, name').eq('id', targetId).single();
+        // 2. Loop through each target
+        let successCount = 0;
+        for (const targetId of targetIds) {
+            const { data: receiver } = await adminSupabase.from('student_roster').select('balance, name').eq('id', targetId).single();
 
-        if (!receiver) {
-            // rollback sender balance if receiver not found
-            await adminSupabase.from('student_roster').update({ balance: sender.balance }).eq('id', studentId);
-            return NextResponse.json({ error: 'Receiver not found' }, { status: 404 });
+            if (receiver) {
+                // Log transaction for sender
+                await adminSupabase.from('transactions').insert({
+                    student_id: studentId,
+                    type: 'transfer_sent',
+                    amount: -amount,
+                    description: `To: ${receiver.name}`
+                });
+
+                // Add to receiver
+                await adminSupabase.from('student_roster').update({ balance: receiver.balance + amount }).eq('id', targetId);
+
+                // Log transaction for receiver
+                await adminSupabase.from('transactions').insert({
+                    student_id: targetId,
+                    type: 'transfer_received',
+                    amount: amount,
+                    description: `From: ${sender.name}`
+                });
+
+                successCount++;
+            }
         }
 
-        // 2. Log transaction for sender
-        await adminSupabase.from('transactions').insert({
-            student_id: studentId,
-            type: 'transfer_sent',
-            amount: -amount,
-            description: `To: ${receiver.name}`
-        });
+        if (successCount === 0) {
+            // Rollback if ALL failed (rare)
+            await adminSupabase.from('student_roster').update({ balance: sender.balance }).eq('id', studentId);
+            return NextResponse.json({ error: 'All receivers not found' }, { status: 404 });
+        }
 
-        await adminSupabase.from('student_roster').update({ balance: receiver.balance + amount }).eq('id', targetId);
-
-        // 4. Log transaction for receiver
-        await adminSupabase.from('transactions').insert({
-            student_id: targetId,
-            type: 'transfer_received',
-            amount: amount,
-            description: `From: ${sender.name}`
-        });
-
-        return NextResponse.json({ success: true, message: 'Transfer successful' });
+        return NextResponse.json({ success: true, message: `${successCount}명에게 송금 완료` });
 
     } else if (action === 'deposit') {
         if (!amount || amount <= 0) return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
