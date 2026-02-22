@@ -40,10 +40,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { studentId, itemId } = body;
+        const { studentId, itemId, quantity = 1 } = body;
 
         if (!studentId || !itemId) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        const buyQuantity = parseInt(quantity, 10);
+        if (isNaN(buyQuantity) || buyQuantity < 1) {
+            return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 });
         }
 
         const adminSupabase = createAdminClient();
@@ -65,30 +70,34 @@ export async function POST(request: Request) {
             .single();
 
         if (itemError || !item) throw new Error('Item not found');
-        if (item.stock <= 0) throw new Error('재고가 없습니다.');
+        if (item.stock < buyQuantity) throw new Error(`재고가 부족합니다. (현재 재고: ${item.stock})`);
 
-        if (roster.balance < item.price) {
+        const totalPrice = item.price * buyQuantity;
+
+        if (roster.balance < totalPrice) {
             return NextResponse.json({ error: '잔액이 부족합니다.' }, { status: 400 });
         }
 
         // 3. Deduct Balance
         await adminSupabase
             .from('student_roster')
-            .update({ balance: roster.balance - item.price })
+            .update({ balance: roster.balance - totalPrice })
             .eq('id', studentId);
 
         // 4. Decrement Stock
         await adminSupabase
             .from('market_items')
-            .update({ stock: item.stock - 1 })
+            .update({ stock: item.stock - buyQuantity })
             .eq('id', itemId);
+
+        const qtyText = buyQuantity > 1 ? ` (${buyQuantity}개)` : '';
 
         // 5. Log Transaction
         await adminSupabase.from('transactions').insert({
             student_id: studentId,
-            amount: -item.price,
+            amount: -totalPrice,
             type: 'market_purchase',
-            description: `상점 구매: ${item.name}`
+            description: `상점 구매: ${item.name}${qtyText}`
         });
 
         return NextResponse.json({ success: true });

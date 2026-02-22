@@ -82,12 +82,38 @@ export default function TeacherLogs() {
         }
     };
 
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+            case 'allowance': return '용돈';
+            case 'special_allowance': return '특별 보너스';
+            case 'fine': return '벌금';
+            case 'quiz_reward': return '상금';
+            case 'stock_buy': return '주식 매수';
+            case 'stock_sell': return '주식 매도';
+            case 'stock_profit': return '주식 수익';
+            case 'stock_loss': return '주식 손실';
+            case 'real_estate_income': return '부동산 수익';
+            case 'market_purchase': return '상점 구매';
+            case 'real_estate_purchase': return '부동산 구매';
+            case 'tax': return '세금';
+            case 'transfer': return '송금';
+            case 'deposit': return '예탁 입금';
+            case 'withdrawal': return '예탁 출금';
+            case 'maturity': return '예금 만기';
+            case 'interest': return '이자 수익';
+            case 'income': return '기타 수입';
+            case 'expense': return '기타 지출';
+            case 'investment': return '투자';
+            default: return type;
+        }
+    };
+
     const handleExport = () => {
         const dataToExport = logs.map(log => ({
             '일시': new Date(log.created_at).toLocaleString(),
             '이름': log.student_name,
             '번호': log.student_number,
-            '유형': log.type,
+            '유형': getTypeLabel(log.type),
             '금액': log.amount,
             '내용': log.description
         }));
@@ -193,15 +219,12 @@ export default function TeacherLogs() {
                                                 <span className={`
                                                     inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
                                                     ${log.type === 'fine' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                        (log.type === 'income' || log.type === 'special_allowance') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                            log.type === 'investment' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
+                                                        (log.type === 'income' || log.type === 'special_allowance' || log.type === 'allowance' || log.type === 'quiz_reward') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                            (log.type === 'expense' || log.type === 'market_purchase' || log.type === 'tax' || log.type === 'withdrawal') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                                                (log.type === 'investment' || log.type === 'stock_buy' || log.type === 'stock_sell') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                                                                    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
                                                 `}>
-                                                    {log.type === 'fine' ? '벌금' :
-                                                        log.type === 'income' ? '수입' :
-                                                            log.type === 'expense' ? '지출' :
-                                                                log.type === 'special_allowance' ? '특별 수당' :
-                                                                    log.type === 'investment' ? '투자' : log.type}
+                                                    {getTypeLabel(log.type)}
                                                 </span>
                                             </td>
                                             <td className="p-4 text-slate-600 dark:text-slate-300">

@@ -8,6 +8,7 @@ export default function StudentShop() {
     const [loading, setLoading] = useState(true);
     const [roster, setRoster] = useState<any>(null);
     const [purchasing, setPurchasing] = useState<string | null>(null);
+    const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
 
     useEffect(() => {
         fetchShopData();
@@ -38,12 +39,19 @@ export default function StudentShop() {
     };
 
     const handleBuy = async (item: any) => {
+        const quantity = quantities[item.id] || 1;
+        const totalPrice = item.price * quantity;
+
         if (!roster) return;
-        if (roster.balance < item.price) {
+        if (roster.balance < totalPrice) {
             alert('잔액이 부족합니다.');
             return;
         }
-        if (!confirm(`${item.name}을(를) ${item.price.toLocaleString()}원에 구매하시겠습니까?`)) return;
+        if (item.stock < quantity) {
+            alert(`현재 남은 재고(${item.stock}개)보다 많이 구매할 수 없습니다.`);
+            return;
+        }
+        if (!confirm(`${item.name} ${quantity}개를 총 ${totalPrice.toLocaleString()}원에 구매하시겠습니까?`)) return;
 
         setPurchasing(item.id);
         try {
@@ -58,7 +66,8 @@ export default function StudentShop() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     studentId,
-                    itemId: item.id
+                    itemId: item.id,
+                    quantity
                 })
             });
 
@@ -122,9 +131,27 @@ export default function StudentShop() {
                                         재고: {item.stock}
                                     </span>
                                 </div>
+
+                                <div className="flex items-center justify-between mb-4">
+                                    <label className="text-sm text-slate-600 font-medium">구매 수량</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={item.stock}
+                                        value={quantities[item.id] || 1}
+                                        onChange={(e) => {
+                                            let val = parseInt(e.target.value);
+                                            if (isNaN(val) || val < 1) val = 1;
+                                            if (val > item.stock) val = item.stock;
+                                            setQuantities({ ...quantities, [item.id]: val });
+                                        }}
+                                        className="w-20 p-1 px-2 border border-slate-300 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+
                                 <button
                                     onClick={() => handleBuy(item)}
-                                    disabled={purchasing === item.id || roster.balance < item.price}
+                                    disabled={purchasing === item.id || roster.balance < (item.price * (quantities[item.id] || 1)) || item.stock < 1}
                                     className="w-full btn-primary bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 disabled:cursor-not-allowed py-2 rounded-lg font-bold flex justify-center items-center gap-2"
                                 >
                                     {purchasing === item.id ? (
