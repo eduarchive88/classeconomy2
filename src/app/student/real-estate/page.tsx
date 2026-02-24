@@ -202,7 +202,7 @@ export default function StudentRealEstate() {
                             const isLocked = seat?.is_locked; // 교사가 잠근 자리
                             const isNoSeat = !seat; // seat 데이터 자체가 없는 빈 셀
                             const isMyCurrent = currentSeat && seat?.id === currentSeat.id; // 마지막 구매 = 현재 내 자리
-                            const isMyOther = seat?.student_id === roster?.id && !isMyCurrent; // 내 다른 보유 자리 = 판매중
+                            const isMyOther = seat?.student_id != null && seat.student_id === roster?.id && !isMyCurrent; // 내 다른 보유 자리 = 판매중
                             const isOccupied = seat?.student_id && seat?.student_id !== roster?.id; // 다른 학생 자리
                             const canAfford = roster && seat && roster.balance >= seat.price; // 구매 가능 여부
                             const isEmpty = seat && !seat.student_id; // 비어있는 구매 가능 자리
