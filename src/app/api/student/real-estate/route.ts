@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { supabaseAdmin } from '@/utils/supabase/admin';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request) {
     try {
@@ -12,6 +11,7 @@ export async function GET(request: Request) {
         }
 
         const classId = user.user_metadata.class_id;
+        const supabaseAdmin = createAdminClient();
 
         // 1. Get student roster info
         const { data: rosterData, error: rosterError } = await supabaseAdmin

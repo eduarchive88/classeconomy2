@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { supabaseAdmin } from '@/utils/supabase/admin';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
     try {
@@ -16,6 +15,8 @@ export async function POST(request: Request) {
         if (!seatId) {
             return NextResponse.json({ error: 'Seat ID is required' }, { status: 400 });
         }
+
+        const supabaseAdmin = createAdminClient();
 
         // 1. Get buyer info
         const { data: buyer, error: buyerError } = await supabaseAdmin
