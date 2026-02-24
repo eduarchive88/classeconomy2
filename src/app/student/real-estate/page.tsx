@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Home, MapPin, DollarSign, ArrowLeft, RefreshCw, ShoppingCart, User, Lock, Tag } from 'lucide-react';
+import { MapPin, DollarSign, ArrowLeft, RefreshCw, User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentRealEstate() {
@@ -234,7 +234,7 @@ export default function StudentRealEstate() {
                                         <div className="font-bold text-sm">내 자리</div>
                                     ) : isMyOther ? (
                                         <div className="flex flex-col items-center gap-1">
-                                            <Tag className="w-4 h-4 text-emerald-600" />
+                                            <span className="text-lg">🏷️</span>
                                             <div className="text-emerald-700 text-xs font-bold">판매중</div>
                                             <div className="text-[10px] text-emerald-500 font-bold">
                                                 {seat.price?.toLocaleString()}원
@@ -255,15 +255,15 @@ export default function StudentRealEstate() {
                                             {seat ? (
                                                 <div className="flex flex-col items-center gap-1">
                                                     <div className={`text-xs font-bold flex items-center gap-0.5 ${!canAfford ? 'text-red-400' :
-                                                            isOccupied ? 'text-indigo-500' : 'text-amber-600'
+                                                        isOccupied ? 'text-indigo-500' : 'text-amber-600'
                                                         }`}>
                                                         <DollarSign className="w-3 h-3" />
                                                         {seat.price?.toLocaleString()}
                                                     </div>
                                                     {canAfford ? (
                                                         <div className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isOccupied
-                                                                ? 'bg-indigo-100 text-indigo-700'
-                                                                : 'bg-amber-100 text-amber-700'
+                                                            ? 'bg-indigo-100 text-indigo-700'
+                                                            : 'bg-amber-100 text-amber-700'
                                                             }`}>
                                                             인수가능
                                                         </div>
