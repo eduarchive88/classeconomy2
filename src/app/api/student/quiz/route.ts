@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     }
 
     // 4. Fetch Submissions for this Student
-    const dailyQuizIds = dailyQuizzes.map(d => d.id);
+    const dailyQuizIds = dailyQuizzes.map((d: any) => d.id);
     let submissions: any[] = [];
 
     if (dailyQuizIds.length > 0) {
@@ -116,8 +116,8 @@ export async function GET(request: Request) {
     }
 
     // 5. Merge & Format
-    const results = dailyQuizzes.map(dq => {
-        const sub = submissions.find(s => s.daily_quiz_id === dq.id);
+    const results = dailyQuizzes.map((dq: any) => {
+        const sub = submissions.find((s: any) => s.daily_quiz_id === dq.id);
         const quiz: any = dq.quizzes; // Cast to any for easier access
 
         const isSubmitted = !!sub;

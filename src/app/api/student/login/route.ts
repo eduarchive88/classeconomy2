@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const targetClassInfo = normalize(classInfo);
     const targetNumber = normalize(number);
 
-    const student = roster.find(s =>
+    const student = roster.find((s: any) =>
         normalize(s.grade) === targetGrade &&
         normalize(s.class_info) === targetClassInfo &&
         normalize(s.number) === targetNumber

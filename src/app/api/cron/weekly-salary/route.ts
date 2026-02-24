@@ -32,8 +32,8 @@ export async function GET(request: Request) {
 
         const transactions: any[] = [];
 
-        roster.forEach(item => {
-            const profile = profiles?.find(p =>
+        roster.forEach((item: any) => {
+            const profile = profiles?.find((p: any) =>
                 p.name === item.name &&
                 p.number?.toString() === item.number?.toString()
             );

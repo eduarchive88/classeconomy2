@@ -23,7 +23,7 @@ export async function GET() {
         // Take top 5 items
         const topItems = feed.items.slice(0, 5);
 
-        const summarizedNews = await Promise.all(topItems.map(async (item) => {
+        const summarizedNews = await Promise.all(topItems.map(async (item: any) => {
             try {
                 // Use Gemini to summarize
                 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });

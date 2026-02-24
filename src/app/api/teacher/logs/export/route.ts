@@ -22,7 +22,7 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'No classes found' }, { status: 404 });
         }
 
-        const classIds = classes.map(c => c.id);
+        const classIds = classes.map((c: any) => c.id);
 
         // 3. Get All Students in those classes
         const { data: students } = await supabase
@@ -34,9 +34,9 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'No students found' }, { status: 404 });
         }
 
-        const studentIds = students.map(s => s.id);
-        const studentMap = students.reduce((acc, s) => {
-            acc[s.id] = { name: s.name, className: classes.find(c => c.id === s.class_id)?.name };
+        const studentIds = students.map((s: any) => s.id);
+        const studentMap = students.reduce((acc: any, s: any) => {
+            acc[s.id] = { name: s.name, className: classes.find((c: any) => c.id === s.class_id)?.name };
             return acc;
         }, {} as Record<string, { name: string, className: string }>);
 
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
         }
 
         // 5. Format Data for CSV
-        const csvData = transactions.map(t => ({
+        const csvData = transactions.map((t: any) => ({
             created_at: new Date(t.created_at).toLocaleString('ko-KR'),
             class_name: studentMap[t.student_id]?.className || 'Unknown',
             student_name: studentMap[t.student_id]?.name || 'Unknown',

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         if (error) throw error;
 
         // Fetch current prices for all held stocks
-        const portfolio = await Promise.all(investments.map(async (inv) => {
+        const portfolio = await Promise.all(investments.map(async (inv: any) => {
             try {
                 const quote = await yahooFinance.quote(inv.symbol);
                 const currentPrice = quote.regularMarketPrice || inv.average_price; // Fallback

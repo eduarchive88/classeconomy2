@@ -16,17 +16,17 @@ export async function GET() {
         .eq('date', today);
 
     const { data: classData } = await supabase.from('classes').select('*').ilike('session_code', 'class1').single();
-    let targetRoster = null;
-    let targetSeat = null;
+    let targetRoster: any = null;
+    let targetSeat: any = null;
 
     if (classData) {
         const { data: roster } = await supabase.from('student_roster').select('*').eq('class_id', classData.id);
         if (roster) {
-            targetRoster = roster.find(s => s.grade === '2' && s.class_info === '2' && s.number === '1' || s.name === '20201' || s.grade === '20201' || s.profile_id === '20201' || s.number === '20201');
+            targetRoster = roster.find((s: any) => s.grade === '2' && s.class_info === '2' && s.number === '1' || s.name === '20201' || s.grade === '20201' || s.profile_id === '20201' || s.number === '20201');
 
             if (targetRoster) {
                 const { data: seats } = await supabase.from('seats').select('*, student:student_id(name, number)').eq('class_id', classData.id);
-                targetSeat = seats?.filter(s => s.student_id === targetRoster.id);
+                targetSeat = seats?.filter((s: any) => s.student_id === targetRoster.id);
             }
         }
     }
@@ -35,11 +35,10 @@ export async function GET() {
         today,
         classCount: classes?.length || 0,
         dailyQuizCountToday: dailyQuizzes?.length || 0,
-        totalQuizMasterCount: allQuizzes?.length || 0,
-        classes: classes?.map(c => ({
+        classes: classes?.map((c: any) => ({
             name: c.name,
             sessionCode: c.sessionCode,
-            quizCountToday: dailyQuizzes?.filter(dq => dq.class_id === c.id).length || 0
+            quizCountToday: dailyQuizzes?.filter((dq: any) => dq.class_id === c.id).length || 0
         })),
         studentInfo: targetRoster,
         studentSeat: targetSeat,
