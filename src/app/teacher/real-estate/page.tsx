@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Home, Users, Plus, Save, Trash2, ArrowLeft, Grid, MapPin, DollarSign, Wand2, Minus } from 'lucide-react';
+import { Home, Users, Plus, Save, Trash2, ArrowLeft, Grid, MapPin, DollarSign, Wand2, Minus, Lock } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -10,7 +10,7 @@ export default function RealEstateManagement() {
     const [students, setStudents] = useState<any[]>([]);
     const [seats, setSeats] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [mode, setMode] = useState<'assign' | 'price'>('assign');
+    const [mode, setMode] = useState<'assign' | 'price' | 'lock'>('assign');
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [priceInput, setPriceInput] = useState<number>(1000);
     const [trades, setTrades] = useState<any[]>([]);
@@ -258,7 +258,14 @@ export default function RealEstateManagement() {
                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'price' ? 'bg-white dark:bg-slate-700 shadow text-amber-600' : 'text-slate-500 dark:text-slate-400'}`}
                             >
                                 <DollarSign className="w-4 h-4 inline mr-1" />
-                                가격 설정/마켓
+                                가격/마켓
+                            </button>
+                            <button
+                                onClick={() => setMode('lock')}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'lock' ? 'bg-white dark:bg-slate-700 shadow text-red-600' : 'text-slate-500 dark:text-slate-400'}`}
+                            >
+                                <Lock className="w-4 h-4 inline mr-1" />
+                                구매 잠금
                             </button>
                         </div>
 
@@ -286,6 +293,13 @@ export default function RealEstateManagement() {
                                     * 켜짐: 학생이 빈 자리를 클릭하면 즉시 잔액이 차감되고 구매됩니다. <br />
                                     * 꺼짐: 구매 요청만 생성되며 선생님이 승인해야 합니다.
                                 </p>
+                            </div>
+                        )}
+
+                        {mode === 'lock' && (
+                            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
+                                <p className="text-sm text-red-700 dark:text-red-300 font-bold mb-1">🔒 구매 잠금 모드</p>
+                                <p className="text-xs text-red-500 dark:text-red-400">자리를 클릭하면 잠금/잠금해제가 토글됩니다. 잠긴 자리는 학생에게 '구매 불가'로 표시됩니다.</p>
                             </div>
                         )}
 
@@ -388,6 +402,7 @@ export default function RealEstateManagement() {
                         <div className="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
                             <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white dark:bg-slate-800 border dark:border-slate-600 rounded shadow-sm"></div> 빈 자리</span>
                             <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded shadow-sm"></div> 배정됨</span>
+                            <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-50 border border-red-300 rounded shadow-sm"></div> 구매 잠금</span>
                         </div>
                         <div className="px-4 py-1 bg-slate-800 dark:bg-slate-600 text-white rounded text-xs font-bold shadow-md">
                             칠판 (BOARD)
@@ -403,21 +418,50 @@ export default function RealEstateManagement() {
                                 return (
                                     <div
                                         key={`${r}-${c}`}
-                                        onClick={() => handleSaveSeat(r, c)}
+                                        onClick={async () => {
+                                            if (mode === 'lock') {
+                                                // 잠금 토글
+                                                const selectedClassId = localStorage.getItem('selected_class_id');
+                                                if (!selectedClassId) return;
+                                                const isCurrentlyLocked = seat?.is_locked || false;
+                                                if (seat) {
+                                                    await supabase.from('seats').update({ is_locked: !isCurrentlyLocked }).eq('id', seat.id);
+                                                } else {
+                                                    await supabase.from('seats').upsert({
+                                                        class_id: selectedClassId,
+                                                        row_idx: r,
+                                                        col_idx: c,
+                                                        price: 0,
+                                                        is_locked: true
+                                                    }, { onConflict: 'class_id, row_idx, col_idx' });
+                                                }
+                                                fetchData();
+                                            } else {
+                                                handleSaveSeat(r, c);
+                                            }
+                                        }}
                                         className={`
                                             aspect-square rounded-xl border-2 p-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative overflow-hidden
-                                            ${seat?.student_id
-                                                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500'
-                                                : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500'
+                                            ${seat?.is_locked
+                                                ? 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 shadow-sm'
+                                                : seat?.student_id
+                                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500'
+                                                    : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500'
                                             }
                                             ${mode === 'price' ? 'hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-300 dark:hover:border-amber-600' : ''}
+                                            ${mode === 'lock' ? 'hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-400 dark:hover:border-red-600' : ''}
                                         `}
                                     >
                                         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 absolute top-1 left-2">
                                             {r + 1}-{c + 1}
                                         </div>
 
-                                        {student ? (
+                                        {seat?.is_locked ? (
+                                            <div className="flex flex-col items-center gap-1">
+                                                <Lock className="w-5 h-5 text-red-400" />
+                                                <div className="text-red-500 text-[10px] font-bold">구매 불가</div>
+                                            </div>
+                                        ) : student ? (
                                             <div className="font-bold text-slate-800 dark:text-white break-keep leading-tight">
                                                 <div className="text-xs text-slate-500 dark:text-slate-400 font-normal mb-0.5">{student.number}번</div>
                                                 {student.name}
@@ -428,9 +472,11 @@ export default function RealEstateManagement() {
                                             </div>
                                         )}
 
-                                        <div className="absolute bottom-1 right-2 text-xs font-mono text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/30 px-1 rounded">
-                                            {seat?.price?.toLocaleString() || 0}
-                                        </div>
+                                        {!seat?.is_locked && (
+                                            <div className="absolute bottom-1 right-2 text-xs font-mono text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-900/30 px-1 rounded">
+                                                {seat?.price?.toLocaleString() || 0}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })

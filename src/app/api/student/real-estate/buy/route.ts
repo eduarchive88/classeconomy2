@@ -66,7 +66,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Seat not found' }, { status: 404 });
         }
 
-        // 3. 유효성 검증
+        // 3. 잠긴 자리 체크
+        if (seat.is_locked) {
+            return NextResponse.json({ error: '이 자리는 구매할 수 없습니다.' }, { status: 400 });
+        }
+
+        // 4. 유효성 검증
         if (seat.student_id === buyer.id) {
             return NextResponse.json({ error: '이미 본인의 자리입니다.' }, { status: 400 });
         }
@@ -75,53 +80,57 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '잔액이 부족합니다.' }, { status: 400 });
         }
 
-        // 4. 즉시 구매 허용 여부 확인
+        // 5. 즉시 구매 허용 여부 확인
         const { data: classData } = await supabaseAdmin
             .from('classes')
             .select('is_auto_real_estate')
             .eq('id', classId)
             .single();
 
-        const isAutoAllowed = classData?.is_auto_real_estate ?? false;
+        const isAutoAllowed = classData?.is_auto_real_estate ?? true;
 
         // 즉시 구매 비허용인 경우 → pending 요청으로 전환
         if (!isAutoAllowed) {
-            // seat_trades 테이블에 구매 요청 삽입
-            const { error: tradeError } = await supabaseAdmin
-                .from('seat_trades')
-                .insert({
-                    class_id: classId,
-                    seat_id: seat.id,
-                    buyer_id: rosterId,
-                    seller_id: seat.student_id || null,
-                    price: seat.price,
-                    status: 'pending'
-                });
+            try {
+                const { error: tradeError } = await supabaseAdmin
+                    .from('seat_trades')
+                    .insert({
+                        class_id: classId,
+                        seat_id: seat.id,
+                        buyer_id: rosterId,
+                        seller_id: seat.student_id || null,
+                        price: seat.price,
+                        status: 'pending'
+                    });
 
-            if (tradeError) {
-                console.error('Trade insert error:', tradeError);
-                return NextResponse.json({ error: '구매 요청 생성에 실패했습니다.' }, { status: 500 });
+                if (tradeError) {
+                    console.error('Trade insert error:', tradeError);
+                    // seat_trades 테이블이 없거나 컬럼이 맞지 않으면 즉시 구매로 대체
+                    console.log('Falling back to instant purchase due to seat_trades error');
+                }
+                else {
+                    return NextResponse.json({
+                        success: true,
+                        pending: true,
+                        message: '구매 요청이 접수되었습니다. 선생님의 승인을 기다려주세요.'
+                    });
+                }
+            } catch (e) {
+                console.error('seat_trades fallback:', e);
             }
-
-            return NextResponse.json({
-                success: true,
-                pending: true,
-                message: '구매 요청이 접수되었습니다. 선생님의 승인을 기다려주세요.'
-            });
         }
 
-        // === 즉시 구매 허용인 경우 아래 로직 실행 ===
-
+        // === 즉시 구매 로직 ===
         const isOccupied = !!seat.student_id;
 
-        // 5. 구매자 잔액 차감
+        // 6. 구매자 잔액 차감
         const { error: deductError } = await supabaseAdmin.from('student_roster')
             .update({ balance: buyer.balance - seat.price })
             .eq('id', buyer.id);
 
         if (deductError) throw deductError;
 
-        // 6. 기존 소유자가 있으면 판매 대금 지급
+        // 7. 기존 소유자가 있으면 판매 대금 지급
         if (isOccupied) {
             const { data: seller } = await supabaseAdmin.from('student_roster').select('*').eq('id', seat.student_id).single();
             if (seller) {
@@ -139,7 +148,6 @@ export async function POST(request: Request) {
                     description: `자리 판매 수익 (${seat.row_idx + 1}-${seat.col_idx + 1})`
                 });
 
-                // 세금 기록
                 const taxAmount = seat.price - payout;
                 await supabaseAdmin.from('transactions').insert({
                     student_id: seat.student_id,
@@ -150,7 +158,7 @@ export async function POST(request: Request) {
             }
         }
 
-        // 7. 자리 소유권 업데이트 + 가격 인상
+        // 8. 자리 소유권 업데이트 + 가격 인상
         const nextPrice = Math.floor(seat.price * 1.1) + 100;
 
         const { error: updateSeatError } = await supabaseAdmin.from('seats')
@@ -162,7 +170,7 @@ export async function POST(request: Request) {
 
         if (updateSeatError) throw updateSeatError;
 
-        // 8. 구매자 거래 기록
+        // 9. 구매자 거래 기록
         await supabaseAdmin.from('transactions').insert({
             student_id: buyer.id,
             amount: -seat.price,

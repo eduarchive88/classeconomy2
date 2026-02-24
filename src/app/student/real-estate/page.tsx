@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Home, MapPin, DollarSign, ArrowLeft, RefreshCw, ShoppingCart, User, Lock } from 'lucide-react';
+import { Home, MapPin, DollarSign, ArrowLeft, RefreshCw, ShoppingCart, User, Lock, Tag } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentRealEstate() {
@@ -56,7 +56,13 @@ export default function StudentRealEstate() {
     // 자리 구매/인수 처리
     const handlePurchase = async (seat: any) => {
         if (!roster) return;
-        if (!seat) return; // seat 데이터가 없는 빈 셀은 무시
+        if (!seat) return;
+
+        // 잠긴 자리는 구매 불가
+        if (seat.is_locked) {
+            alert('이 자리는 구매할 수 없습니다.');
+            return;
+        }
 
         // 이미 본인 자리인 경우
         if (seat.student_id === roster.id) {
@@ -117,7 +123,16 @@ export default function StudentRealEstate() {
         }
     };
 
-    const mySeat = seats.find((s: any) => s.student_id === roster?.id);
+    // 내가 소유한 모든 자리 (복수 소유 가능)
+    const mySeats = seats.filter((s: any) => s.student_id === roster?.id);
+    // 마지막으로 구매한 자리 = 현재 내 자리 (updated_at 기준, 없으면 created_at)
+    const currentSeat = mySeats.length > 0
+        ? mySeats.reduce((latest: any, s: any) => {
+            const latestTime = new Date(latest.updated_at || latest.created_at || 0).getTime();
+            const sTime = new Date(s.updated_at || s.created_at || 0).getTime();
+            return sTime > latestTime ? s : latest;
+        })
+        : null;
 
     return (
         <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -157,7 +172,7 @@ export default function StudentRealEstate() {
                     <div className="text-right">
                         <div className="text-sm text-slate-500">현재 내 자리</div>
                         <div className="text-lg font-bold text-blue-700">
-                            {mySeat ? `${mySeat.row_idx + 1}행 ${mySeat.col_idx + 1}열` : '미배정'}
+                            {currentSeat ? `${currentSeat.row_idx + 1}행 ${currentSeat.col_idx + 1}열` : '미배정'}
                         </div>
                     </div>
                 </div>
@@ -168,11 +183,12 @@ export default function StudentRealEstate() {
                 <div className="inline-block px-12 py-3 bg-slate-800 text-white rounded-lg shadow-xl font-bold text-lg mb-4 border-4 border-slate-700">
                     칠 판 (BOARD)
                 </div>
-                <div className="flex justify-center gap-4 text-xs text-slate-400">
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white border rounded"></div> 구매 가능</span>
+                <div className="flex justify-center flex-wrap gap-3 text-xs text-slate-400">
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white border rounded"></div> 인수가능</span>
                     <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-500 border rounded"></div> 내 자리</span>
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-200 border rounded"></div> 다른 학생</span>
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-100 border border-dashed rounded"></div> 선택 불가</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-emerald-400 border rounded"></div> 판매중</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-200 border rounded"></div> 인수불가</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-100 border border-dashed rounded"></div> 구매 불가</span>
                 </div>
             </div>
 
@@ -182,37 +198,52 @@ export default function StudentRealEstate() {
                     {Array.from({ length: gridRows }).map((_, r) => (
                         Array.from({ length: gridCols }).map((_, c) => {
                             const seat = seats.find((s: any) => s.row_idx === r && s.col_idx === c);
-                            const isMine = seat?.student_id === roster?.id;
-                            const isOccupied = seat?.student_id && !isMine;
-                            // 빈 자리 체크: seat 데이터가 없거나, seat은 있지만 student_id가 없는 자리
-                            const isEmpty = !seat || (!seat.student_id);
-                            // 빈 자리(학생 미배정 + 교사가 빈자리로 설정)는 선택 불가로 처리
-                            // 자리에 가격이 설정되어 있지 않거나 seat 데이터가 없는 경우 비활성화
-                            const isDisabled = !seat;
+
+                            // 상태 분류
+                            const isLocked = seat?.is_locked; // 교사가 잠근 자리
+                            const isNoSeat = !seat; // seat 데이터 자체가 없는 빈 셀
+                            const isMyCurrent = currentSeat && seat?.id === currentSeat.id; // 마지막 구매 = 현재 내 자리
+                            const isMyOther = seat?.student_id === roster?.id && !isMyCurrent; // 내 다른 보유 자리 = 판매중
+                            const isOccupied = seat?.student_id && seat?.student_id !== roster?.id; // 다른 학생 자리
+                            const canAfford = roster && seat && roster.balance >= seat.price; // 구매 가능 여부
+                            const isEmpty = seat && !seat.student_id; // 비어있는 구매 가능 자리
+
+                            // 클릭 가능 여부
+                            const isClickable = !isNoSeat && !isLocked && !isMyCurrent && !isMyOther && canAfford;
 
                             return (
                                 <div
                                     key={`${r}-${c}`}
                                     className={`
                                         aspect-square rounded-xl border-2 p-3 flex flex-col items-center justify-center text-center transition-all relative overflow-hidden
-                                        ${isMine ? 'bg-blue-500 border-blue-600 text-white shadow-lg z-10 scale-105' :
-                                            isDisabled ? 'bg-slate-50 border-slate-100 border-dashed opacity-50 cursor-not-allowed' :
-                                                isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' :
-                                                    'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
+                                        ${isMyCurrent ? 'bg-blue-500 border-blue-600 text-white shadow-lg z-10 scale-105' :
+                                            isMyOther ? 'bg-emerald-100 border-emerald-400 shadow-sm' :
+                                                isLocked || isNoSeat ? 'bg-slate-50 border-slate-100 border-dashed opacity-50 cursor-not-allowed' :
+                                                    !canAfford && (isOccupied || isEmpty) ? 'bg-red-50 border-red-200 cursor-not-allowed' :
+                                                        isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' :
+                                                            'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
                                         }
                                     `}
-                                    onClick={() => !isMine && !isDisabled && handlePurchase(seat)}
+                                    onClick={() => isClickable && handlePurchase(seat)}
                                 >
-                                    <div className={`text-[10px] absolute top-1 left-2 font-bold ${isMine ? 'text-blue-100' : 'text-slate-400'}`}>
+                                    <div className={`text-[10px] absolute top-1 left-2 font-bold ${isMyCurrent ? 'text-blue-100' : isMyOther ? 'text-emerald-500' : 'text-slate-400'}`}>
                                         {r + 1}-{c + 1}
                                     </div>
 
-                                    {isMine ? (
+                                    {isMyCurrent ? (
                                         <div className="font-bold text-sm">내 자리</div>
-                                    ) : isDisabled ? (
+                                    ) : isMyOther ? (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <Tag className="w-4 h-4 text-emerald-600" />
+                                            <div className="text-emerald-700 text-xs font-bold">판매중</div>
+                                            <div className="text-[10px] text-emerald-500 font-bold">
+                                                {seat.price?.toLocaleString()}원
+                                            </div>
+                                        </div>
+                                    ) : isLocked || isNoSeat ? (
                                         <div className="flex flex-col items-center gap-1">
                                             <Lock className="w-4 h-4 text-slate-300" />
-                                            <div className="text-slate-300 text-[10px]">선택 불가</div>
+                                            <div className="text-slate-300 text-[10px]">구매 불가</div>
                                         </div>
                                     ) : (
                                         <>
@@ -223,18 +254,22 @@ export default function StudentRealEstate() {
                                             )}
                                             {seat ? (
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <div className={`text-xs font-bold flex items-center gap-0.5 ${isOccupied ? 'text-indigo-500' : 'text-amber-600'}`}>
+                                                    <div className={`text-xs font-bold flex items-center gap-0.5 ${!canAfford ? 'text-red-400' :
+                                                            isOccupied ? 'text-indigo-500' : 'text-amber-600'
+                                                        }`}>
                                                         <DollarSign className="w-3 h-3" />
                                                         {seat.price?.toLocaleString()}
                                                     </div>
-                                                    {!isOccupied && (
-                                                        <div className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
-                                                            구매가능
+                                                    {canAfford ? (
+                                                        <div className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isOccupied
+                                                                ? 'bg-indigo-100 text-indigo-700'
+                                                                : 'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                            인수가능
                                                         </div>
-                                                    )}
-                                                    {isOccupied && (
-                                                        <div className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
-                                                            인수 가능
+                                                    ) : (
+                                                        <div className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">
+                                                            인수불가
                                                         </div>
                                                     )}
                                                 </div>
@@ -258,8 +293,9 @@ export default function StudentRealEstate() {
                         <span className="font-bold text-indigo-600">적대적 인수:</span> 이미 다른 친구가 구매한 자리도 더 비싼 가격에 인수할 수 있습니다.
                     </li>
                     <li>인수 시 원래 주인에게 구매 금액의 85%가 지급되며, 15%는 세금으로 차감됩니다.</li>
-                    <li>자리를 뺏긴 친구는 자동으로 자리를 잃게 되며, 자리 가격은 10% 상승하여 다음 주인을 기다립니다.</li>
-                    <li><span className="font-bold text-slate-600">선택 불가</span> 표시가 된 자리는 빈 자리로 구매할 수 없습니다.</li>
+                    <li>자리를 뺏긴 친구는 자동으로 자리를 잃게 되며, 자리 가격은 10% 상승합니다.</li>
+                    <li><span className="font-bold text-red-500">인수불가:</span> 잔액이 부족한 자리는 빨간색으로 표시됩니다.</li>
+                    <li><span className="font-bold text-emerald-600">판매중:</span> 여러 자리를 소유한 경우, 마지막 구매 자리만 '내 자리'이고 나머지는 판매중입니다.</li>
                 </ul>
             </div>
         </div>
