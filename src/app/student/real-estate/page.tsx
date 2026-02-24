@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Home, MapPin, DollarSign, ArrowLeft, RefreshCw, ShoppingCart, User } from 'lucide-react';
+import { Home, MapPin, DollarSign, ArrowLeft, RefreshCw, ShoppingCart, User, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentRealEstate() {
@@ -10,6 +10,9 @@ export default function StudentRealEstate() {
     const [roster, setRoster] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    // 동적 그리드 크기 (API 응답에서 받아옴)
+    const [gridRows, setGridRows] = useState(5);
+    const [gridCols, setGridCols] = useState(6);
     const supabase = createClient();
 
     const fetchData = async () => {
@@ -35,6 +38,9 @@ export default function StudentRealEstate() {
 
             if (data.roster) setRoster(data.roster);
             if (data.seats) setSeats(data.seats);
+            // 서버에서 전달된 그리드 크기 반영
+            if (data.gridRows) setGridRows(data.gridRows);
+            if (data.gridCols) setGridCols(data.gridCols);
 
         } catch (e) {
             console.error(e);
@@ -47,10 +53,12 @@ export default function StudentRealEstate() {
         fetchData();
     }, []);
 
+    // 자리 구매/인수 처리
     const handlePurchase = async (seat: any) => {
         if (!roster) return;
+        if (!seat) return; // seat 데이터가 없는 빈 셀은 무시
 
-        // Prevent buying own seat
+        // 이미 본인 자리인 경우
         if (seat.student_id === roster.id) {
             alert('이미 본인의 자리입니다.');
             return;
@@ -94,7 +102,12 @@ export default function StudentRealEstate() {
                 throw new Error(result.error || '구매 중 오류가 발생했습니다.');
             }
 
-            alert('구매가 완료되었습니다!');
+            // pending 상태 처리 (즉시 구매 비허용)
+            if (result.pending) {
+                alert('📋 구매 요청이 접수되었습니다.\n선생님의 승인을 기다려주세요.');
+            } else {
+                alert('✅ 구매가 완료되었습니다!');
+            }
             fetchData();
         } catch (e: any) {
             console.error(e);
@@ -159,17 +172,23 @@ export default function StudentRealEstate() {
                     <span className="flex items-center gap-1"><div className="w-3 h-3 bg-white border rounded"></div> 구매 가능</span>
                     <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-500 border rounded"></div> 내 자리</span>
                     <span className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-200 border rounded"></div> 다른 학생</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-100 border border-dashed rounded"></div> 선택 불가</span>
                 </div>
             </div>
 
-            {/* Seat Grid */}
+            {/* Seat Grid - 동적 크기 */}
             <div className="overflow-x-auto pb-4">
-                <div className="grid gap-3 mx-auto w-fit" style={{ gridTemplateColumns: `repeat(6, minmax(100px, 1fr))` }}>
-                    {Array.from({ length: 5 }).map((_, r) => (
-                        Array.from({ length: 6 }).map((_, c) => {
+                <div className="grid gap-3 mx-auto w-fit" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(100px, 1fr))` }}>
+                    {Array.from({ length: gridRows }).map((_, r) => (
+                        Array.from({ length: gridCols }).map((_, c) => {
                             const seat = seats.find((s: any) => s.row_idx === r && s.col_idx === c);
                             const isMine = seat?.student_id === roster?.id;
                             const isOccupied = seat?.student_id && !isMine;
+                            // 빈 자리 체크: seat 데이터가 없거나, seat은 있지만 student_id가 없는 자리
+                            const isEmpty = !seat || (!seat.student_id);
+                            // 빈 자리(학생 미배정 + 교사가 빈자리로 설정)는 선택 불가로 처리
+                            // 자리에 가격이 설정되어 있지 않거나 seat 데이터가 없는 경우 비활성화
+                            const isDisabled = !seat;
 
                             return (
                                 <div
@@ -177,11 +196,12 @@ export default function StudentRealEstate() {
                                     className={`
                                         aspect-square rounded-xl border-2 p-3 flex flex-col items-center justify-center text-center transition-all relative overflow-hidden
                                         ${isMine ? 'bg-blue-500 border-blue-600 text-white shadow-lg z-10 scale-105' :
-                                            isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' : // Changed style for occupied
-                                                'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
+                                            isDisabled ? 'bg-slate-50 border-slate-100 border-dashed opacity-50 cursor-not-allowed' :
+                                                isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' :
+                                                    'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
                                         }
                                     `}
-                                    onClick={() => !isMine && handlePurchase(seat)}
+                                    onClick={() => !isMine && !isDisabled && handlePurchase(seat)}
                                 >
                                     <div className={`text-[10px] absolute top-1 left-2 font-bold ${isMine ? 'text-blue-100' : 'text-slate-400'}`}>
                                         {r + 1}-{c + 1}
@@ -189,6 +209,11 @@ export default function StudentRealEstate() {
 
                                     {isMine ? (
                                         <div className="font-bold text-sm">내 자리</div>
+                                    ) : isDisabled ? (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <Lock className="w-4 h-4 text-slate-300" />
+                                            <div className="text-slate-300 text-[10px]">선택 불가</div>
+                                        </div>
                                     ) : (
                                         <>
                                             {isOccupied && (
@@ -234,6 +259,7 @@ export default function StudentRealEstate() {
                     </li>
                     <li>인수 시 원래 주인에게 구매 금액의 85%가 지급되며, 15%는 세금으로 차감됩니다.</li>
                     <li>자리를 뺏긴 친구는 자동으로 자리를 잃게 되며, 자리 가격은 10% 상승하여 다음 주인을 기다립니다.</li>
+                    <li><span className="font-bold text-slate-600">선택 불가</span> 표시가 된 자리는 빈 자리로 구매할 수 없습니다.</li>
                 </ul>
             </div>
         </div>

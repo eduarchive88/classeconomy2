@@ -64,9 +64,20 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: seatsError.message }, { status: 500 });
         }
 
+        // 그리드 크기 계산 (교사 설정과 동기화)
+        const allSeats = seatsData || [];
+        let gridRows = 5; // 기본값
+        let gridCols = 6; // 기본값
+        if (allSeats.length > 0) {
+            gridRows = Math.max(...allSeats.map((s: any) => s.row_idx)) + 1;
+            gridCols = Math.max(...allSeats.map((s: any) => s.col_idx)) + 1;
+        }
+
         return NextResponse.json({
             roster: rosterData,
-            seats: seatsData || []
+            seats: allSeats,
+            gridRows,
+            gridCols
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

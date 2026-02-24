@@ -156,7 +156,8 @@ export default function RealEstateManagement() {
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     const variation = Math.floor(finalBasePrice * 0.1);
-                    const rowFactor = Math.floor(rows / 2) - r;
+                    // 뒷자리일수록 비싸게 (r이 클수록 가격 UP)
+                    const rowFactor = r - Math.floor(rows / 2);
                     const price = Math.max(100, finalBasePrice + (rowFactor * variation));
 
                     updates.push({
