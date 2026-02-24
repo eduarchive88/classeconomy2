@@ -15,7 +15,12 @@ export default function StudentRealEstate() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/student/real-estate');
+            const studentId = localStorage.getItem('studentId') || '';
+            const response = await fetch('/api/student/real-estate', {
+                headers: {
+                    'x-student-id': studentId
+                }
+            });
             if (!response.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
 
             const data = await response.json();
@@ -57,9 +62,13 @@ export default function StudentRealEstate() {
 
         setSubmitting(true);
         try {
+            const studentId = localStorage.getItem('studentId') || '';
             const response = await fetch('/api/student/real-estate/buy', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-student-id': studentId
+                },
                 body: JSON.stringify({ seatId: seat.id })
             });
 

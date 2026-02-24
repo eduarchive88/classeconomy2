@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { getStudentFromAuth } from '@/utils/student-auth';
 
 export async function POST(request: Request) {
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
 
         const { seatId } = await request.json();
 
@@ -16,13 +13,42 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Seat ID is required' }, { status: 400 });
         }
 
+        let rosterId: string | null = null;
+        let classId: string | null = null;
+
+        if (user) {
+            const studentInfo = await getStudentFromAuth(supabase, user);
+            rosterId = studentInfo.rosterId;
+            classId = studentInfo.classId;
+        }
+
         const supabaseAdmin = createAdminClient();
+
+        if (!rosterId || !classId) {
+            const headerStudentId = request.headers.get('x-student-id');
+            if (headerStudentId) {
+                const { data: roster } = await supabaseAdmin
+                    .from('student_roster')
+                    .select('id, class_id')
+                    .eq('id', headerStudentId)
+                    .single();
+
+                if (roster) {
+                    rosterId = roster.id;
+                    classId = roster.class_id;
+                }
+            }
+        }
+
+        if (!rosterId || !classId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         // 1. Get buyer info
         const { data: buyer, error: buyerError } = await supabaseAdmin
             .from('student_roster')
             .select('*')
-            .eq('profile_id', user.id)
+            .eq('id', rosterId)
             .single();
 
         if (buyerError || !buyer) {
