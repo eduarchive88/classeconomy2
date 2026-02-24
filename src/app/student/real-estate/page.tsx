@@ -15,7 +15,15 @@ export default function StudentRealEstate() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const studentId = localStorage.getItem('studentId') || '';
+            const sessionStr = localStorage.getItem('student_session');
+            let studentId = '';
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    studentId = session.student?.id || '';
+                } catch (e) { }
+            }
+
             const response = await fetch('/api/student/real-estate', {
                 headers: {
                     'x-student-id': studentId
@@ -62,7 +70,15 @@ export default function StudentRealEstate() {
 
         setSubmitting(true);
         try {
-            const studentId = localStorage.getItem('studentId') || '';
+            const sessionStr = localStorage.getItem('student_session');
+            let studentId = '';
+            if (sessionStr) {
+                try {
+                    const session = JSON.parse(sessionStr);
+                    studentId = session.student?.id || '';
+                } catch (e) { }
+            }
+
             const response = await fetch('/api/student/real-estate/buy', {
                 method: 'POST',
                 headers: {

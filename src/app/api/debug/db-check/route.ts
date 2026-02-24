@@ -15,8 +15,21 @@ export async function GET() {
         .select('id, class_id, date, quiz_id')
         .eq('date', today);
 
-    // 3. 퀴즈 마스터 테이블 확인
-    const { data: allQuizzes } = await supabase.from('quizzes').select('id, question, class_id');
+    const { data: classData } = await supabase.from('classes').select('*').ilike('session_code', 'class1').single();
+    let targetRoster = null;
+    let targetSeat = null;
+
+    if (classData) {
+        const { data: roster } = await supabase.from('student_roster').select('*').eq('class_id', classData.id);
+        if (roster) {
+            targetRoster = roster.find(s => s.grade === '2' && s.class_info === '2' && s.number === '1' || s.name === '20201' || s.grade === '20201' || s.profile_id === '20201' || s.number === '20201');
+
+            if (targetRoster) {
+                const { data: seats } = await supabase.from('seats').select('*, student:student_id(name, number)').eq('class_id', classData.id);
+                targetSeat = seats?.filter(s => s.student_id === targetRoster.id);
+            }
+        }
+    }
 
     return NextResponse.json({
         today,
@@ -28,6 +41,8 @@ export async function GET() {
             sessionCode: c.sessionCode,
             quizCountToday: dailyQuizzes?.filter(dq => dq.class_id === c.id).length || 0
         })),
+        studentInfo: targetRoster,
+        studentSeat: targetSeat,
         error: dqError?.message
     });
 }
