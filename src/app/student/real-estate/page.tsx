@@ -104,7 +104,7 @@ export default function StudentRealEstate() {
         }
     };
 
-    const mySeat = seats.find(s => s.student_id === roster?.id);
+    const mySeat = seats.find((s: any) => s.student_id === roster?.id);
 
     return (
         <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -167,7 +167,7 @@ export default function StudentRealEstate() {
                 <div className="grid gap-3 mx-auto w-fit" style={{ gridTemplateColumns: `repeat(6, minmax(100px, 1fr))` }}>
                     {Array.from({ length: 5 }).map((_, r) => (
                         Array.from({ length: 6 }).map((_, c) => {
-                            const seat = seats.find(s => s.row_idx === r && s.col_idx === c);
+                            const seat = seats.find((s: any) => s.row_idx === r && s.col_idx === c);
                             const isMine = seat?.student_id === roster?.id;
                             const isOccupied = seat?.student_id && !isMine;
 
