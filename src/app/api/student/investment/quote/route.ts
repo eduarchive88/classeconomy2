@@ -1,9 +1,6 @@
 import yahooFinance from 'yahoo-finance2';
 import { NextResponse } from 'next/server';
 
-// yahoo-finance2 경고 메시지 억제 (cookie consent 관련)
-yahooFinance.suppressNotices(['yahooSurvey']);
-
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {

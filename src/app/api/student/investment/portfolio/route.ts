@@ -2,9 +2,6 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import yahooFinance from 'yahoo-finance2';
 
-// yahoo-finance2 경고 메시지 억제
-yahooFinance.suppressNotices(['yahooSurvey']);
-
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
