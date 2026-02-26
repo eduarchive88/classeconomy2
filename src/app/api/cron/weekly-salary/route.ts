@@ -1,72 +1,97 @@
 
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
+// 매주 월요일 오전 8시(KST) = UTC 일요일 23시에 Vercel Cron에 의해 호출됨
 export async function GET(request: Request) {
-    const supabase = createClient();
+    // Vercel Cron 인증 (CRON_SECRET이 설정된 경우에만 검사)
+    const authHeader = request.headers.get('authorization');
+    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        console.warn('Unauthorized cron invocation attempt - weekly salary');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Admin 클라이언트 사용 (크론잡은 인증 컨텍스트가 없으므로 RLS 우회 필요)
+    const supabase = createAdminClient();
 
     try {
-        // 1. Fetch all students from roster who have an allowance set
-        const { data: roster, error: rosterError } = await supabase
+        // 1. 주급(allowance)이 설정된 모든 학생 조회
+        const { data: students, error: rosterError } = await supabase
             .from('student_roster')
-            .select('name, number, allowance, class_id')
+            .select('id, name, number, balance, allowance, class_id')
             .gt('allowance', 0);
 
         if (rosterError) throw rosterError;
-        if (!roster || roster.length === 0) {
-            return NextResponse.json({ success: true, message: 'No allowances to distribute' });
+
+        if (!students || students.length === 0) {
+            return NextResponse.json({
+                success: true,
+                message: '주급이 설정된 학생이 없습니다.',
+                distributed_to: 0
+            });
         }
 
-        // 2. Fetch all student profiles to get their UUIDs
-        // We match by name and number (and optionally session_code/class if needed)
-        const { data: profiles, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, name, number')
-            .eq('role', 'student');
-
-        if (profileError) throw profileError;
-
-        // 3. Prepare transactions
+        // 2. 학생별로 잔액 업데이트 + 거래 기록 생성
         const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-
+        const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
         const transactions: any[] = [];
+        let successCount = 0;
+        let failCount = 0;
 
-        roster.forEach((item: any) => {
-            const profile = profiles?.find((p: any) =>
-                p.name === item.name &&
-                p.number?.toString() === item.number?.toString()
-            );
+        for (const student of students) {
+            try {
+                const currentBalance = student.balance || 0;
+                const newBalance = currentBalance + student.allowance;
 
-            if (profile) {
+                // 잔액 업데이트
+                const { error: updateError } = await supabase
+                    .from('student_roster')
+                    .update({ balance: newBalance })
+                    .eq('id', student.id);
+
+                if (updateError) {
+                    console.error(`주급 지급 실패 - ${student.name}(${student.number}번):`, updateError);
+                    failCount++;
+                    continue;
+                }
+
+                // 거래 기록 준비
                 transactions.push({
-                    to_id: profile.id,
-                    amount: item.allowance,
-                    type: 'weekly_salary',
+                    student_id: student.id,
+                    amount: student.allowance,
+                    type: 'allowance',
                     description: `주급 지급 (${dateStr})`
                 });
-            }
-        });
 
-        if (transactions.length === 0) {
-            return NextResponse.json({ success: true, message: 'No registered students found for distribution' });
+                successCount++;
+                console.log(`주급 지급 완료: ${student.name}(${student.number}번) - ${student.allowance}원 (${currentBalance} → ${newBalance})`);
+            } catch (err: any) {
+                console.error(`주급 처리 에러 - ${student.name}:`, err);
+                failCount++;
+            }
         }
 
-        // 4. Batch insert transactions
-        const { error: insertError } = await supabase
-            .from('transactions')
-            .insert(transactions);
+        // 3. 거래 기록 일괄 삽입
+        if (transactions.length > 0) {
+            const { error: insertError } = await supabase
+                .from('transactions')
+                .insert(transactions);
 
-        if (insertError) throw insertError;
+            if (insertError) {
+                console.error('주급 거래 기록 삽입 실패:', insertError);
+                // 잔액은 이미 업데이트했으므로 로그 실패만 기록
+            }
+        }
 
         return NextResponse.json({
             success: true,
-            distributed_to: transactions.length,
-            message: `Successfully distributed weekly salary to ${transactions.length} students`
+            distributed_to: successCount,
+            failed: failCount,
+            message: `주급 지급 완료: ${successCount}명 성공${failCount > 0 ? `, ${failCount}명 실패` : ''}`
         });
 
     } catch (error: any) {
-        console.error('Weekly salary distribution error:', error);
+        console.error('주급 자동 지급 크론잡 에러:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
