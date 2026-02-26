@@ -46,7 +46,6 @@ export async function GET(request: Request) {
             .from('bank_accounts')
             .select('amount')
             .eq('student_id', rosterId)
-            .eq('type', 'savings')
             .eq('status', 'active');
 
         if (error) {
