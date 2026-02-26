@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 export default function TeacherInvestmentPage() {
     const [students, setStudents] = useState<any[]>([]);
+    const [totalStudents, setTotalStudents] = useState(0);
     const [loading, setLoading] = useState(true);
     const [sortBy, setSortBy] = useState<'netProfit' | 'profitRate' | 'studentNumber'>('netProfit');
     const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export default function TeacherInvestmentPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setStudents(data.students || []);
+                    setTotalStudents(data.totalStudents || data.students?.length || 0);
                 }
             } catch (e) {
                 console.error('Fetch error:', e);
@@ -74,7 +76,7 @@ export default function TeacherInvestmentPage() {
                         <TrendingUp className="w-5 h-5" />
                         <span className="text-sm font-medium">투자 참여 학생</span>
                     </div>
-                    <div className="text-3xl font-bold">{investingStudents.length}<span className="text-lg font-normal opacity-80"> / {students.length}명</span></div>
+                    <div className="text-3xl font-bold">{investingStudents.length}<span className="text-lg font-normal opacity-80"> / {totalStudents}명</span></div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
@@ -145,10 +147,10 @@ export default function TeacherInvestmentPage() {
                                 >
                                     {/* 순위 */}
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${!s.hasInvestment ? 'bg-slate-100 dark:bg-slate-700 text-slate-400' :
-                                            rank === 1 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600' :
-                                                rank === 2 ? 'bg-slate-100 dark:bg-slate-700 text-slate-500' :
-                                                    rank === 3 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' :
-                                                        'bg-slate-50 dark:bg-slate-700 text-slate-400'
+                                        rank === 1 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600' :
+                                            rank === 2 ? 'bg-slate-100 dark:bg-slate-700 text-slate-500' :
+                                                rank === 3 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' :
+                                                    'bg-slate-50 dark:bg-slate-700 text-slate-400'
                                         }`}>
                                         {s.hasInvestment ? rankEmoji : '-'}
                                     </div>

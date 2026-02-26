@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 
+// 종목명 매핑 (DB에 stock_name 컬럼이 없으므로 코드에서 매핑)
+const STOCK_NAME_MAP: Record<string, string> = {
+    'AAPL': '애플 (Apple)',
+    'TSLA': '테슬라 (Tesla)',
+    '005930.KS': '삼성전자',
+    '000660.KS': 'SK하이닉스',
+    '005380.KS': '현대차',
+    '035420.KS': 'NAVER',
+    'BTC-USD': '비트코인 (Bitcoin)',
+    'ETH-USD': '이더리움 (Ethereum)',
+};
+
 // Yahoo Finance에서 현재가 조회
 async function fetchCurrentPrice(symbol: string): Promise<number | null> {
     try {
@@ -18,7 +30,7 @@ async function fetchCurrentPrice(symbol: string): Promise<number | null> {
     }
 }
 
-// 교사용 - 학급 전체 학생 투자 현황 조회 API (실현 + 미실현 수익 반영)
+// 교사용 - 학급 전체 학생 투자 현황 조회 API (미실현 수익 기준 + 벌크 쿼리 최적화)
 export async function GET(request: Request) {
     try {
         const supabase = await createClient();
@@ -57,22 +69,31 @@ export async function GET(request: Request) {
             .order('number', { ascending: true });
 
         if (studentsError || !students || students.length === 0) {
-            console.error('Students fetch error:', studentsError);
-            return NextResponse.json({ students: [] });
+            return NextResponse.json({ students: [], totalStudents: 0 });
         }
 
-        // 모든 학생의 보유 종목 조회
+        const studentIds = students.map((s: any) => s.id);
+
+        // 모든 학생의 보유 종목 한 번에 조회 (quantity > 0)
         const { data: allInvestments } = await adminSupabase
             .from('investments')
-            .select('student_id, symbol, stock_name, quantity, average_price')
-            .in('student_id', students.map(s => s.id))
+            .select('student_id, symbol, quantity, average_price')
+            .in('student_id', studentIds)
             .gt('quantity', 0);
+
+        // 모든 학생의 투자 관련 거래 한 번에 조회 (벌크 쿼리)
+        const investmentTypes = ['investment_buy', 'investment_sell', 'stock_buy', 'stock_sell', 'stock_profit', 'stock_loss'];
+        const { data: allTransactions } = await adminSupabase
+            .from('transactions')
+            .select('student_id, amount, type')
+            .in('student_id', studentIds)
+            .in('type', investmentTypes);
 
         // 심볼별 현재가 캐시
         const priceCache: Record<string, number> = {};
-        const uniqueSymbols = [...new Set((allInvestments || []).map(inv => inv.symbol))];
+        const uniqueSymbols = [...new Set((allInvestments || []).map((inv: any) => inv.symbol))];
 
-        await Promise.all(uniqueSymbols.map(async (symbol) => {
+        await Promise.all(uniqueSymbols.map(async (symbol: string) => {
             const price = await fetchCurrentPrice(symbol);
             if (price !== null) priceCache[symbol] = price;
         }));
@@ -84,31 +105,22 @@ export async function GET(request: Request) {
         const result = [];
 
         for (const student of students) {
-            // 매수 거래
-            const { data: costTxs } = await adminSupabase
-                .from('transactions')
-                .select('amount')
-                .eq('student_id', student.id)
-                .in('type', costTypes);
+            // 해당 학생의 거래 필터링 (벌크 데이터에서)
+            const studentTxs = (allTransactions || []).filter((tx: any) => tx.student_id === student.id);
+            const costTxs = studentTxs.filter((tx: any) => costTypes.includes(tx.type));
+            const gainTxs = studentTxs.filter((tx: any) => gainTypes.includes(tx.type));
 
-            // 매도 거래
-            const { data: gainTxs } = await adminSupabase
-                .from('transactions')
-                .select('amount')
-                .eq('student_id', student.id)
-                .in('type', gainTypes);
-
-            const totalCost = costTxs?.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount || 0), 0) || 0;
-            const totalGain = gainTxs?.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount || 0), 0) || 0;
+            const totalCost = costTxs.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount || 0), 0);
+            const totalGain = gainTxs.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount || 0), 0);
             const realizedProfit = totalGain - totalCost;
 
             // 미실현 수익: 현재 보유 종목의 평가 손익
-            const studentInvestments = (allInvestments || []).filter(inv => inv.student_id === student.id);
+            const studentInvestments = (allInvestments || []).filter((inv: any) => inv.student_id === student.id);
             let unrealizedProfit = 0;
             let currentHoldingValue = 0;
             let holdingCost = 0;
 
-            const portfolioWithPrice = studentInvestments.map(inv => {
+            const portfolioWithPrice = studentInvestments.map((inv: any) => {
                 const currentPrice = priceCache[inv.symbol] || inv.average_price;
                 const marketValue = currentPrice * inv.quantity;
                 const cost = inv.average_price * inv.quantity;
@@ -116,7 +128,7 @@ export async function GET(request: Request) {
                 currentHoldingValue += marketValue;
                 holdingCost += cost;
                 return {
-                    stock_name: inv.stock_name,
+                    stock_name: STOCK_NAME_MAP[inv.symbol] || inv.symbol,
                     symbol: inv.symbol,
                     quantity: inv.quantity,
                     avg_price: inv.average_price,
@@ -130,25 +142,25 @@ export async function GET(request: Request) {
             const totalInvested = totalCost + holdingCost;
             const profitRate = totalInvested > 0 ? ((netProfit / totalInvested) * 100) : 0;
 
-            const hasInvestment = (costTxs && costTxs.length > 0) || (gainTxs && gainTxs.length > 0) || studentInvestments.length > 0;
+            const hasInvestment = costTxs.length > 0 || gainTxs.length > 0 || studentInvestments.length > 0;
 
             result.push({
                 id: student.id,
                 name: student.name,
                 studentNumber: student.number,
-                totalCost,                  // 총 매수액 (실현)
-                totalGain,                  // 총 매도 수익 (실현)
+                totalCost,
+                totalGain,
                 realizedProfit: Math.round(realizedProfit),
                 unrealizedProfit: Math.round(unrealizedProfit),
-                netProfit,                  // 순수익 (실현 + 미실현)
-                profitRate,                 // 수익률
+                netProfit,
+                profitRate,
                 currentHoldingValue: Math.round(currentHoldingValue),
                 portfolio: portfolioWithPrice,
                 hasInvestment
             });
         }
 
-        return NextResponse.json({ students: result });
+        return NextResponse.json({ students: result, totalStudents: students.length });
     } catch (error: any) {
         console.error('Teacher investment fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
