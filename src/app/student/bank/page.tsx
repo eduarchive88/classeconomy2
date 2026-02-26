@@ -263,10 +263,12 @@ export default function StudentBank() {
                                                                                                 tx.type === 'real_estate_purchase' ? '부동산 구입' :
                                                                                                     tx.type === 'stock_buy' ? '주식 매수' :
                                                                                                         tx.type === 'stock_sell' ? '주식 매도' :
-                                                                                                            tx.type === 'real_estate_income' ? '임대/매각 수익' :
-                                                                                                                tx.type === 'real_estate_pending' ? '부동산 구매 승인 대기' :
-                                                                                                                    tx.type === 'real_estate_refund' ? '부동산 구매 환불' :
-                                                                                                                        tx.type === 'tax' ? '세금' : tx.type}
+                                                                                                            tx.type === 'investment_buy' ? '주식 매수' :
+                                                                                                                tx.type === 'investment_sell' ? '주식 매도' :
+                                                                                                                    tx.type === 'real_estate_income' ? '임대/매각 수익' :
+                                                                                                                        tx.type === 'real_estate_pending' ? '부동산 구매 승인 대기' :
+                                                                                                                            tx.type === 'real_estate_refund' ? '부동산 구매 환불' :
+                                                                                                                                tx.type === 'tax' ? '세금' : tx.type}
                                                 </div>
                                                 <div className="text-sm text-slate-500 dark:text-slate-400">
                                                     {new Date(tx.created_at).toLocaleDateString()} {tx.description && `• ${tx.description}`}

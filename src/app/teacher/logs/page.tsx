@@ -90,6 +90,8 @@ export default function TeacherLogs() {
             case 'quiz_reward': return '상금';
             case 'stock_buy': return '주식 매수';
             case 'stock_sell': return '주식 매도';
+            case 'investment_buy': return '주식 매수';
+            case 'investment_sell': return '주식 매도';
             case 'stock_profit': return '주식 수익';
             case 'stock_loss': return '주식 손실';
             case 'real_estate_income': return '부동산 수익';

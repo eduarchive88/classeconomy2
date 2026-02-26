@@ -48,6 +48,19 @@ export async function POST(request: Request) {
 
         if (studentError || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
 
+        // 한글 종목명 매핑
+        const STOCKS = [
+            { symbol: 'AAPL', name: '애플 (Apple)' },
+            { symbol: 'TSLA', name: '테슬라 (Tesla)' },
+            { symbol: '005930.KS', name: '삼성전자' },
+            { symbol: '000660.KS', name: 'SK하이닉스' },
+            { symbol: '005380.KS', name: '현대차' },
+            { symbol: '035420.KS', name: 'NAVER' },
+            { symbol: 'BTC-USD', name: '비트코인 (Bitcoin)' },
+            { symbol: 'ETH-USD', name: '이더리움 (Ethereum)' }
+        ];
+        const stockName = STOCKS.find(s => s.symbol === symbol)?.name || symbol;
+
         if (action === 'buy') {
             if (student.balance < cost) {
                 return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
@@ -89,7 +102,7 @@ export async function POST(request: Request) {
                 student_id: studentId,
                 type: 'investment_buy',
                 amount: -cost,
-                description: `Bought ${quantity} ${symbol} @ ${currentPrice}`
+                description: `${stockName} ${quantity}주 매수 (단가: ${Math.floor(currentPrice).toLocaleString()}원)`
             });
 
             return NextResponse.json({ success: true, message: `Bought ${symbol}` });
@@ -141,7 +154,7 @@ export async function POST(request: Request) {
                 student_id: studentId,
                 type: 'investment_sell',
                 amount: revenue,
-                description: `Sold ${quantity} ${symbol} @ ${currentPrice}`
+                description: `${stockName} ${quantity}주 매도 (단가: ${Math.floor(currentPrice).toLocaleString()}원)`
             });
 
             return NextResponse.json({ success: true, message: `Sold ${symbol}` });

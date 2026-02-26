@@ -52,6 +52,8 @@ export default function StudentLog() {
             case 'real_estate_refund': return '부동산 환불';
             case 'stock_buy': return '주식 매수';
             case 'stock_sell': return '주식 매도';
+            case 'investment_buy': return '주식 매수';
+            case 'investment_sell': return '주식 매도';
             case 'tax': return '세금';
             default: return type;
         }
