@@ -64,6 +64,13 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: seatsError.message }, { status: 500 });
         }
 
+        // 3. 이 학생의 pending 거래 목록 (승인 대기 중)
+        const { data: pendingTrades } = await supabaseAdmin
+            .from('seat_trades')
+            .select('id, seat_id, status, price, created_at')
+            .eq('buyer_id', rosterId)
+            .eq('status', 'pending');
+
         // 그리드 크기 계산 (교사 설정과 동기화)
         const allSeats = seatsData || [];
         let gridRows = 5; // 기본값
@@ -77,7 +84,8 @@ export async function GET(request: Request) {
             roster: rosterData,
             seats: allSeats,
             gridRows,
-            gridCols
+            gridCols,
+            pendingTrades: pendingTrades || []
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

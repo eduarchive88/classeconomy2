@@ -12,6 +12,8 @@ export default function StudentRealEstate() {
     // 동적 그리드 크기 (API 응답에서 받아옴)
     const [gridRows, setGridRows] = useState(5);
     const [gridCols, setGridCols] = useState(6);
+    // 내가 대기 중인 거래 목록 (pending)
+    const [pendingTrades, setPendingTrades] = useState<any[]>([]);
     const supabase = createClient();
 
     const fetchData = async () => {
@@ -40,6 +42,8 @@ export default function StudentRealEstate() {
             // 서버에서 전달된 그리드 크기 반영
             if (data.gridRows) setGridRows(data.gridRows);
             if (data.gridCols) setGridCols(data.gridCols);
+            // 내 포딩 거래 목록 (pending)
+            if (data.pendingTrades) setPendingTrades(data.pendingTrades);
 
         } catch (e) {
             console.error(e);
@@ -76,8 +80,8 @@ export default function StudentRealEstate() {
 
         const isOccupied = !!seat.student_id;
         const confirmMsg = isOccupied
-            ? `${seat.price.toLocaleString()}원에 이 자리를 인수하시겠습니까?\n(원주인에게 85% 지급, 15%는 세금)`
-            : `${seat.price.toLocaleString()}원에 이 자리를 구매하시겠습니까?`;
+            ? `${seat.price.toLocaleString()}원에 이 자리를 인수하시겠습니까?\n(원주인에게 85% 지급, 15%는 세금)\n* 승인 음 승인대기로 인수 접수, 금액은 즐리 차감됩니다.`
+            : `${seat.price.toLocaleString()}원에 이 자리를 구매하시겠습니까?\n* 승인 음 승인대기로 구매 접수, 금액은 즐리 차감됩니다.`;
 
         if (!confirm(confirmMsg)) return;
 
@@ -198,6 +202,9 @@ export default function StudentRealEstate() {
                         Array.from({ length: gridCols }).map((_, c) => {
                             const seat = seats.find((s: any) => s.row_idx === r && s.col_idx === c);
 
+                            // 내가 pending 요청한 자리인지 확인
+                            const myPendingTrade = pendingTrades.find((t: any) => t.seat_id === seat?.id);
+
                             // 상태 분류
                             const isLocked = seat?.is_locked; // 교사가 잠근 자리
                             const isNoSeat = !seat; // seat 데이터 자체가 없는 빈 셀
@@ -207,8 +214,8 @@ export default function StudentRealEstate() {
                             const canAfford = roster && seat && roster.balance >= seat.price; // 구매 가능 여부
                             const isEmpty = seat && !seat.student_id; // 비어있는 구매 가능 자리
 
-                            // 클릭 가능 여부
-                            const isClickable = !isNoSeat && !isLocked && !isMyCurrent && !isMyOther && canAfford;
+                            // 클릭 가능 여부 (pending 중 인 자리는 다시 클릭 불가)
+                            const isClickable = !isNoSeat && !isLocked && !isMyCurrent && !isMyOther && canAfford && !myPendingTrade;
 
                             return (
                                 <div
@@ -216,11 +223,12 @@ export default function StudentRealEstate() {
                                     className={`
                                         aspect-square rounded-xl border-2 p-3 flex flex-col items-center justify-center text-center transition-all relative overflow-hidden
                                         ${isMyCurrent ? 'bg-blue-500 border-blue-600 text-white shadow-lg z-10 scale-105' :
-                                            isMyOther ? 'bg-emerald-100 border-emerald-400 shadow-sm' :
-                                                isLocked || isNoSeat ? 'bg-slate-50 border-slate-100 border-dashed opacity-50 cursor-not-allowed' :
-                                                    !canAfford && (isOccupied || isEmpty) ? 'bg-red-50 border-red-200 cursor-not-allowed' :
-                                                        isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' :
-                                                            'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
+                                            myPendingTrade ? 'bg-yellow-100 border-yellow-400 cursor-not-allowed' :
+                                                isMyOther ? 'bg-emerald-100 border-emerald-400 shadow-sm' :
+                                                    isLocked || isNoSeat ? 'bg-slate-50 border-slate-100 border-dashed opacity-50 cursor-not-allowed' :
+                                                        !canAfford && (isOccupied || isEmpty) ? 'bg-red-50 border-red-200 cursor-not-allowed' :
+                                                            isOccupied ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 cursor-pointer' :
+                                                                'bg-white border-slate-100 hover:border-amber-300 hover:bg-amber-50 cursor-pointer shadow-sm hover:shadow-md'
                                         }
                                     `}
                                     onClick={() => isClickable && handlePurchase(seat)}
@@ -231,6 +239,14 @@ export default function StudentRealEstate() {
 
                                     {isMyCurrent ? (
                                         <div className="font-bold text-sm">내 자리</div>
+                                    ) : myPendingTrade ? (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <span className="text-lg">⏳</span>
+                                            <div className="text-yellow-700 text-xs font-bold">승인대기중</div>
+                                            <div className="text-[10px] text-yellow-600 font-bold">
+                                                {myPendingTrade.price?.toLocaleString()}원
+                                            </div>
+                                        </div>
                                     ) : isMyOther ? (
                                         <div className="flex flex-col items-center gap-1">
                                             <span className="text-lg">🏷️</span>

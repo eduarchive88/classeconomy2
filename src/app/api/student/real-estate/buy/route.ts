@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 
         const isAutoAllowed = classData?.is_auto_real_estate ?? true;
 
-        // 즉시 구매 비허용인 경우 → pending 요청으로 전환
+        // 즉시 구매 비허용인 경우 → pending 요청으로 전환 (잔액 선만 후 승인 대기)
         if (!isAutoAllowed) {
             try {
                 const { error: tradeError } = await supabaseAdmin
@@ -113,13 +113,33 @@ export async function POST(request: Request) {
 
                     return NextResponse.json({ error: '구매 요청 중 오류가 발생했습니다. 선생님께 문의해주세요.' }, { status: 500 });
                 }
-                else {
-                    return NextResponse.json({
-                        success: true,
-                        pending: true,
-                        message: '구매 요청이 접수되었습니다. 선생님의 승인을 기다려주세요.'
-                    });
+
+                // 잔액 선차감 (승인 대기 중 쇜다음을 막기 위해)
+                const { error: deductError } = await supabaseAdmin
+                    .from('student_roster')
+                    .update({ balance: buyer.balance - seat.price })
+                    .eq('id', rosterId!);
+
+                if (deductError) {
+                    console.error('Deduct error after pending insert:', deductError);
+                    // 차감 실패 시 트레이드 실행 취소
+                    await supabaseAdmin.from('seat_trades').delete().eq('buyer_id', rosterId!).eq('seat_id', seat.id).eq('status', 'pending');
+                    return NextResponse.json({ error: '잔액 차감 중 오류가 발생했습니다.' }, { status: 500 });
                 }
+
+                // 거래 기록
+                await supabaseAdmin.from('transactions').insert({
+                    student_id: rosterId,
+                    amount: -seat.price,
+                    type: 'real_estate_pending',
+                    description: `자리 구매 승인 대기 (${seat.row_idx + 1}-${seat.col_idx + 1})`
+                });
+
+                return NextResponse.json({
+                    success: true,
+                    pending: true,
+                    message: '구매 요청이 접수되었습니다. 선생님의 승인을 기다려주세요.'
+                });
             } catch (e: any) {
                 console.error('seat_trades fallback error:', e);
                 return NextResponse.json({ error: '구매 요청 중 서버 오류가 발생했습니다.' }, { status: 500 });
