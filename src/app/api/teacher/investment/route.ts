@@ -50,13 +50,14 @@ export async function GET(request: Request) {
         }
 
         // 학급의 모든 학생 조회
-        const { data: students } = await adminSupabase
+        const { data: students, error: studentsError } = await adminSupabase
             .from('student_roster')
-            .select('id, name, student_number')
+            .select('id, name, number')
             .eq('class_id', classId)
-            .order('student_number', { ascending: true });
+            .order('number', { ascending: true });
 
-        if (!students || students.length === 0) {
+        if (studentsError || !students || students.length === 0) {
+            console.error('Students fetch error:', studentsError);
             return NextResponse.json({ students: [] });
         }
 
@@ -134,7 +135,7 @@ export async function GET(request: Request) {
             result.push({
                 id: student.id,
                 name: student.name,
-                studentNumber: student.student_number,
+                studentNumber: student.number,
                 totalCost,                  // 총 매수액 (실현)
                 totalGain,                  // 총 매도 수익 (실현)
                 realizedProfit: Math.round(realizedProfit),

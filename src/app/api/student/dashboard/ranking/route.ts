@@ -33,10 +33,11 @@ export async function GET(request: Request) {
         // 같은 학급의 모든 학생 조회
         const { data: students, error: studentsError } = await adminSupabase
             .from('student_roster')
-            .select('id, name, student_number')
+            .select('id, name, number')
             .eq('class_id', classId);
 
         if (studentsError || !students || students.length === 0) {
+            console.error('Students fetch error:', studentsError);
             return NextResponse.json({ ranking: [] });
         }
 
@@ -100,7 +101,7 @@ export async function GET(request: Request) {
                 rankings.push({
                     id: student.id,
                     name: student.name,
-                    studentNumber: student.student_number,
+                    studentNumber: student.number,
                     netProfit: Math.round(totalNetProfit)
                 });
             }
