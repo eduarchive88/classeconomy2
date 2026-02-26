@@ -105,8 +105,13 @@ export async function POST(request: Request) {
 
                 if (tradeError) {
                     console.error('Trade insert error:', tradeError);
-                    // seat_trades 테이블이 없거나 컬럼이 맞지 않으면 즉시 구매로 대체
-                    console.log('Falling back to instant purchase due to seat_trades error');
+
+                    // 만약 동일한 자리에 대해 이미 대기 중인 요청이 있다면?
+                    if (tradeError.code === '23505') { // unique violation
+                        return NextResponse.json({ error: '이미 해당 자리에 대한 구매 요청이 진행 중입니다.' }, { status: 400 });
+                    }
+
+                    return NextResponse.json({ error: '구매 요청 중 오류가 발생했습니다. 선생님께 문의해주세요.' }, { status: 500 });
                 }
                 else {
                     return NextResponse.json({
@@ -115,8 +120,9 @@ export async function POST(request: Request) {
                         message: '구매 요청이 접수되었습니다. 선생님의 승인을 기다려주세요.'
                     });
                 }
-            } catch (e) {
-                console.error('seat_trades fallback:', e);
+            } catch (e: any) {
+                console.error('seat_trades fallback error:', e);
+                return NextResponse.json({ error: '구매 요청 중 서버 오류가 발생했습니다.' }, { status: 500 });
             }
         }
 

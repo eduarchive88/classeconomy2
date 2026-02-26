@@ -18,6 +18,7 @@ export default function RealEstateManagement() {
     // 행/열 동적 조절
     const [rows, setRows] = useState(5);
     const [cols, setCols] = useState(6);
+    const [isAutoBuy, setIsAutoBuy] = useState(true);
     const supabase = createClient();
 
     const fetchData = async () => {
@@ -31,6 +32,14 @@ export default function RealEstateManagement() {
             .eq('class_id', selectedClassId)
             .order('number', { ascending: true });
         if (studentsData) setStudents(studentsData);
+
+        // 클래스 설정 불러오기
+        const { data: classData } = await supabase
+            .from('classes')
+            .select('is_auto_real_estate')
+            .eq('id', selectedClassId)
+            .single();
+        if (classData) setIsAutoBuy(classData.is_auto_real_estate);
 
         // 자리 데이터 불러오기
         const { data: seatsData } = await supabase
@@ -276,10 +285,12 @@ export default function RealEstateManagement() {
                                         <input
                                             type="checkbox"
                                             className="sr-only peer"
+                                            checked={isAutoBuy}
                                             onChange={async (e) => {
                                                 const checked = e.target.checked;
                                                 const classId = localStorage.getItem('selected_class_id');
                                                 if (classId) {
+                                                    setIsAutoBuy(checked);
                                                     await supabase.from('classes').update({ is_auto_real_estate: checked }).eq('id', classId);
                                                     alert(checked ? '자동 구매가 활성화되었습니다.' : '자동 구매가 비활성화되었습니다 (선생님 승인 필요).');
                                                 }
