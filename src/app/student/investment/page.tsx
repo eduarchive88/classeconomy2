@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCcw, Newspaper, DollarSign, PieChart, Wallet } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, RefreshCcw, Newspaper, DollarSign, PieChart, Wallet, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
+// 거래 가능한 종목 목록
 const STOCKS = [
     { symbol: 'AAPL', name: '애플 (Apple)' },
     { symbol: 'TSLA', name: '테슬라 (Tesla)' },
@@ -21,20 +22,17 @@ export default function InvestmentPage() {
     const [news, setNews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [newsLoading, setNewsLoading] = useState(true);
+    const [quoteErrors, setQuoteErrors] = useState<Record<string, boolean>>({}); // 가격 가져오기 실패 추적
 
-    // Trade Modal
-    const [selectedStock, setSelectedStock] = useState<any>(null); // { symbol, name, price }
+    // 거래 모달 상태
+    const [selectedStock, setSelectedStock] = useState<any>(null);
     const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
     const [quantity, setQuantity] = useState('');
     const [tradeLoading, setTradeLoading] = useState(false);
 
-    // My Portfolio
+    // 포트폴리오 상태
     const [portfolio, setPortfolio] = useState<any[]>([]);
     const [portfolioLoading, setPortfolioLoading] = useState(true);
-
-    // My Portfolio
-    // TODO: Fetch portfolio from a separate API or include in quote API?
-    // For now, let's just show trade interface. Portfolio viewing can be added later or via bank API enhancement.
 
     useEffect(() => {
         const stored = localStorage.getItem('student_session');
@@ -47,28 +45,36 @@ export default function InvestmentPage() {
             fetchPortfolio(JSON.parse(stored).student.id);
         }
 
-        const interval = setInterval(fetchQuotes, 10000); // Refresh quotes every 10s
+        // 10초마다 시세 자동 갱신
+        const interval = setInterval(fetchQuotes, 10000);
         return () => clearInterval(interval);
     }, []);
 
+    // 시세 가져오기
     const fetchQuotes = async () => {
         const newQuotes: any = {};
+        const errors: Record<string, boolean> = {};
         for (const stock of STOCKS) {
             try {
                 const res = await fetch(`/api/student/investment/quote?symbol=${stock.symbol}`);
                 const data = await res.json();
-                if (res.ok) {
+                if (res.ok && !data.isError) {
                     newQuotes[stock.symbol] = data;
+                    errors[stock.symbol] = false;
+                } else {
+                    errors[stock.symbol] = true;
                 }
             } catch (error) {
                 console.error(`Failed to fetch ${stock.symbol}`, error);
+                errors[stock.symbol] = true;
             }
         }
         setQuotes(newQuotes);
-        setQuotes(newQuotes);
+        setQuoteErrors(errors);
         setLoading(false);
     };
 
+    // 포트폴리오 가져오기
     const fetchPortfolio = async (id: string) => {
         try {
             const res = await fetch(`/api/student/investment/portfolio?studentId=${id}`);
@@ -83,6 +89,7 @@ export default function InvestmentPage() {
         }
     };
 
+    // 뉴스 가져오기
     const fetchNews = async () => {
         try {
             const res = await fetch('/api/student/investment/news');
@@ -97,6 +104,7 @@ export default function InvestmentPage() {
         }
     };
 
+    // 거래 처리
     const handleTrade = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedStock || !tradeAction || !quantity) return;
@@ -119,7 +127,7 @@ export default function InvestmentPage() {
                 setQuantity('');
                 setTradeAction(null);
                 setSelectedStock(null);
-                if (studentId) fetchPortfolio(studentId); // Refresh portfolio
+                if (studentId) fetchPortfolio(studentId);
             } else {
                 alert(json.error);
             }
@@ -130,6 +138,7 @@ export default function InvestmentPage() {
         }
     };
 
+    // 거래 모달 열기
     const openTradeModal = (stock: any, action: 'buy' | 'sell') => {
         setSelectedStock(stock);
         setTradeAction(action);
@@ -138,6 +147,7 @@ export default function InvestmentPage() {
 
     return (
         <div className="container mx-auto p-4 max-w-4xl pb-24">
+            {/* 헤더 */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <Link href="/student" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
@@ -150,57 +160,8 @@ export default function InvestmentPage() {
                 </button>
             </div>
 
-            {/* Market Status (Quotes) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {STOCKS.map((stock) => {
-                    const quote = quotes[stock.symbol];
-                    const isUp = quote?.change >= 0;
-
-                    return (
-                        <div key={stock.symbol} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="font-bold text-lg">{stock.name}</h3>
-                                    <span className="text-xs font-mono text-slate-500">{stock.symbol}</span>
-                                </div>
-                                {quote ? (
-                                    <div className={`text-right ${isUp ? 'text-red-500' : 'text-blue-500'}`}>
-                                        <div className="text-xl font-bold flex items-center justify-end gap-1">
-                                            {isUp ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                                            {quote.price.toLocaleString()}
-                                        </div>
-                                        <div className="text-sm font-medium">
-                                            {isUp ? '+' : ''}{quote.change.toFixed(2)} ({quote.changePercent.toFixed(2)}%)
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="animate-pulse bg-slate-200 dark:bg-slate-700 w-24 h-10 rounded"></div>
-                                )}
-                            </div>
-
-                            <div className="flex gap-2 mt-4">
-                                <button
-                                    onClick={() => openTradeModal({ ...stock, price: quote?.price }, 'buy')}
-                                    disabled={!quote}
-                                    className="flex-1 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-bold transition-colors disabled:opacity-50"
-                                >
-                                    매수
-                                </button>
-                                <button
-                                    onClick={() => openTradeModal({ ...stock, price: quote?.price }, 'sell')}
-                                    disabled={!quote}
-                                    className="flex-1 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold transition-colors disabled:opacity-50"
-                                >
-                                    매도
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* My Portfolio Section */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-8">
+            {/* ===== 1. 나의 투자 현황 (포트폴리오) - 최상단 ===== */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <PieChart className="w-6 h-6 text-emerald-500" />
                     나의 투자 현황 (포트폴리오)
@@ -252,7 +213,76 @@ export default function InvestmentPage() {
                 )}
             </div>
 
-            {/* Economic News */}
+            {/* ===== 2. 투자 안내 - 포트폴리오 바로 아래 ===== */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400 mb-6">
+                <p className="font-bold mb-2">💡 투자 안내</p>
+                <ul className="list-disc ml-5 space-y-1">
+                    <li>주식은 <strong>소수점 단위</strong>로도 구매 가능합니다. (예: 0.5주)</li>
+                    <li>실시간 가격 변동에 따라 수익률이 달라질 수 있습니다.</li>
+                    <li>가격은 Yahoo Finance에서 실시간 연동됩니다. 네트워크 상황에 따라 지연될 수 있습니다.</li>
+                </ul>
+            </div>
+
+            {/* ===== 3. 시장 현황 (시세 카드) ===== */}
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-indigo-500" />
+                시장 현황
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {STOCKS.map((stock) => {
+                    const quote = quotes[stock.symbol];
+                    const hasError = quoteErrors[stock.symbol];
+                    const isUp = quote?.change >= 0;
+
+                    return (
+                        <div key={stock.symbol} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="font-bold text-lg">{stock.name}</h3>
+                                    <span className="text-xs font-mono text-slate-500">{stock.symbol}</span>
+                                </div>
+                                {quote ? (
+                                    <div className={`text-right ${isUp ? 'text-red-500' : 'text-blue-500'}`}>
+                                        <div className="text-xl font-bold flex items-center justify-end gap-1">
+                                            {isUp ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                                            {quote.price.toLocaleString()}
+                                        </div>
+                                        <div className="text-sm font-medium">
+                                            {isUp ? '+' : ''}{quote.change.toFixed(2)} ({quote.changePercent.toFixed(2)}%)
+                                        </div>
+                                    </div>
+                                ) : hasError ? (
+                                    <div className="flex items-center gap-1 text-amber-500 text-sm">
+                                        <AlertCircle className="w-4 h-4" />
+                                        <span>가격 불러오기 실패</span>
+                                    </div>
+                                ) : (
+                                    <div className="animate-pulse bg-slate-200 dark:bg-slate-700 w-24 h-10 rounded"></div>
+                                )}
+                            </div>
+
+                            <div className="flex gap-2 mt-4">
+                                <button
+                                    onClick={() => openTradeModal({ ...stock, price: quote?.price }, 'buy')}
+                                    disabled={!quote}
+                                    className="flex-1 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-bold transition-colors disabled:opacity-50"
+                                >
+                                    매수
+                                </button>
+                                <button
+                                    onClick={() => openTradeModal({ ...stock, price: quote?.price }, 'sell')}
+                                    disabled={!quote}
+                                    className="flex-1 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold transition-colors disabled:opacity-50"
+                                >
+                                    매도
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* ===== 4. 경제 뉴스 ===== */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
                 <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <Newspaper className="w-6 h-6 text-indigo-500" />
@@ -294,7 +324,7 @@ export default function InvestmentPage() {
                 )}
             </div>
 
-            {/* Trade Modal */}
+            {/* 거래 모달 */}
             {tradeAction && selectedStock && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -354,14 +384,15 @@ export default function InvestmentPage() {
                 </div>
             )}
 
-            {/* Guide */}
-            <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
-                <p className="font-bold mb-2">💡 투자 안내</p>
-                <ul className="list-disc ml-5 space-y-1">
-                    <li>주식은 <strong>소수점 단위</strong>로도 구매 가능합니다. (예: 0.5주)</li>
-                    <li>실시간 가격 변동에 따라 수익률이 달라질 수 있습니다.</li>
-                </ul>
-            </div>
+            {/* 푸터 */}
+            <footer className="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
+                <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
+                <p className="mt-1">
+                    문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">카카오톡 오픈채팅</a>
+                    <span className="mx-2">|</span>
+                    블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a>
+                </p>
+            </footer>
         </div>
     );
 }
