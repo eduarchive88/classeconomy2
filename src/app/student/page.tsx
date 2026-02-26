@@ -50,17 +50,15 @@ export default function StudentDashboard() {
                     localStorage.setItem('student_session', JSON.stringify(session));
                 }
 
-                // 저축 총액 조회
-                const { data: accounts } = await supabase
-                    .from('bank_accounts')
-                    .select('amount')
-                    .eq('student_id', session.student.id)
-                    .eq('type', 'savings')
-                    .eq('status', 'active');
-
-                if (accounts) {
-                    const totalSavings = accounts.reduce((sum: number, acc: any) => sum + (acc.amount || 0), 0);
-                    setSavingsTotal(totalSavings);
+                // 저축 총액 조회 (API 경유 - RLS 우회)
+                try {
+                    const sumRes = await fetch(`/api/student/dashboard/summary?studentId=${session.student.id}`);
+                    if (sumRes.ok) {
+                        const sumData = await sumRes.json();
+                        setSavingsTotal(sumData.totalSavings || 0);
+                    }
+                } catch (e) {
+                    console.error('Savings fetch error:', e);
                 }
 
                 // 투자 총액 및 수익률 조회
@@ -120,16 +118,16 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="md:col-span-2 card bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none p-8 flex flex-col justify-between shadow-lg rounded-2xl relative overflow-hidden">
+                    <div className="md:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 flex flex-col justify-between shadow-sm hover:shadow-md rounded-2xl relative overflow-hidden transition-all">
                         <div className="relative z-10">
-                            <h2 className="text-2xl font-bold mb-2">
+                            <h2 className="text-2xl font-bold mb-2 text-slate-800 dark:text-white">
                                 {student?.name || '학생'}님 환영해요! 👋
                             </h2>
-                            <p className="text-white/90 text-sm font-medium mb-4">오늘도 현명한 경제 생활을 해보세요.</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-4">오늘도 현명한 경제 생활을 해보세요.</p>
 
                             <div className="mt-4">
-                                <p className="text-blue-50 text-xs font-medium mb-1">나의 현재 잔액</p>
-                                <h2 className="text-4xl font-bold">{balance.toLocaleString()} 원</h2>
+                                <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-1">나의 현재 잔액</p>
+                                <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100">{balance.toLocaleString()} 원</h2>
                             </div>
                         </div>
                         <div className="absolute right-[-20px] bottom-[-20px] text-white/10 rotate-12">
