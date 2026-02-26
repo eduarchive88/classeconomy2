@@ -1,6 +1,22 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
-import yahooFinance from 'yahoo-finance2';
 import { NextResponse } from 'next/server';
+
+// Yahoo Finance 차트 API를 직접 호출하여 현재가 조회
+async function fetchCurrentPrice(symbol: string): Promise<number | null> {
+    try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+        const res = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            },
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
+    } catch {
+        return null;
+    }
+}
 
 export async function POST(request: Request) {
     const { action, studentId, symbol, quantity } = await request.json();
@@ -12,11 +28,10 @@ export async function POST(request: Request) {
     }
 
     try {
-        // 1. Get Current Price
-        const quote = await yahooFinance.quote(symbol);
-        const currentPrice = quote.regularMarketPrice;
+        // 1. 현재 시세 조회
+        const currentPrice = await fetchCurrentPrice(symbol);
         if (!currentPrice) {
-            return NextResponse.json({ error: 'Price not available' }, { status: 500 });
+            return NextResponse.json({ error: '현재 시세를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
         }
 
         const totalCost = Math.floor(currentPrice * quantity); // Floor for integer currency? or allow float? Let's assume integer currency for simplicity, but price is float.

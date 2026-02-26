@@ -1,8 +1,28 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-import yahooFinance from 'yahoo-finance2';
 
 export const dynamic = 'force-dynamic';
+
+// Yahoo Finance 차트 API를 직접 호출 (npm 패키지 의존 없음)
+async function fetchCurrentPrice(symbol: string): Promise<number | null> {
+    try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+        const res = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+            next: { revalidate: 0 }
+        });
+
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        return price || null;
+    } catch {
+        return null;
+    }
+}
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -24,29 +44,15 @@ export async function GET(request: Request) {
 
         // 보유 종목별 현재 시세 가져오기
         const portfolio = await Promise.all(investments.map(async (inv: any) => {
-            try {
-                const quote = await yahooFinance.quote(inv.symbol, {}, { timeout: 8000 });
-                const currentPrice = quote.regularMarketPrice || inv.average_price;
-                return {
-                    ...inv,
-                    currentPrice,
-                    marketValue: currentPrice * inv.quantity,
-                    totalCost: inv.average_price * inv.quantity,
-                    profit: (currentPrice * inv.quantity) - (inv.average_price * inv.quantity),
-                    profitPercent: ((currentPrice - inv.average_price) / inv.average_price) * 100
-                };
-            } catch (e: any) {
-                console.error(`Portfolio quote error for ${inv.symbol}:`, e?.message || e);
-                // 시세 조회 실패 시 평균 매수가를 현재가로 대체
-                return {
-                    ...inv,
-                    currentPrice: inv.average_price,
-                    marketValue: inv.average_price * inv.quantity,
-                    totalCost: inv.average_price * inv.quantity,
-                    profit: 0,
-                    profitPercent: 0
-                };
-            }
+            const currentPrice = await fetchCurrentPrice(inv.symbol) || inv.average_price;
+            return {
+                ...inv,
+                currentPrice,
+                marketValue: currentPrice * inv.quantity,
+                totalCost: inv.average_price * inv.quantity,
+                profit: (currentPrice * inv.quantity) - (inv.average_price * inv.quantity),
+                profitPercent: ((currentPrice - inv.average_price) / inv.average_price) * 100
+            };
         }));
 
         return NextResponse.json({ portfolio });
