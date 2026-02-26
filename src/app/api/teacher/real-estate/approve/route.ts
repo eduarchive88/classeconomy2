@@ -106,22 +106,41 @@ export async function POST(request: Request) {
         } else {
             // ===== 거절 처리 =====
             const seat = trade.seat;
-            const buyer = trade.buyer;
 
-            // 1. 구매자에게 차감된 금액 환불
-            await supabaseAdmin.from('student_roster')
-                .update({ balance: buyer.balance + trade.price })
-                .eq('id', buyer.id);
+            // 1. 구매자 현재 잔액을 직접 조회 (join 대신 명시적 조회로 안전하게)
+            const { data: buyerCurrent, error: buyerFetchErr } = await supabaseAdmin
+                .from('student_roster')
+                .select('id, balance')
+                .eq('id', trade.buyer_id)
+                .single();
 
-            // 2. 환불 거래 기록
+            if (buyerFetchErr || !buyerCurrent) {
+                console.error('buyer fetch error:', buyerFetchErr);
+                return NextResponse.json({ error: '구매자 정보를 찾을 수 없습니다.' }, { status: 404 });
+            }
+
+            const refundedBalance = buyerCurrent.balance + trade.price;
+
+            // 2. 구매자에게 차감된 금액 환불
+            const { error: refundError } = await supabaseAdmin
+                .from('student_roster')
+                .update({ balance: refundedBalance })
+                .eq('id', trade.buyer_id);
+
+            if (refundError) {
+                console.error('refund error:', refundError);
+                return NextResponse.json({ error: '환불 처리 중 오류가 발생했습니다.' }, { status: 500 });
+            }
+
+            // 3. 환불 거래 기록
             await supabaseAdmin.from('transactions').insert({
-                student_id: buyer.id,
+                student_id: trade.buyer_id,
                 amount: trade.price,
                 type: 'real_estate_refund',
                 description: `자리 구매 거절 환불 (${seat.row_idx + 1}-${seat.col_idx + 1})`
             });
 
-            // 3. 거래 상태 거절로 업데이트
+            // 4. 거래 상태 거절로 업데이트
             await supabaseAdmin.from('seat_trades')
                 .update({ status: 'rejected', updated_at: new Date().toISOString() })
                 .eq('id', tradeId);
