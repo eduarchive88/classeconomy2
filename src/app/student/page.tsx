@@ -8,6 +8,9 @@ import Link from 'next/link';
 export default function StudentDashboard() {
     const [student, setStudent] = useState<any>(null);
     const [balance, setBalance] = useState(0);
+    const [savingsTotal, setSavingsTotal] = useState(0);
+    const [investmentTotal, setInvestmentTotal] = useState(0);
+    const [investmentProfitRate, setInvestmentProfitRate] = useState(0);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const supabase = createClient();
@@ -46,6 +49,40 @@ export default function StudentDashboard() {
                     session.student.balance = roster.balance || 0;
                     localStorage.setItem('student_session', JSON.stringify(session));
                 }
+
+                // 저축 총액 조회
+                const { data: accounts } = await supabase
+                    .from('bank_accounts')
+                    .select('amount')
+                    .eq('student_id', session.student.id)
+                    .eq('type', 'savings')
+                    .eq('status', 'active');
+
+                if (accounts) {
+                    const totalSavings = accounts.reduce((sum: number, acc: any) => sum + (acc.amount || 0), 0);
+                    setSavingsTotal(totalSavings);
+                }
+
+                // 투자 총액 및 수익률 조회
+                try {
+                    const res = await fetch(`/api/student/investment/portfolio?studentId=${session.student.id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const portfolio = data.portfolio || [];
+                        const totalInvested = portfolio.reduce((sum: number, inv: any) => sum + (inv.totalCost || 0), 0);
+                        const totalValue = portfolio.reduce((sum: number, inv: any) => sum + (inv.marketValue || 0), 0);
+
+                        setInvestmentTotal(totalInvested);
+                        if (totalInvested > 0) {
+                            setInvestmentProfitRate(((totalValue - totalInvested) / totalInvested) * 100);
+                        } else {
+                            setInvestmentProfitRate(0);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Investment fetch error:', e);
+                }
+
             } catch (error) {
                 console.error('Session error:', error);
                 localStorage.removeItem('student_session');
@@ -88,15 +125,46 @@ export default function StudentDashboard() {
                             <h2 className="text-2xl font-bold mb-2">
                                 {student?.name || '학생'}님 환영해요! 👋
                             </h2>
-                            <p className="text-blue-100 text-sm font-medium mb-4">오늘도 현명한 경제 생활을 해보세요.</p>
+                            <p className="text-white/90 text-sm font-medium mb-4">오늘도 현명한 경제 생활을 해보세요.</p>
 
                             <div className="mt-4">
-                                <p className="text-blue-200 text-xs font-medium mb-1">나의 현재 잔액</p>
+                                <p className="text-blue-50 text-xs font-medium mb-1">나의 현재 잔액</p>
                                 <h2 className="text-4xl font-bold">{balance.toLocaleString()} 원</h2>
                             </div>
                         </div>
                         <div className="absolute right-[-20px] bottom-[-20px] text-white/10 rotate-12">
                             <Wallet className="w-40 h-40" />
+                        </div>
+                    </div>
+
+                    {/* 우측 요약 위젯 */}
+                    <div className="md:col-span-1 flex flex-col gap-4">
+                        {/* 저축 현황 */}
+                        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
+                                <Landmark className="w-4 h-4" />
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">나의 총 저축액</p>
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">
+                                {savingsTotal.toLocaleString()} <span className="text-base font-normal text-slate-500">원</span>
+                            </h3>
+                        </div>
+                        {/* 투자 현황 */}
+                        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
+                                <TrendingUp className="w-4 h-4" />
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">나의 총 투자액</p>
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
+                                {investmentTotal.toLocaleString()} <span className="text-base font-normal text-slate-500">원</span>
+                            </h3>
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <span className={`text-sm font-bold flex items-center ${investmentProfitRate >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    {investmentProfitRate > 0 && '+'}
+                                    {investmentProfitRate.toFixed(2)}%
+                                </span>
+                                <span className="text-xs text-slate-400 font-medium border-l border-slate-200 dark:border-slate-700 pl-1.5">수익률</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -48,8 +48,8 @@ export default function StudentLog() {
             case 'real_estate_income': return '임대 수익';
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
-            case 'real_estate_pending': return '부동산 구매 대기';
-            case 'real_estate_refund': return '부동산 환불';
+            case 'real_estate_pending': return '부동산(승인대기)';
+            case 'real_estate_refund': return '부동산(환불)';
             case 'stock_buy': return '주식 매수';
             case 'stock_sell': return '주식 매도';
             case 'investment_buy': return '주식 매수';
