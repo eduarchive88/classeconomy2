@@ -88,12 +88,12 @@ export default function TeacherInvestmentPage() {
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
                         <Trophy className="w-5 h-5" />
-                        <span className="text-sm font-medium">학급 총 순수익</span>
+                        <span className="text-sm font-medium">학급 전체 미실현 수익</span>
                     </div>
                     <div className={`text-2xl font-bold ${totalNetProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
                         {totalNetProfit >= 0 ? '+' : ''}{totalNetProfit.toLocaleString()} <span className="text-sm font-normal text-slate-400">원</span>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">실현 + 미실현 수익 합산</p>
+                    <p className="text-[10px] text-slate-400 mt-1">학생들의 보유 종목 평가 손익 합산 (학생과 동일 기준)</p>
                 </div>
             </div>
 
@@ -162,9 +162,9 @@ export default function TeacherInvestmentPage() {
                                             <span className="font-bold text-slate-800 dark:text-white truncate">{s.name}</span>
                                         </div>
                                         {s.hasInvestment ? (
-                                            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                                                <span className="text-xs text-slate-400">실현 {s.realizedProfit >= 0 ? '+' : ''}{s.realizedProfit?.toLocaleString()}원</span>
-                                                <span className="text-xs text-slate-400">미실현 {s.unrealizedProfit >= 0 ? '+' : ''}{s.unrealizedProfit?.toLocaleString()}원</span>
+                                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-md">매수 원금 <b>{s.holdingCost?.toLocaleString()}</b>원</span>
+                                                <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-md">평가 금액 <b>{s.currentHoldingValue?.toLocaleString()}</b>원</span>
                                             </div>
                                         ) : (
                                             <span className="text-xs text-slate-400">투자 내역 없음</span>

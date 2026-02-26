@@ -112,7 +112,7 @@ export async function GET(request: Request) {
 
             const totalCost = costTxs.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount || 0), 0);
             const totalGain = gainTxs.reduce((sum: number, tx: any) => sum + Math.abs(tx.amount || 0), 0);
-            const realizedProfit = totalGain - totalCost;
+            // 실현 수익(realizedProfit)은 단순 총매수-총매도로 계산할 수 없으므로(전부 손실로 잡히는 현상 발생) 제외합니다.
 
             // 미실현 수익: 현재 보유 종목의 평가 손익
             const studentInvestments = (allInvestments || []).filter((inv: any) => inv.student_id === student.id);
@@ -138,8 +138,8 @@ export async function GET(request: Request) {
                 };
             });
 
-            const netProfit = Math.round(realizedProfit + unrealizedProfit);
-            const totalInvested = totalCost + holdingCost;
+            const netProfit = Math.round(unrealizedProfit); // 순수익 = 현재 보유 종목의 평가 손익 (사용자 요청)
+            const totalInvested = holdingCost; // 실제 현재 '보유 중인' 종목들의 매수 원금
             const profitRate = totalInvested > 0 ? ((netProfit / totalInvested) * 100) : 0;
 
             const hasInvestment = costTxs.length > 0 || gainTxs.length > 0 || studentInvestments.length > 0;
@@ -150,7 +150,7 @@ export async function GET(request: Request) {
                 studentNumber: student.number,
                 totalCost,
                 totalGain,
-                realizedProfit: Math.round(realizedProfit),
+                holdingCost: Math.round(holdingCost),
                 unrealizedProfit: Math.round(unrealizedProfit),
                 netProfit,
                 profitRate,
