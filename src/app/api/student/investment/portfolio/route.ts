@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     try {
         const { data: student, error: studentError } = await supabase
-            .from('students')
+            .from('student_roster')
             .select('balance')
             .eq('id', studentId)
             .single();
