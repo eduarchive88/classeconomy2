@@ -264,7 +264,9 @@ export default function StudentBank() {
                                                                                                     tx.type === 'stock_buy' ? '주식 매수' :
                                                                                                         tx.type === 'stock_sell' ? '주식 매도' :
                                                                                                             tx.type === 'real_estate_income' ? '임대/매각 수익' :
-                                                                                                                tx.type === 'tax' ? '세금' : tx.type}
+                                                                                                                tx.type === 'real_estate_pending' ? '부동산 구매 승인 대기' :
+                                                                                                                    tx.type === 'real_estate_refund' ? '부동산 구매 환불' :
+                                                                                                                        tx.type === 'tax' ? '세금' : tx.type}
                                                 </div>
                                                 <div className="text-sm text-slate-500 dark:text-slate-400">
                                                     {new Date(tx.created_at).toLocaleDateString()} {tx.description && `• ${tx.description}`}
@@ -437,6 +439,16 @@ export default function StudentBank() {
                     </div>
                 )}
             </div>
+
+            {/* Footer */}
+            <footer className="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
+                <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
+                <p className="mt-1">
+                    문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">카카오톡 오픈채팅</a>
+                    <span className="mx-2">|</span>
+                    블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a>
+                </p>
+            </footer>
         </div>
     );
 }

@@ -81,13 +81,18 @@ export async function POST(request: Request) {
         }
 
         // 5. 즉시 구매 허용 여부 확인
-        const { data: classData } = await supabaseAdmin
+        const { data: classData, error: classConfigError } = await supabaseAdmin
             .from('classes')
             .select('is_auto_real_estate')
             .eq('id', classId)
-            .single();
+            .maybeSingle();
 
-        const isAutoAllowed = classData?.is_auto_real_estate ?? true;
+        if (classConfigError) {
+            console.error('Class config fetch error:', classConfigError);
+        }
+
+        // 즉시 구매 허용 기본값을 false(비허용)로 설정하여 보수적으로 처리
+        const isAutoAllowed = classData?.is_auto_real_estate === true;
 
         // 즉시 구매 비허용인 경우 → pending 요청으로 전환 (잔액 선만 후 승인 대기)
         if (!isAutoAllowed) {
