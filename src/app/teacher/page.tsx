@@ -186,6 +186,17 @@ export default function TeacherDashboard() {
                             <p className="text-slate-500 dark:text-slate-400 text-sm">학생들의 투자 수익률과 순이익을 확인합니다.</p>
                         </Link>
 
+                        <Link href="/teacher/groups" className="card group hover:border-orange-500 transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                    <Users className="w-6 h-6" />
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-orange-500" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">모둠 활동 관리</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">모둠을 편성하고 모둠별 자리와 공동 자금을 관리합니다.</p>
+                        </Link>
+
                         <Link href="/teacher/settings" className="card group hover:border-slate-500 transition-all">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-600 group-hover:text-white transition-colors">

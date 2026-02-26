@@ -290,6 +290,17 @@ export default function StudentDashboard() {
                         </div>
                         <ArrowRight className="w-5 h-5 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-slate-500" />
                     </Link>
+
+                    <Link href="/student/groups" className="p-6 rounded-2xl bg-white dark:bg-slate-800 border-2 border-transparent hover:border-orange-500 transition-all flex items-center gap-4 group shadow-sm hover:shadow-md">
+                        <div className="p-3 rounded-xl bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                            <Users className="w-6 h-6" />
+                        </div>
+                        <div className="text-left flex-1">
+                            <h4 className="font-bold text-slate-900 dark:text-white">모둠 활동</h4>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">모둠 자금 기부 및 자리 구매</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-orange-500" />
+                    </Link>
                 </div>
             </div>
         </div>
