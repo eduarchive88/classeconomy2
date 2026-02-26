@@ -95,6 +95,8 @@ export default function TeacherLogs() {
             case 'real_estate_income': return '부동산 수익';
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
+            case 'real_estate_pending': return '부동산 구매 대기';
+            case 'real_estate_refund': return '부동산 환불';
             case 'tax': return '세금';
             case 'transfer_sent': return '송금 보냄';
             case 'transfer_received': return '송금 받음';
