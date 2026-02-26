@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { TrendingUp, Lightbulb, Wallet, ArrowRight, LogOut, ShoppingBag, MapPin, Settings, Landmark, Trophy, Crown, Medal } from 'lucide-react';
+import { TrendingUp, Lightbulb, Wallet, ArrowRight, LogOut, ShoppingBag, MapPin, Settings, Landmark, Trophy, Crown, Medal, Users } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentDashboard() {

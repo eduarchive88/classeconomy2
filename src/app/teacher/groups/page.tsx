@@ -92,7 +92,7 @@ export default function GroupActivityManagement() {
 
     const addGroup = () => {
         const newGroup = {
-            name: `새 모둠 ${groups.length + 1}`,
+            name: `${groups.length + 1}모둠`,
             leader_id: null,
             memberIds: []
         };
@@ -270,7 +270,11 @@ export default function GroupActivityManagement() {
                                 const groupMemberIds = group.group_members?.map((m: any) => m.student_id) || group.memberIds || [];
 
                                 return (
-                                    <div key={group.id || `new-${idx}`} className="glass-panel p-5 relative group">
+                                    <div
+                                        key={group.id || `new-${idx}`}
+                                        onClick={() => { if (group.id) setSelectedGroupId(group.id); }}
+                                        className={`glass-panel p-5 relative group cursor-pointer transition-all ${selectedGroupId === group.id ? 'ring-2 ring-orange-500 border-orange-300' : 'hover:border-orange-200'}`}
+                                    >
                                         <button
                                             onClick={() => deleteGroup(group.id)}
                                             className="absolute top-4 right-4 text-slate-300 hover:text-red-500 p-1 rounded transition-colors"
@@ -345,18 +349,32 @@ export default function GroupActivityManagement() {
 
                         {/* 모둠에 배정되지 않은 학생 목록 */}
                         <div className="glass-panel p-6 bg-slate-50/50">
-                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">학급 학생 명단 (미배정 학생 선택)</h3>
+                            <div className="flex items-center gap-3 mb-4">
+                                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">학급 학생 명단</h3>
+                                {selectedGroupId ? (
+                                    <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full border border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800">
+                                        ▶ '{groups.find(g => g.id === selectedGroupId)?.name}' 모둠에 배정 중
+                                    </span>
+                                ) : (
+                                    <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                                        위에서 모둠 카드를 클릭하여 선택하세요
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex flex-wrap gap-2">
                                 {students.map(s => {
                                     const assignedGroup = groups.find(g => (g.group_members?.some((m: any) => m.student_id === s.id)) || (g.memberIds?.includes(s.id)));
                                     return (
                                         <button
                                             key={s.id}
-                                            disabled={!!assignedGroup}
+                                            disabled={!!assignedGroup || !selectedGroupId}
                                             onClick={() => {
-                                                const targetIdx = groups.findIndex(g => g.name.includes('새 모둠') || !g.id); // 임시 로직: 마지막 또는 대기 모둠에 추가
-                                                // 실제로는 모둠 카드 내부로 드롭하거나 '추가 모드'가 필요하지만, 일단 선택된 모둠에 추가
-                                                if (selectedGroupId && groups.find(g => g.id === selectedGroupId)) {
+                                                if (!selectedGroupId) {
+                                                    alert('먼저 위에서 대상 모둠 카드를 클릭해주세요.');
+                                                    return;
+                                                }
+                                                const targetGroup = groups.find(g => g.id === selectedGroupId);
+                                                if (targetGroup) {
                                                     const newGroups = [...groups];
                                                     const gIdx = newGroups.findIndex(g => g.id === selectedGroupId);
                                                     const currentIds = newGroups[gIdx].memberIds || newGroups[gIdx].group_members?.map((m: any) => m.student_id) || [];
@@ -365,18 +383,16 @@ export default function GroupActivityManagement() {
                                                         newGroups[gIdx].group_members = newGroups[gIdx].memberIds.map((id: string) => ({ student_id: id }));
                                                         setGroups(newGroups);
                                                     }
-                                                } else {
-                                                    alert('먼저 대상을 지정할 모둠 이름을 클릭하거나 새로 만들어주세요.');
                                                 }
                                             }}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${assignedGroup ? 'bg-slate-200 text-slate-400 line-through dark:bg-slate-800' : 'bg-white border text-slate-700 hover:border-orange-500 hover:text-orange-600 shadow-sm dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600'}`}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${assignedGroup ? 'bg-slate-200 text-slate-400 line-through dark:bg-slate-800' : !selectedGroupId ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800' : 'bg-white border text-slate-700 hover:border-orange-500 hover:text-orange-600 shadow-sm dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600'}`}
                                         >
                                             {s.number}. {s.name} {assignedGroup && `[${assignedGroup.name}]`}
                                         </button>
                                     );
                                 })}
                             </div>
-                            <p className="text-[11px] text-slate-400 mt-4">* 모둠 카드 상단 이름을 클릭하여 대상을 지정한 후 학생을 클릭하면 해당 모둠에 배정됩니다.</p>
+                            <p className="text-[11px] text-slate-400 mt-4">* 위 모둠 카드를 클릭하여 대상 모둠을 선택한 후, 학생을 클릭하면 해당 모둠에 배정됩니다.</p>
                         </div>
                     </div>
                 )}
@@ -411,37 +427,35 @@ export default function GroupActivityManagement() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between mb-8">
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-                                            <button
-                                                onClick={() => setSeatMode('assign')}
-                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${seatMode === 'assign' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                모둠 배정
-                                            </button>
-                                            <button
-                                                onClick={() => setSeatMode('price')}
-                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${seatMode === 'price' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                가격 설정
-                                            </button>
-                                            <button
-                                                onClick={() => setSeatMode('lock')}
-                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${seatMode === 'lock' ? 'bg-white dark:bg-slate-700 shadow-sm text-red-600' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                잠금 설정
-                                            </button>
-                                        </div>
-                                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">자동 승인</span>
-                                            <button
-                                                onClick={() => updateAutoBuy(!isAutoGroupSeat)}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isAutoGroupSeat ? 'bg-green-500' : 'bg-slate-300'}`}
-                                            >
-                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoGroupSeat ? 'translate-x-6' : 'translate-x-1'}`} />
-                                            </button>
-                                        </div>
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex items-center bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <button
+                                            onClick={() => setSeatMode('assign')}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${seatMode === 'assign' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            모둠배정
+                                        </button>
+                                        <button
+                                            onClick={() => setSeatMode('price')}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${seatMode === 'price' ? 'bg-white dark:bg-slate-700 shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            가격설정
+                                        </button>
+                                        <button
+                                            onClick={() => setSeatMode('lock')}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${seatMode === 'lock' ? 'bg-white dark:bg-slate-700 shadow-sm text-red-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            잠금설정
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <span className="text-xs font-semibold text-slate-400 whitespace-nowrap">자동 승인</span>
+                                        <button
+                                            onClick={() => updateAutoBuy(!isAutoGroupSeat)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isAutoGroupSeat ? 'bg-green-500' : 'bg-slate-300'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoGroupSeat ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
                                     </div>
                                 </div>
 
