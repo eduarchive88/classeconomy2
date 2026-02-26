@@ -73,17 +73,23 @@ export default function RealEstateManagement() {
         setTradesLoading(false);
     };
 
-    // 거래 승인/거절 처리
+    // 거래 승인/거절 처리 (API를 통해 환불/소유권 이전 포함)
     const handleTradeApproval = async (trade: any, approve: boolean) => {
         setLoading(true);
         try {
-            if (approve) {
-                await supabase.from('seats').update({ student_id: trade.buyer_id }).eq('id', trade.seat_id);
-                await supabase.from('seat_trades').update({ status: 'approved' }).eq('id', trade.id);
-            } else {
-                await supabase.from('seat_trades').update({ status: 'rejected' }).eq('id', trade.id);
+            const res = await fetch('/api/teacher/real-estate/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tradeId: trade.id,
+                    action: approve ? 'approve' : 'reject'
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || '처리 중 오류가 발생했습니다.');
             }
-            alert(approve ? '승인되었습니다.' : '거절되었습니다.');
+            alert(data.message || (approve ? '승인되었습니다.' : '거절되었습니다. 금액이 환불됩니다.'));
             fetchData();
         } catch (e: any) {
             alert('처리 실패: ' + e.message);
