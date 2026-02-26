@@ -32,6 +32,7 @@ export default function InvestmentPage() {
 
     // 포트폴리오 상태
     const [portfolio, setPortfolio] = useState<any[]>([]);
+    const [balance, setBalance] = useState<number>(0);
     const [portfolioLoading, setPortfolioLoading] = useState(true);
 
     useEffect(() => {
@@ -81,6 +82,9 @@ export default function InvestmentPage() {
             const data = await res.json();
             if (data.portfolio) {
                 setPortfolio(data.portfolio);
+            }
+            if (data.balance !== undefined) {
+                setBalance(data.balance);
             }
         } catch (error) {
             console.error('Failed to fetch portfolio', error);
@@ -325,64 +329,95 @@ export default function InvestmentPage() {
             </div>
 
             {/* 거래 모달 */}
-            {tradeAction && selectedStock && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-bold mb-1">
-                            {selectedStock.name} {tradeAction === 'buy' ? '매수' : '매도'}
-                        </h3>
-                        <p className="text-slate-500 mb-6 text-sm">
-                            현재가: <span className="font-mono font-bold text-slate-800 dark:text-white">{selectedStock.price?.toLocaleString()}</span>
-                        </p>
+            {tradeAction && selectedStock && (() => {
+                const currentQuantity = portfolio.find(p => p.symbol === selectedStock.symbol)?.quantity || 0;
+                const expectedAmount = Number(quantity) * selectedStock.price;
 
-                        <form onSubmit={handleTrade}>
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
-                                    수량 (주)
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        min="0.0001"
-                                        step="any"
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(e.target.value)}
-                                        className="w-full p-4 pl-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 outline-none text-lg font-bold transition-all text-right pr-12"
-                                        placeholder="0"
-                                        required
-                                    />
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                                        주
+                // 구매/판매 가능 여부 검증
+                const isBuyDisabled = tradeAction === 'buy' && expectedAmount > balance;
+                const isSellDisabled = tradeAction === 'sell' && Number(quantity) > currentQuantity;
+                const isSubmitDisabled = tradeLoading || isBuyDisabled || isSellDisabled || Number(quantity) <= 0;
+
+                return (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-xl font-bold mb-1">
+                                {selectedStock.name} {tradeAction === 'buy' ? '매수' : '매도'}
+                            </h3>
+                            <div className="flex justify-between items-center mb-6">
+                                <p className="text-slate-500 text-sm">
+                                    현재가: <span className="font-mono font-bold text-slate-800 dark:text-white">{selectedStock.price?.toLocaleString()}원</span>
+                                </p>
+                                <div className="text-right text-sm">
+                                    {tradeAction === 'buy' ? (
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-medium">보유 자금: {balance.toLocaleString()}원</p>
+                                    ) : (
+                                        <p className="text-emerald-600 dark:text-emerald-400 font-medium">보유 주식: {currentQuantity}주</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleTrade}>
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
+                                        수량 (주)
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="0.0001"
+                                            step="any"
+                                            value={quantity}
+                                            onChange={(e) => setQuantity(e.target.value)}
+                                            className={`w-full p-4 pl-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 transition-all text-right pr-12 font-bold text-lg outline-none
+                                                ${(isBuyDisabled || isSellDisabled)
+                                                    ? 'border-red-500 focus:border-red-500 text-red-600'
+                                                    : 'border-transparent focus:border-indigo-500'}`}
+                                            placeholder="0"
+                                            required
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                                            주
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <div className="text-xs text-red-500 font-medium">
+                                            {isBuyDisabled && '보유 자금이 부족합니다.'}
+                                            {isSellDisabled && '보유 주식이 부족합니다.'}
+                                        </div>
+                                        <div className={`text-right text-sm font-medium ${isBuyDisabled ? 'text-red-500' : 'text-slate-600 dark:text-slate-400'}`}>
+                                            예상 금액: {Math.ceil(expectedAmount).toLocaleString()} 원
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="mt-2 text-right text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                                    예상 금액: {(Number(quantity) * selectedStock.price).toLocaleString()} 원
-                                </div>
-                            </div>
 
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => { setTradeAction(null); setSelectedStock(null); }}
-                                    className="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={tradeLoading}
-                                    className={`flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-indigo-500/30 ${tradeAction === 'buy'
-                                        ? 'bg-red-500 hover:bg-red-600'
-                                        : 'bg-blue-500 hover:bg-blue-600'
-                                        }`}
-                                >
-                                    {tradeLoading ? '처리 중...' : (tradeAction === 'buy' ? '매수하기' : '매도하기')}
-                                </button>
-                            </div>
-                        </form>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTradeAction(null); setSelectedStock(null); }}
+                                        className="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    >
+                                        취소
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitDisabled}
+                                        className={`flex-1 py-3 rounded-xl font-bold text-white transition-all shadow-lg 
+                                            ${isSubmitDisabled
+                                                ? 'bg-slate-300 dark:bg-slate-700 shadow-none cursor-not-allowed'
+                                                : tradeAction === 'buy'
+                                                    ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30'
+                                                    : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/30'
+                                            }`}
+                                    >
+                                        {tradeLoading ? '처리 중...' : (tradeAction === 'buy' ? '매수하기' : '매도하기')}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* 푸터 */}
             <footer className="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">

@@ -35,6 +35,14 @@ export async function GET(request: Request) {
     const supabase = createClient();
 
     try {
+        const { data: student, error: studentError } = await supabase
+            .from('students')
+            .select('balance')
+            .eq('id', studentId)
+            .single();
+
+        if (studentError) throw studentError;
+
         const { data: investments, error } = await supabase
             .from('investments')
             .select('*')
@@ -55,7 +63,7 @@ export async function GET(request: Request) {
             };
         }));
 
-        return NextResponse.json({ portfolio });
+        return NextResponse.json({ portfolio, balance: student.balance });
     } catch (error: any) {
         console.error('Portfolio Fetch Error:', error?.message || error);
         return NextResponse.json({ error: 'Failed' }, { status: 500 });
