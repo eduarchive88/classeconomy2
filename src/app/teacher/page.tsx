@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { Users, Coins, BookOpen, Settings, ChevronRight, LogOut, Plus, MapPin, ShoppingBag, FileSpreadsheet } from 'lucide-react';
+import { Users, Coins, BookOpen, Settings, ChevronRight, LogOut, Plus, MapPin, ShoppingBag, FileSpreadsheet, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeacherDashboard() {
@@ -173,6 +173,17 @@ export default function TeacherDashboard() {
                             </div>
                             <h2 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">학급 마켓</h2>
                             <p className="text-slate-500 dark:text-slate-400 text-sm">학생들이 구매할 수 있는 상품/쿠폰을 등록합니다.</p>
+                        </Link>
+
+                        <Link href="/teacher/investment" className="card group hover:border-teal-500 transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                                    <TrendingUp className="w-6 h-6" />
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-teal-500" />
+                            </div>
+                            <h2 className="text-xl font-bold mb-1 text-slate-800 dark:text-white">우리반 투자현황</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">학생들의 투자 수익률과 순이익을 확인합니다.</p>
                         </Link>
 
                         <Link href="/teacher/settings" className="card group hover:border-slate-500 transition-all">
