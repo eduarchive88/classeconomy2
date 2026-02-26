@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { TrendingUp, Lightbulb, Wallet, ArrowRight, LogOut, ShoppingBag, MapPin, Settings, Landmark } from 'lucide-react';
+import { TrendingUp, Lightbulb, Wallet, ArrowRight, LogOut, ShoppingBag, MapPin, Settings, Landmark, Trophy, Crown, Medal } from 'lucide-react';
 import Link from 'next/link';
 
 export default function StudentDashboard() {
@@ -11,6 +11,8 @@ export default function StudentDashboard() {
     const [savingsTotal, setSavingsTotal] = useState(0);
     const [investmentTotal, setInvestmentTotal] = useState(0);
     const [investmentProfitRate, setInvestmentProfitRate] = useState(0);
+    // 투자왕 명예의 전당 상태
+    const [investRanking, setInvestRanking] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const supabase = createClient();
@@ -81,6 +83,17 @@ export default function StudentDashboard() {
                     console.error('Investment fetch error:', e);
                 }
 
+                // 투자왕 명예의 전당 조회
+                try {
+                    const rankRes = await fetch(`/api/student/dashboard/ranking?classId=${session.student.class_id}`);
+                    if (rankRes.ok) {
+                        const rankData = await rankRes.json();
+                        setInvestRanking(rankData.ranking || []);
+                    }
+                } catch (e) {
+                    console.error('Ranking fetch error:', e);
+                }
+
             } catch (error) {
                 console.error('Session error:', error);
                 localStorage.removeItem('student_session');
@@ -99,11 +112,21 @@ export default function StudentDashboard() {
         router.push('/');
     };
 
+    // 순위별 메달 아이콘 및 색상 반환 함수
+    const getRankStyle = (rank: number) => {
+        switch (rank) {
+            case 0: return { emoji: '🥇', color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' };
+            case 1: return { emoji: '🥈', color: 'text-slate-400', bg: 'bg-slate-50 dark:bg-slate-700/30', border: 'border-slate-200 dark:border-slate-600' };
+            case 2: return { emoji: '🥉', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' };
+            default: return { emoji: '', color: 'text-slate-500', bg: '', border: '' };
+        }
+    };
+
     if (loading) return <div className="p-8 flex justify-center items-center h-screen text-slate-800 dark:text-white">Loading...</div>;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-slate-800 dark:text-white">학생 대시보드</h1>
                     <div className="flex items-center gap-4">
@@ -117,53 +140,86 @@ export default function StudentDashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="md:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 flex flex-col justify-between shadow-sm hover:shadow-md rounded-2xl relative overflow-hidden transition-all">
+                {/* 상단 3단 카드 영역 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    {/* 1번: 환영 + 잔액 (축소) */}
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 flex flex-col justify-between shadow-sm hover:shadow-md rounded-2xl relative overflow-hidden transition-all">
                         <div className="relative z-10">
-                            <h2 className="text-2xl font-bold mb-2 text-slate-800 dark:text-white">
-                                {student?.name || '학생'}님 환영해요! 👋
+                            <h2 className="text-lg font-bold mb-1 text-slate-800 dark:text-white">
+                                {student?.name || '학생'}님 👋
                             </h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-4">오늘도 현명한 경제 생활을 해보세요.</p>
+                            <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-3">오늘도 현명한 경제 생활을 해보세요.</p>
 
-                            <div className="mt-4">
+                            <div>
                                 <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-1">나의 현재 잔액</p>
-                                <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100">{balance.toLocaleString()} 원</h2>
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{balance.toLocaleString()} <span className="text-sm font-normal text-slate-400">원</span></h2>
                             </div>
                         </div>
-                        <div className="absolute right-[-20px] bottom-[-20px] text-white/10 rotate-12">
-                            <Wallet className="w-40 h-40" />
+                        <div className="absolute right-[-15px] bottom-[-15px] text-slate-100 dark:text-slate-700/30 rotate-12">
+                            <Wallet className="w-24 h-24" />
                         </div>
                     </div>
 
-                    {/* 우측 요약 위젯 */}
-                    <div className="md:col-span-1 flex flex-col gap-4">
+                    {/* 2번: 저축 + 투자 위젯 (중앙) */}
+                    <div className="flex flex-col gap-3">
                         {/* 저축 현황 */}
-                        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
                                 <Landmark className="w-4 h-4" />
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">나의 총 저축액</p>
+                                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">나의 총 저축액</p>
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">
-                                {savingsTotal.toLocaleString()} <span className="text-base font-normal text-slate-500">원</span>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
+                                {savingsTotal.toLocaleString()} <span className="text-sm font-normal text-slate-500">원</span>
                             </h3>
                         </div>
                         {/* 투자 현황 */}
-                        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
                                 <TrendingUp className="w-4 h-4" />
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">나의 총 투자액</p>
+                                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">나의 총 투자액</p>
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
-                                {investmentTotal.toLocaleString()} <span className="text-base font-normal text-slate-500">원</span>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-0.5">
+                                {investmentTotal.toLocaleString()} <span className="text-sm font-normal text-slate-500">원</span>
                             </h3>
-                            <div className="flex items-center gap-1.5 mt-1">
-                                <span className={`text-sm font-bold flex items-center ${investmentProfitRate >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-bold flex items-center ${investmentProfitRate >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                     {investmentProfitRate > 0 && '+'}
                                     {investmentProfitRate.toFixed(2)}%
                                 </span>
-                                <span className="text-xs text-slate-400 font-medium border-l border-slate-200 dark:border-slate-700 pl-1.5">수익률</span>
+                                <span className="text-[10px] text-slate-400 font-medium border-l border-slate-200 dark:border-slate-700 pl-1.5">수익률</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* 3번: 투자왕 명예의 전당 */}
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-800 border border-amber-200 dark:border-amber-900/40 p-5 rounded-2xl shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Trophy className="w-5 h-5 text-amber-500" />
+                            <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400">투자왕 명예의 전당</h3>
+                        </div>
+                        {investRanking.length === 0 ? (
+                            <div className="text-center py-4 text-xs text-slate-400">아직 투자 데이터가 없습니다.</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {investRanking.map((r: any, idx: number) => {
+                                    const style = getRankStyle(idx);
+                                    return (
+                                        <div key={r.id} className={`flex items-center gap-2.5 p-2 rounded-xl ${style.bg} border ${style.border} transition-all`}>
+                                            <span className="text-lg">{style.emoji}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm font-bold truncate ${r.id === student?.id ? 'text-amber-600 dark:text-amber-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                                                    {r.name}
+                                                    {r.id === student?.id && <span className="ml-1 text-[10px] font-medium text-amber-500">(나)</span>}
+                                                </p>
+                                            </div>
+                                            <span className={`text-xs font-bold tabular-nums ${r.netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                                                {r.netProfit >= 0 ? '+' : ''}{r.netProfit.toLocaleString()}원
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
 
