@@ -34,12 +34,17 @@ export default function RealEstateManagement() {
         if (studentsData) setStudents(studentsData);
 
         // 클래스 설정 불러오기
-        const { data: classData } = await supabase
+        const { data: classData, error: classError } = await supabase
             .from('classes')
             .select('is_auto_real_estate')
             .eq('id', selectedClassId)
             .single();
-        if (classData) setIsAutoBuy(classData.is_auto_real_estate);
+        // 켓럼상 없거나 null이면 기본값 true(허용)
+        if (classData && classData.is_auto_real_estate !== null && classData.is_auto_real_estate !== undefined) {
+            setIsAutoBuy(classData.is_auto_real_estate);
+        } else {
+            setIsAutoBuy(true); // 기본값: 허용
+        }
 
         // 자리 데이터 불러오기
         const { data: seatsData } = await supabase
