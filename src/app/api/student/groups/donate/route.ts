@@ -1,9 +1,9 @@
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
     const { studentId, groupId, amount, description } = await request.json();
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     if (!studentId) {
         return NextResponse.json({ message: '학생 ID가 누락되었습니다.' }, { status: 400 });

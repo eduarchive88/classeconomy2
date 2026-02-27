@@ -1,17 +1,14 @@
 
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-import { getStudentFromAuth } from '@/utils/student-auth';
 
 export async function POST(request: Request) {
-    const { seatId, groupId, price, isAutoApprove } = await request.json();
-    const supabase = createClient();
+    const { studentId, seatId, groupId, price, isAutoApprove } = await request.json();
+    const supabase = createAdminClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { rosterId } = await getStudentFromAuth(supabase, user);
-    if (!rosterId) return NextResponse.json({ error: 'Student record not found' }, { status: 403 });
+    if (!studentId) {
+        return NextResponse.json({ error: 'Student ID is missing' }, { status: 400 });
+    }
 
     // 1. 모둠 정보 및 설정 조회
     const { data: group, error: groupError } = await supabase
@@ -20,7 +17,7 @@ export async function POST(request: Request) {
         .eq('id', groupId)
         .single();
 
-    if (groupError || group.leader_id !== rosterId) {
+    if (groupError || group.leader_id !== studentId) {
         return NextResponse.json({ error: 'Only group leaders can purchase seats' }, { status: 403 });
     }
 
