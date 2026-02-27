@@ -336,7 +336,7 @@ export default function GroupActivityManagement() {
                                     <div
                                         key={group.id || `new-${idx}`}
                                         onClick={() => { if (group.id) setSelectedGroupId(group.id); }}
-                                        className={`glass-panel p-5 relative group cursor-pointer transition-all duration-200 ${selectedGroupId === group.id ? 'ring-4 ring-orange-500 bg-orange-50 border-orange-500 shadow-lg transform scale-[1.02] z-10 dark:bg-orange-900/20' : 'hover:border-orange-200 dark:hover:border-slate-500'}`}
+                                        className={`glass-panel p-5 relative group cursor-pointer transition-all duration-200 ${selectedGroupId === group.id ? 'ring-4 ring-orange-600 border-4 border-orange-600 bg-orange-50 shadow-2xl transform scale-[1.03] z-10 dark:bg-orange-900/30' : 'hover:border-orange-200 dark:hover:border-slate-500'}`}
                                     >
                                         <button
                                             onClick={() => deleteGroup(group.id)}
@@ -592,11 +592,13 @@ export default function GroupActivityManagement() {
                                                     ) : group ? (
                                                         <div className="px-2">
                                                             <div className="text-xs font-bold text-orange-600 dark:text-orange-400">{group.name}</div>
-                                                            <div className="text-[10px] text-slate-400 mt-1 font-mono">{seat?.price?.toLocaleString()}원</div>
+                                                            <div className="text-[10px] text-slate-400 mt-1 font-mono">
+                                                                {seat?.price != null ? `${seat.price.toLocaleString()}원` : '가격 미설정'}
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <div className="text-[10px] text-slate-300 font-mono">
-                                                            {seat?.price?.toLocaleString()}원
+                                                            {seat?.price != null ? `${seat.price.toLocaleString()}원` : '가격 미설정'}
                                                         </div>
                                                     )}
                                                 </div>
