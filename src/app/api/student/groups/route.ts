@@ -25,7 +25,7 @@ export async function GET(request: Request) {
                 )
             `)
             .eq('student_id', studentId)
-            .single();
+            .maybeSingle(); // Use maybeSingle to avoid error if student has no group
 
         let group: any = null;
 

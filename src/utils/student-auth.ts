@@ -32,3 +32,25 @@ export async function getStudentFromAuth(supabase: SupabaseClient, user: any) {
 
     return { rosterId, classId };
 }
+
+/**
+ * Client-side utility for students to get their session info
+ */
+export async function getStudentInfo() {
+    if (typeof window === 'undefined') return null;
+
+    const sessionStr = localStorage.getItem('student_session');
+    if (!sessionStr) return null;
+
+    try {
+        const session = JSON.parse(sessionStr);
+        // Check expiration
+        if (new Date(session.expiresAt) < new Date()) {
+            localStorage.removeItem('student_session');
+            return null;
+        }
+        return session.student;
+    } catch (e) {
+        return null;
+    }
+}
