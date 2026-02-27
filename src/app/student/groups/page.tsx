@@ -174,7 +174,7 @@ export default function StudentGroupsPage() {
                 setSelectedSeat(null);
                 loadData();
             } else {
-                alert(`구매 실패: ${result.message || '알 수 없는 오류'}`);
+                alert(`구매 실패: ${result.error || result.message || '알 수 없는 오류가 발생했습니다.'}`);
             }
         } catch (error) {
             alert('구매 중 오류가 발생했습니다.');
@@ -423,7 +423,7 @@ export default function StudentGroupsPage() {
                                                             {seat.price.toLocaleString()}
                                                         </div>
                                                         <div className={`text-[8px] px-1 py-0.5 rounded font-bold mt-1 ${!canAfford ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-700'}`}>
-                                                            인수 가능
+                                                            {!canAfford ? '인수 불가' : '인수 가능'}
                                                         </div>
                                                     </div>
                                                 )}
