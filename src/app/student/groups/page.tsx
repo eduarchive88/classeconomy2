@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Users,
@@ -61,6 +61,11 @@ export default function StudentGroupsPage() {
     const [selectedSeat, setSelectedSeat] = useState<GroupSeat | null>(null);
     const [pendingTrades, setPendingTrades] = useState<any[]>([]);
     const [lastApprovedSeatId, setLastApprovedSeatId] = useState<string | null>(null);
+
+    const currentGroupSeat = useMemo(() => {
+        if (!lastApprovedSeatId || !seats.length) return null;
+        return seats.find(s => s.id === lastApprovedSeatId) || null;
+    }, [lastApprovedSeatId, seats]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -232,7 +237,7 @@ export default function StudentGroupsPage() {
         );
     }
 
-    const isLeader = group.leader_id === student.id;
+    const isLeader = group.leader_id === student?.id;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
@@ -280,7 +285,7 @@ export default function StudentGroupsPage() {
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">모둠 자산</p>
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-2xl font-black text-orange-600 dark:text-orange-400">
-                                            {group.balance.toLocaleString()}
+                                            {(group.balance || 0).toLocaleString()}
                                         </span>
                                         <span className="text-sm font-bold text-orange-500">원</span>
                                     </div>
@@ -289,7 +294,7 @@ export default function StudentGroupsPage() {
                                 <div>
                                     <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 px-1">모둠원 목록</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {group.members.map(member => (
+                                        {(group.members || []).map(member => (
                                             <div
                                                 key={member.student_id}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-colors ${member.student_id === group.leader_id
@@ -322,7 +327,7 @@ export default function StudentGroupsPage() {
                                 <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-xs font-medium text-orange-50">내 잔액</span>
-                                        <span className="text-sm font-bold">{student.balance.toLocaleString()}원</span>
+                                        <span className="text-sm font-bold">{(student?.balance || 0).toLocaleString()}원</span>
                                     </div>
                                     <div className="relative">
                                         <input
@@ -469,7 +474,7 @@ export default function StudentGroupsPage() {
                                                     <div className="flex flex-col items-center">
                                                         <span className="text-[10px] font-bold opacity-60 italic mb-0.5">{r + 1}-{c + 1}</span>
                                                         <div className={`text-xs font-bold ${!canAfford ? 'text-red-500' : 'text-blue-600'}`}>
-                                                            {seat.price.toLocaleString()}
+                                                            {seat?.price?.toLocaleString()}
                                                         </div>
                                                         <div className={`text-[8px] px-1 py-0.5 rounded font-bold mt-1 ${!canAfford ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-700'}`}>
                                                             {!canAfford ? '인수 불가' : '인수 가능'}
@@ -496,7 +501,7 @@ export default function StudentGroupsPage() {
                                                     <LayoutGrid className="w-4 h-4" /> 행: {selectedSeat?.row_idx ? selectedSeat.row_idx + 1 : 1}, 열: {selectedSeat?.col_idx ? selectedSeat.col_idx + 1 : 1}
                                                 </span>
                                                 <span className="flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
-                                                    <Wallet className="w-4 h-4" /> 가격: {selectedSeat?.price.toLocaleString()}원
+                                                    <Wallet className="w-4 h-4" /> 가격: {selectedSeat?.price?.toLocaleString() || 0}원
                                                 </span>
                                             </div>
                                         </div>

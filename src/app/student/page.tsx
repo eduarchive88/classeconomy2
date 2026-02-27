@@ -253,7 +253,7 @@ export default function StudentDashboard() {
                         </div>
                         <div className="text-left flex-1">
                             <h4 className="font-bold text-slate-900 dark:text-white">퀴즈 풀기</h4>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">경제 퀴즈로 돈 벌기</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">오늘의 퀴즈 맞추고 상금 받기</p>
                         </div>
                         <ArrowRight className="w-5 h-5 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-amber-500" />
                     </Link>
