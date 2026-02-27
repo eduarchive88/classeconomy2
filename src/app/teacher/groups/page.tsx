@@ -80,7 +80,10 @@ export default function GroupActivityManagement() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ classId: selectedClassId, groups: updatedGroups })
             });
-            if (!res.ok) throw new Error('저장 공패');
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || '저장 실패');
+            }
             alert('모둠 설정이 저장되었습니다.');
             fetchData();
         } catch (e: any) {
@@ -109,10 +112,13 @@ export default function GroupActivityManagement() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ groupId: id })
             });
-            if (!res.ok) throw new Error('삭제 실패');
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || '삭제 실패');
+            }
             fetchData();
         } catch (e: any) {
-            alert(e.message);
+            alert('오류: ' + e.message);
         } finally {
             setLoading(false);
         }
@@ -143,10 +149,13 @@ export default function GroupActivityManagement() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ classId: selectedClassId, seats: [updateData] })
             });
-            if (!res.ok) throw new Error('저장 실패');
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || '저장 실패');
+            }
             fetchData();
         } catch (e: any) {
-            alert(e.message);
+            alert('오류: ' + e.message);
         }
     };
 
@@ -189,7 +198,10 @@ export default function GroupActivityManagement() {
                 body: JSON.stringify({ classId: selectedClassId, seats: updates })
             });
 
-            if (!res.ok) throw new Error('가격 적용 실패');
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error || '가격 적용 실패');
+            }
 
             fetchData();
             alert('가격이 적용되었습니다.');
@@ -324,7 +336,7 @@ export default function GroupActivityManagement() {
                                     <div
                                         key={group.id || `new-${idx}`}
                                         onClick={() => { if (group.id) setSelectedGroupId(group.id); }}
-                                        className={`glass-panel p-5 relative group cursor-pointer transition-all ${selectedGroupId === group.id ? 'ring-2 ring-orange-500 border-orange-300' : 'hover:border-orange-200'}`}
+                                        className={`glass-panel p-5 relative group cursor-pointer transition-all duration-200 ${selectedGroupId === group.id ? 'ring-4 ring-orange-500 bg-orange-50 border-orange-500 shadow-lg transform scale-[1.02] z-10 dark:bg-orange-900/20' : 'hover:border-orange-200 dark:hover:border-slate-500'}`}
                                     >
                                         <button
                                             onClick={() => deleteGroup(group.id)}
@@ -520,7 +532,7 @@ export default function GroupActivityManagement() {
                                             <button
                                                 key={g.id}
                                                 onClick={() => setSelectedGroupId(g.id)}
-                                                className={`w-full p-2 text-left text-xs rounded-lg transition-colors ${selectedGroupId === g.id ? 'bg-orange-50 text-orange-600 border border-orange-200 font-bold' : 'hover:bg-slate-50 text-slate-600 dark:text-slate-400 dark:hover:bg-slate-700'}`}
+                                                className={`w-full p-2 text-left text-xs rounded-lg transition-all ${selectedGroupId === g.id ? 'bg-orange-500 text-white shadow-md font-bold' : 'hover:bg-slate-50 text-slate-600 dark:text-slate-400 dark:hover:bg-slate-700'}`}
                                             >{g.name}</button>
                                         ))}
                                     </div>

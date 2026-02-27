@@ -39,27 +39,35 @@ export async function POST(request: Request) {
     try {
         // 복잡한 트랜잭션 처리를 위해 순차적으로 처리 (Supabase는 단일 요청 트랜잭션을 지원하지 않으므로 주의)
         for (const group of groups) {
-            const { id, name, leader_id, memberIds } = group;
+            const { id, name, leader_id, memberIds, group_members } = group;
 
             // 1. 모둠 생성 또는 업데이트
+            const payload: any = {
+                class_id: classId,
+                name,
+                leader_id: leader_id || null
+            };
+            if (id && !id.startsWith('temp-')) {
+                payload.id = id;
+            }
+
             const { data: savedGroup, error: groupError } = await supabase
                 .from('groups')
-                .upsert({
-                    id: id || undefined,
-                    class_id: classId,
-                    name,
-                    leader_id: leader_id || null
-                })
+                .upsert(payload)
                 .select()
                 .single();
 
             if (groupError) throw groupError;
 
             // 2. 기존 멤버 삭제 및 새 멤버 추가
+            const finalMemberIds = memberIds !== undefined
+                ? memberIds
+                : (group_members?.map((m: any) => m.student_id) || []);
+
             await supabase.from('group_members').delete().eq('group_id', savedGroup.id);
 
-            if (memberIds && memberIds.length > 0) {
-                const memberData = memberIds.map((studentId: string) => ({
+            if (finalMemberIds.length > 0) {
+                const memberData = finalMemberIds.map((studentId: string) => ({
                     group_id: savedGroup.id,
                     student_id: studentId
                 }));

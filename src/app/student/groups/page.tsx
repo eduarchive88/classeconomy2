@@ -16,7 +16,7 @@ import {
     Info,
     ArrowRight
 } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
+
 import { getStudentInfo } from '@/utils/student-auth';
 
 interface GroupMember {
@@ -49,7 +49,7 @@ interface ClassSettings {
 
 export default function StudentGroupsPage() {
     const router = useRouter();
-    const supabase = createClient();
+
     const [loading, setLoading] = useState(true);
     const [student, setStudent] = useState<any>(null);
     const [group, setGroup] = useState<GroupInfo | null>(null);
@@ -69,65 +69,28 @@ export default function StudentGroupsPage() {
             }
             setStudent(studentInfo);
 
-            // Get group info
-            const { data: memberData } = await supabase
-                .from('group_members')
-                .select('group_id, groups(id, name, leader_id, balance)')
-                .eq('student_id', studentInfo.id)
-                .single();
+            const response = await fetch('/api/student/groups', {
+                headers: {
+                    'x-student-id': studentInfo.id,
+                    'x-class-id': studentInfo.class_id
+                }
+            });
 
-            if (memberData && memberData.groups) {
-                const groupData = memberData.groups as any;
-
-                // Get all members of this group
-                const { data: allMembers } = await supabase
-                    .from('group_members')
-                    .select('student_id, students(nickname)')
-                    .eq('group_id', groupData.id);
-
-                setGroup({
-                    id: groupData.id,
-                    name: groupData.name,
-                    leader_id: groupData.leader_id,
-                    balance: groupData.balance,
-                    members: (allMembers || []).map((m: any) => ({
-                        student_id: m.student_id,
-                        nickname: m.students?.nickname || '알 수 없음'
-                    }))
-                });
+            if (response.ok) {
+                const data = await response.json();
+                setGroup(data.group || null);
+                setSettings(data.settings || { group_rows: 4, group_cols: 4 });
+                setSeats(data.seats || []);
+            } else {
+                console.error('API error:', await response.text());
             }
-
-            // Get class settings
-            const { data: classData } = await supabase
-                .from('classes')
-                .select('group_rows, group_cols')
-                .eq('id', studentInfo.class_id)
-                .single();
-
-            if (classData) {
-                setSettings({
-                    group_rows: classData.group_rows || 4,
-                    group_cols: classData.group_cols || 4
-                });
-            }
-
-            // Get seats
-            const { data: seatsData } = await supabase
-                .from('group_seats')
-                .select('*, groups(name)')
-                .eq('class_id', studentInfo.class_id);
-
-            setSeats((seatsData || []).map((s: any) => ({
-                ...s,
-                group_name: s.groups?.name
-            })));
 
         } catch (error) {
             console.error('Data loading error:', error);
         } finally {
             setLoading(false);
         }
-    }, [supabase, router]);
+    }, [router]);
 
     useEffect(() => {
         loadData();
@@ -312,8 +275,8 @@ export default function StudentGroupsPage() {
                                             <div
                                                 key={member.student_id}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-colors ${member.student_id === group.leader_id
-                                                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
-                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                                                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                                                     }`}
                                             >
                                                 {member.student_id === group.leader_id && <Crown className="w-3.5 h-3.5" />}
@@ -426,14 +389,14 @@ export default function StudentGroupsPage() {
                                                 onClick={() => seat && setSelectedSeat(seat)}
                                                 disabled={!seat}
                                                 className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex flex-col items-center justify-center transition-all shadow-sm ${!seat
-                                                        ? 'bg-transparent border border-dashed border-slate-200 dark:border-slate-800 opacity-20 cursor-not-allowed'
-                                                        : isMyGroup
-                                                            ? 'bg-orange-500 text-white shadow-orange-500/20 transform scale-105 z-10'
-                                                            : isOtherGroup
-                                                                ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-red-500'
-                                                                : isSelected
-                                                                    ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500 text-orange-600 ring-4 ring-orange-500/10 scale-110 z-20'
-                                                                    : 'bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-slate-400 hover:border-orange-300 dark:hover:border-orange-700/50 hover:bg-orange-50/50 dark:hover:bg-orange-900/10'
+                                                    ? 'bg-transparent border border-dashed border-slate-200 dark:border-slate-800 opacity-20 cursor-not-allowed'
+                                                    : isMyGroup
+                                                        ? 'bg-orange-500 text-white shadow-orange-500/20 transform scale-105 z-10'
+                                                        : isOtherGroup
+                                                            ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-red-500'
+                                                            : isSelected
+                                                                ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500 text-orange-600 ring-4 ring-orange-500/10 scale-110 z-20'
+                                                                : 'bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-slate-400 hover:border-orange-300 dark:hover:border-orange-700/50 hover:bg-orange-50/50 dark:hover:bg-orange-900/10'
                                                     }`}
                                             >
                                                 {seat?.is_locked && !isMyGroup && (

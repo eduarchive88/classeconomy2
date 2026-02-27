@@ -60,10 +60,18 @@ export async function POST(request: Request) {
 
         // 2. 자리 개별 정보 업데이트 (Upsert)
         if (seats && seats.length > 0) {
-            const seatData = seats.map((s: any) => ({
-                ...s,
-                class_id: classId
-            }));
+            const seatData = seats.map((s: any) => {
+                const data: any = {
+                    class_id: classId,
+                    row_idx: s.row_idx,
+                    col_idx: s.col_idx,
+                    price: s.price,
+                    group_id: s.group_id,
+                    is_locked: s.is_locked
+                };
+                if (s.id) data.id = s.id;
+                return data;
+            });
             const { error: seatsError } = await supabase
                 .from('group_seats')
                 .upsert(seatData, { onConflict: 'class_id, row_idx, col_idx' });
