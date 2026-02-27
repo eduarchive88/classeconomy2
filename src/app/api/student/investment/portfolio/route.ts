@@ -1,28 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { getInvestmentPrice } from '@/utils/investment';
 
 export const dynamic = 'force-dynamic';
-
-// Yahoo Finance 차트 API를 직접 호출 (npm 패키지 의존 없음)
-async function fetchCurrentPrice(symbol: string): Promise<number | null> {
-    try {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
-        const res = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            },
-            next: { revalidate: 0 }
-        });
-
-        if (!res.ok) return null;
-
-        const data = await res.json();
-        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        return price || null;
-    } catch {
-        return null;
-    }
-}
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -37,11 +17,11 @@ export async function GET(request: Request) {
     try {
         const { data: student, error: studentError } = await supabase
             .from('student_roster')
-            .select('balance')
+            .select('balance, class_id')
             .eq('id', studentId)
             .single();
 
-        if (studentError) throw studentError;
+        if (studentError || !student) throw new Error('Student not found');
 
         const { data: investments, error } = await supabase
             .from('investments')
@@ -50,22 +30,26 @@ export async function GET(request: Request) {
 
         if (error) throw error;
 
-        // 보유 종목별 현재 시세 가져오기
+        // 보유 종목별 현재 시세 가져오기 (설정 반영)
         const portfolio = await Promise.all(investments.map(async (inv: any) => {
-            const currentPrice = await fetchCurrentPrice(inv.symbol) || inv.average_price;
+            const { price: currentPrice } = await getInvestmentPrice(inv.symbol, student.class_id);
+            const actualPrice = currentPrice || inv.average_price;
+
             return {
                 ...inv,
-                currentPrice,
-                marketValue: currentPrice * inv.quantity,
+                currentPrice: actualPrice,
+                marketValue: actualPrice * inv.quantity,
                 totalCost: inv.average_price * inv.quantity,
-                profit: (currentPrice * inv.quantity) - (inv.average_price * inv.quantity),
-                profitPercent: ((currentPrice - inv.average_price) / inv.average_price) * 100
+                profit: (actualPrice * inv.quantity) - (inv.average_price * inv.quantity),
+                profitPercent: inv.average_price > 0
+                    ? ((actualPrice - inv.average_price) / inv.average_price) * 100
+                    : 0
             };
         }));
 
         return NextResponse.json({ portfolio, balance: student.balance });
     } catch (error: any) {
         console.error('Portfolio Fetch Error:', error?.message || error);
-        return NextResponse.json({ error: 'Failed' }, { status: 500 });
+        return NextResponse.json({ error: '포트폴리오 정보를 불러오는데 실패했습니다.' }, { status: 500 });
     }
 }

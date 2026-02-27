@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Settings, Plus, Trash2, Key, Info, Save, ArrowLeft, Sun } from 'lucide-react';
+import { Settings, Plus, Trash2, Key, Info, Save, ArrowLeft, Sun, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -11,6 +11,7 @@ export default function SettingsPage() {
     const [classes, setClasses] = useState<any[]>([]);
     const [newClassName, setNewClassName] = useState('');
     const [newSessionCode, setNewSessionCode] = useState('');
+    const [priceMode, setPriceMode] = useState('realtime');
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState<any>(null);
     const supabase = createClient();
@@ -26,6 +27,9 @@ export default function SettingsPage() {
                 const settingsData = await res.json();
                 if (settingsData.google_ai_api_key) {
                     setApiKey(settingsData.google_ai_api_key);
+                }
+                if (settingsData.investment_price_mode) {
+                    setPriceMode(settingsData.investment_price_mode);
                 }
 
                 // Load classes
@@ -56,6 +60,24 @@ export default function SettingsPage() {
             }
 
             alert(data.message || 'API 키가 저장되었습니다.');
+        } catch (e: any) {
+            alert('오류: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSavePriceMode = async (newMode: string) => {
+        setPriceMode(newMode);
+        setLoading(true);
+        try {
+            const res = await fetch('/api/teacher/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ investment_price_mode: newMode })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
         } catch (e: any) {
             alert('오류: ' + e.message);
         } finally {
@@ -207,6 +229,68 @@ export default function SettingsPage() {
                         </button>
                     </div>
                 </section>
+
+                {/* 경제/투자 설정 */}
+                <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                        경제/투자 운영 설정
+                    </h2>
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-2">시장 가격(주식/코인) 조회 주기</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">학생들의 시장 페이지 및 상장 주식 가격 변동 타이밍을 결정합니다.</p>
+
+                            <div className="space-y-3">
+                                <label className="flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors dark:border-slate-600">
+                                    <input
+                                        type="radio"
+                                        name="priceMode"
+                                        value="weekly"
+                                        checked={priceMode === 'weekly'}
+                                        onChange={(e) => handleSavePriceMode(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                    <div>
+                                        <div className="font-medium text-slate-800 dark:text-white">주간 변동 (매주 월요일 9시 고정)</div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">일주일에 단 한번만 가격이 바뀌어 예측 가능한 환경 조성에 좋습니다.</div>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors dark:border-slate-600">
+                                    <input
+                                        type="radio"
+                                        name="priceMode"
+                                        value="hourly"
+                                        checked={priceMode === 'hourly'}
+                                        onChange={(e) => handleSavePriceMode(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                    <div>
+                                        <div className="font-medium text-slate-800 dark:text-white">시간별 변동 (매 정각)</div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">매 정각마다 최신 시세를 스냅샷으로 저장합니다. 비교적 안정적입니다.</div>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors dark:border-slate-600">
+                                    <input
+                                        type="radio"
+                                        name="priceMode"
+                                        value="realtime"
+                                        checked={priceMode === 'realtime'}
+                                        onChange={(e) => handleSavePriceMode(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                    <div>
+                                        <div className="font-medium text-slate-800 dark:text-white">실시간 변동 (기본값)</div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">조회하는 시점의 실제 주식/코인 시세가 항상 반영됩니다.</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 {/* AI 설정 */}
                 <section className="glass-panel p-6">
                     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

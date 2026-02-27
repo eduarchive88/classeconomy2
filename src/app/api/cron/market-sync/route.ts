@@ -1,77 +1,65 @@
-/*
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-import yahooFinance from 'yahoo-finance2';
+import { INVESTMENT_SYMBOLS } from '@/lib/constants';
+import { fetchLivePrice } from '@/utils/investment';
 
-// Mapping symbols to Yahoo Finance tickers
-const SYMBOLS: Record<string, string> = {
-    '삼성전자': '005930.KS',
-    '삼성SDI': '006400.KS',
-    'POSCO홀딩스': '005490.KS',
-    '대한항공': '003490.KS',
-    'LG전자': '066570.KS',
-    '현대차': '005380.KS',
-    '기아': '000270.KS',
-    'NAVER': '035420.KS',
-    '카카오': '035720.KS',
-    'LG화학': '051910.KS',
-    '셀트리온': '068270.KS',
-    'Apple': 'AAPL',
-    'Amazon': 'AMZN',
-    'Netflix': 'NFLX',
-    'Tesla': 'TSLA',
-    'NVIDIA': 'NVDA',
-    'Microsoft': 'MSFT',
-    'Meta': 'META',
-    '비트코인': 'BTC-KRW',
-    '이더리움': 'ETH-KRW',
-    '리플': 'XRP-KRW',
-};
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-    // Verify Cron Secret or Admin?
-    // For demo, we skip strict auth but in prod should check 'Authorization' header.
+    const supabase = createAdminClient();
+    const now = new Date();
+    const day = now.getDay(); // 1 = Monday
+    const hours = now.getHours(); // 0-23
 
-    const supabase = createClient();
     const updates = [];
+    const logs = [];
 
-    for (const [name, ticker] of Object.entries(SYMBOLS)) {
+    for (const item of INVESTMENT_SYMBOLS) {
         try {
-            const quote = await yahooFinance.quote(ticker);
-            const price = quote.regularMarketPrice;
+            const price = await fetchLivePrice(item.symbol);
+            if (price !== null) {
+                // 1. 항상 'hourly' 스냅샷 업데이트
+                updates.push({
+                    symbol: item.symbol,
+                    type: item.type,
+                    price: price,
+                    price_mode: 'hourly',
+                    updated_at: now.toISOString()
+                });
 
-            // FX Rate for US stocks? Yahoo automatically returns in currency of exchange?
-            // US stocks (AAPL) are in USD. We need KRW.
-            // Fetch USD/KRW rate.
-            let finalPrice = price;
+                // 2. 월요일 오전 9시경인 경우 'weekly' 스냅샷 업데이트
+                // (크론 잡이 정확히 9시에 한번만 실행된다고 가정하거나, 9시 범위 내에서 계속 업데이트)
+                if (day === 1 && hours === 9) {
+                    updates.push({
+                        symbol: item.symbol,
+                        type: item.type,
+                        price: price,
+                        price_mode: 'weekly',
+                        updated_at: now.toISOString()
+                    });
+                }
 
-            if (quote.currency === 'USD') {
-                const fx = await yahooFinance.quote('KRW=X'); // USD/KRW
-                finalPrice = price * (fx.regularMarketPrice || 1300);
+                logs.push(`${item.name}: ${price.toLocaleString()}원 업데이트 완료`);
             }
-
-            updates.push({
-                symbol: name, // Store by Name (Korean) for display
-                type: ticker.includes('-KRW') ? 'coin' : 'stock',
-                price: finalPrice,
-                updated_at: new Date().toISOString()
-            });
-
-        } catch (e) {
-            console.error(`Failed to fetch ${name}`, e);
+        } catch (e: any) {
+            console.error(`Failed to sync ${item.symbol}:`, e.message);
         }
     }
 
     if (updates.length > 0) {
-        const { error } = await supabase.from('market_data').upsert(updates, { onConflict: 'symbol' });
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        const { error } = await supabase
+            .from('market_data')
+            .upsert(updates, { onConflict: 'symbol,price_mode' });
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
     }
 
-    return NextResponse.json({ success: true, updated: updates.length });
-}
-*/
-
-import { NextResponse } from 'next/server';
-export async function GET() {
-    return NextResponse.json({ message: "Market sync is currently disabled for build stabilization." });
+    return NextResponse.json({
+        success: true,
+        timestamp: now.toISOString(),
+        updated_count: updates.length,
+        logs
+    });
 }

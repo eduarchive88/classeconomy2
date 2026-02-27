@@ -1,22 +1,7 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-
-// Yahoo Finance 차트 API를 직접 호출하여 현재가 조회
-async function fetchCurrentPrice(symbol: string): Promise<number | null> {
-    try {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
-        const res = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            },
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
-    } catch {
-        return null;
-    }
-}
+import { getInvestmentPrice } from '@/utils/investment';
+import { INVESTMENT_SYMBOLS } from '@/lib/constants';
 
 export async function POST(request: Request) {
     const { action, studentId, symbol, quantity } = await request.json();
@@ -28,42 +13,30 @@ export async function POST(request: Request) {
     }
 
     try {
-        // 1. 현재 시세 조회
-        const currentPrice = await fetchCurrentPrice(symbol);
-        if (!currentPrice) {
-            return NextResponse.json({ error: '현재 시세를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
-        }
-
-        const totalCost = Math.floor(currentPrice * quantity); // Floor for integer currency? or allow float? Let's assume integer currency for simplicity, but price is float.
-        // Assuming balance is integer, but investments can track precision.
-        // Let's ceil the cost to be safe for currency.
-        const cost = Math.ceil(currentPrice * quantity);
-
-        // 2. Get Student Balance
+        // 0. 학생의 학급 ID 조회
         const { data: student, error: studentError } = await supabase
             .from('student_roster')
-            .select('balance')
+            .select('balance, class_id')
             .eq('id', studentId)
             .single();
 
         if (studentError || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
 
+        // 1. 현재 시세 조회 (설정 반영)
+        const { price: currentPrice } = await getInvestmentPrice(symbol, student.class_id);
+        if (!currentPrice || currentPrice <= 0) {
+            return NextResponse.json({ error: '현재 시세를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
+        }
+
+        const cost = Math.ceil(currentPrice * quantity);
+
         // 한글 종목명 매핑
-        const STOCKS = [
-            { symbol: 'AAPL', name: '애플 (Apple)' },
-            { symbol: 'TSLA', name: '테슬라 (Tesla)' },
-            { symbol: '005930.KS', name: '삼성전자' },
-            { symbol: '000660.KS', name: 'SK하이닉스' },
-            { symbol: '005380.KS', name: '현대차' },
-            { symbol: '035420.KS', name: 'NAVER' },
-            { symbol: 'BTC-USD', name: '비트코인 (Bitcoin)' },
-            { symbol: 'ETH-USD', name: '이더리움 (Ethereum)' }
-        ];
-        const stockName = STOCKS.find(s => s.symbol === symbol)?.name || symbol;
+        const stockInfo = INVESTMENT_SYMBOLS.find(s => s.symbol === symbol);
+        const stockName = stockInfo?.name || symbol;
 
         if (action === 'buy') {
             if (student.balance < cost) {
-                return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+                return NextResponse.json({ error: '잔액이 부족합니다.' }, { status: 400 });
             }
 
             // Deduct Balance
@@ -102,7 +75,7 @@ export async function POST(request: Request) {
                 student_id: studentId,
                 type: 'investment_buy',
                 amount: -cost,
-                description: `${stockName} ${quantity}주 매수 (단가: ${Math.floor(currentPrice).toLocaleString()}원)`
+                description: `${stockName} ${quantity}개 매수 (단가: ${Math.floor(currentPrice).toLocaleString()}원)`
             });
 
             return NextResponse.json({ success: true, message: `Bought ${symbol}` });
@@ -117,26 +90,20 @@ export async function POST(request: Request) {
                 .single();
 
             if (!existing || existing.quantity < quantity) {
-                return NextResponse.json({ error: 'Insufficient quantity' }, { status: 400 });
+                return NextResponse.json({ error: '보유 수량이 부족합니다.' }, { status: 400 });
             }
 
-            // Calculate profit/loss for logging (optional)
             const revenue = Math.floor(currentPrice * quantity);
 
             // Update Investment
             const newQuantity = existing.quantity - quantity;
             if (newQuantity <= 0) {
-                // Or keep with 0 quantity? Let's delete for cleanliness or keep with 0?
-                // Let's delete if 0 to avoid clutter, or update to 0. 
-                // Updating to 0 preserves average price history? No, average price assumes holding.
-                // Let's allow partial sell.
-                if (Math.abs(newQuantity) < 0.000001) { // Float safety
+                if (Math.abs(newQuantity) < 0.000001) {
                     await adminSupabase.from('investments').delete().eq('id', existing.id);
                 } else {
                     await adminSupabase.from('investments').update({
-                        quantity: newQuantity,
+                        quantity: 0,
                         updated_at: new Date().toISOString()
-                        // Average price doesn't change on sell
                     }).eq('id', existing.id);
                 }
             } else {
@@ -154,7 +121,7 @@ export async function POST(request: Request) {
                 student_id: studentId,
                 type: 'investment_sell',
                 amount: revenue,
-                description: `${stockName} ${quantity}주 매도 (단가: ${Math.floor(currentPrice).toLocaleString()}원)`
+                description: `${stockName} ${quantity}개 매도 (단가: ${Math.floor(currentPrice).toLocaleString()}원)`
             });
 
             return NextResponse.json({ success: true, message: `Sold ${symbol}` });
@@ -164,6 +131,6 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error('Trade Error:', error);
-        return NextResponse.json({ error: 'Trade failed' }, { status: 500 });
+        return NextResponse.json({ error: '거래 처리에 실패했습니다.' }, { status: 500 });
     }
 }

@@ -57,7 +57,7 @@ export default function InvestmentPage() {
         const errors: Record<string, boolean> = {};
         for (const stock of STOCKS) {
             try {
-                const res = await fetch(`/api/student/investment/quote?symbol=${stock.symbol}`);
+                const res = await fetch(`/api/student/investment/quote?symbol=${stock.symbol}${studentId ? `&studentId=${studentId}` : ''}`);
                 const data = await res.json();
                 if (res.ok && !data.isError) {
                     newQuotes[stock.symbol] = data;
