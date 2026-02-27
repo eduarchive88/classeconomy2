@@ -41,7 +41,14 @@ export async function GET(request: Request) {
                 headers: { 'User-Agent': 'Mozilla/5.0' }
             });
             const liveData = await liveRes.json();
-            const price = liveData?.chart?.result?.[0]?.meta?.regularMarketPrice || 0;
+            const meta = liveData?.chart?.result?.[0]?.meta;
+            let price = meta?.regularMarketPrice || 0;
+
+            // 미국 주식 등 달러 기준인 경우 한화로 변환 (간이 환율 1350원 적용)
+            if (price && meta?.currency === 'USD') {
+                price = Math.round(price * 1350);
+            }
+
             return NextResponse.json({
                 symbol,
                 price,
