@@ -494,16 +494,22 @@ export default function StudentGroupsPage() {
                                 </h4>
                                 <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
                                     <li className="flex gap-2">
-                                        <span className="text-orange-500 font-bold">•</span>
-                                        모둠원들은 각자 원하는 만큼 모둠 자금을 <b>기부</b>할 수 있습니다.
+                                        <span className="text-orange-500 font-bold flex-shrink-0">•</span>
+                                        <span className="flex-1">
+                                            모둠원들은 각자 원하는 만큼 모둠 자금을 <b>기부</b>할 수 있습니다.
+                                        </span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-orange-500 font-bold">•</span>
-                                        기부한 돈은 <b>개인 자산에서 차감</b>되며, 다시 돌려받을 수 없으니 주의하세요.
+                                        <span className="text-orange-500 font-bold flex-shrink-0">•</span>
+                                        <span className="flex-1">
+                                            기부한 돈은 <b>개인 자산에서 차감</b>되며, 다시 돌려받을 수 없으니 주의하세요.
+                                        </span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-orange-500 font-bold">•</span>
-                                        <b>모둠장</b>은 모여진 자금으로 모둠 자리를 구매할 수 있습니다.
+                                        <span className="text-orange-500 font-bold flex-shrink-0">•</span>
+                                        <span className="flex-1">
+                                            <b>모둠장</b>은 모려진 자금으로 모둠 자리를 구매할 수 있습니다.
+                                        </span>
                                     </li>
                                 </ul>
                             </div>
@@ -514,16 +520,22 @@ export default function StudentGroupsPage() {
                                 </h4>
                                 <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
                                     <li className="flex gap-2">
-                                        <span className="text-orange-500 font-bold">•</span>
-                                        모둠 자리의 기본 가격은 개인 부동산 자리 가격의 <b>4배</b>입니다.
+                                        <span className="text-orange-500 font-bold flex-shrink-0">•</span>
+                                        <span className="flex-1">
+                                            모둠 자리의 기본 가격은 개인 부동산 자리 가격의 <b>4배</b>입니다.
+                                        </span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-orange-500 font-bold">•</span>
-                                        누군가 자리를 구매하면, 전체 모둠 자리의 가격이 오를 수 있습니다 (인플레이션).
+                                        <span className="text-orange-500 font-bold flex-shrink-0">•</span>
+                                        <span className="flex-1">
+                                            누군가 자리를 구매하면, 전체 모둠 자리의 가격이 오를 수 있습니다 (인플레이션).
+                                        </span>
                                     </li>
                                     <li className="flex gap-2">
-                                        <span className="text-orange-500 font-bold">•</span>
-                                        선생님의 설정에 따라 구매 즉시 승인되거나 대기 상태가 될 수 있습니다.
+                                        <span className="text-orange-500 font-bold flex-shrink-0">•</span>
+                                        <span className="flex-1">
+                                            선생님의 설정에 따라 구매 즉시 승인되거나 대기 상태가 될 수 있습니다.
+                                        </span>
                                     </li>
                                 </ul>
                             </div>
