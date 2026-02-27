@@ -43,29 +43,47 @@ export async function GET(request: Request) {
             const liveData = await liveRes.json();
             const meta = liveData?.chart?.result?.[0]?.meta;
             let price = meta?.regularMarketPrice || 0;
+            let previousClose = meta?.chartPreviousClose || meta?.regularMarketPreviousClose || 0;
 
             // 미국 주식 등 달러 기준인 경우 한화로 변환 (간이 환율 1350원 적용)
             if (price && meta?.currency === 'USD') {
                 price = Math.round(price * 1350);
             }
+            if (previousClose && meta?.currency === 'USD') {
+                previousClose = Math.round(previousClose * 1350);
+            }
+
+            let change = 0;
+            let changePercent = 0;
+            if (price > 0 && previousClose > 0) {
+                change = price - previousClose;
+                changePercent = parseFloat(((change / previousClose) * 100).toFixed(2));
+            }
 
             return NextResponse.json({
                 symbol,
                 price,
-                change: 0,
-                changePercent: 0,
+                change,
+                changePercent,
                 name: symbol,
                 isError: false
             });
         }
 
-        const { price, mode } = await getInvestmentPrice(symbol, classId);
+        const { price, previousClose, mode } = await getInvestmentPrice(symbol, classId);
+
+        let change = 0;
+        let changePercent = 0;
+        if (price > 0 && previousClose > 0) {
+            change = price - previousClose;
+            changePercent = parseFloat(((change / previousClose) * 100).toFixed(2));
+        }
 
         return NextResponse.json({
             symbol,
             price,
-            change: 0, // 스냅샷 모드에서는 고정가이므로 변동 폭 0으로 처리 가능
-            changePercent: 0,
+            change,
+            changePercent,
             name: symbol,
             mode,
             isError: false

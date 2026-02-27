@@ -303,15 +303,6 @@ export default function StudentDashboard() {
                     </Link>
                 </div>
 
-                {/* Footer */}
-                <footer className="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
-                    <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
-                    <p className="mt-1">
-                        문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-medium">카카오톡 오픈채팅</a>
-                        <span className="mx-2">|</span>
-                        블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-medium">뀨짱쌤의 교육자료 아카이브</a>
-                    </p>
-                </footer>
             </div>
         </div>
     );
