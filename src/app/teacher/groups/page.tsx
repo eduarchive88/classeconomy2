@@ -101,6 +101,7 @@ export default function GroupActivityManagement() {
             memberIds: []
         };
         setGroups([...groups, newGroup]);
+        setSelectedGroupId(newGroup.id);
     };
 
     const deleteGroup = async (id: string) => {
@@ -187,7 +188,11 @@ export default function GroupActivityManagement() {
                         col_idx: c,
                         price: Math.floor(price / 10) * 10
                     };
-                    if (existingSeat) updateData.id = existingSeat.id;
+                    if (existingSeat) {
+                        updateData.id = existingSeat.id;
+                        updateData.group_id = existingSeat.group_id;
+                        updateData.is_locked = existingSeat.is_locked;
+                    }
                     updates.push(updateData);
                 }
             }
@@ -336,8 +341,14 @@ export default function GroupActivityManagement() {
                                     <div
                                         key={group.id || `new-${idx}`}
                                         onClick={() => { if (group.id) setSelectedGroupId(group.id); }}
-                                        className={`glass-panel p-5 relative group cursor-pointer transition-all duration-200 ${selectedGroupId === group.id ? 'ring-4 ring-orange-600 border-4 border-orange-600 bg-orange-50 shadow-2xl transform scale-[1.03] z-10 dark:bg-orange-900/30' : 'hover:border-orange-200 dark:hover:border-slate-500'}`}
+                                        className={`glass-panel p-5 relative group cursor-pointer transition-all duration-300 ${selectedGroupId === group.id ? 'ring-8 ring-orange-100 border-4 border-orange-600 bg-orange-50 shadow-2xl transform scale-[1.05] z-10 dark:bg-orange-950/40 dark:ring-orange-900/20' : 'hover:border-orange-200 dark:hover:border-slate-500'}`}
                                     >
+                                        {selectedGroupId === group.id && (
+                                            <div className="absolute -top-3 -right-3 bg-orange-600 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-lg flex items-center gap-1 z-20">
+                                                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                                                선택됨
+                                            </div>
+                                        )}
                                         <button
                                             onClick={() => deleteGroup(group.id)}
                                             className="absolute top-4 right-4 text-slate-300 hover:text-red-500 p-1 rounded transition-colors"
@@ -584,21 +595,21 @@ export default function GroupActivityManagement() {
                                                 <div
                                                     key={`${r}-${c}`}
                                                     onClick={() => handleSaveSeat(r, c)}
-                                                    className={`aspect-video rounded-xl border-2 flex flex-col items-center justify-center text-center cursor-pointer transition-all relative ${seat?.is_locked ? 'bg-red-50 border-red-200' : group ? 'bg-orange-50 border-orange-200 shadow-sm' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 opacity-60 hover:opacity-100 hover:border-slate-300'}`}
+                                                    className={`aspect-video rounded-xl border-2 flex flex-col items-center justify-center text-center cursor-pointer transition-all relative ${seat?.is_locked ? 'bg-red-50 border-red-200' : group ? 'bg-orange-50 border-orange-400 shadow-md ring-2 ring-orange-100' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 opacity-70 hover:opacity-100 hover:border-slate-400 hover:shadow-lg'}`}
                                                 >
                                                     <span className="absolute top-1 left-2 text-[10px] font-mono text-slate-400">{r + 1}-{c + 1}</span>
                                                     {seat?.is_locked ? (
-                                                        <Lock className="w-5 h-5 text-red-300" />
-                                                    ) : group ? (
-                                                        <div className="px-2">
-                                                            <div className="text-xs font-bold text-orange-600 dark:text-orange-400">{group.name}</div>
-                                                            <div className="text-[10px] text-slate-400 mt-1 font-mono">
-                                                                {seat?.price != null ? `${seat.price.toLocaleString()}원` : '가격 미설정'}
-                                                            </div>
-                                                        </div>
+                                                        <Lock className="w-5 h-5 text-red-400" />
                                                     ) : (
-                                                        <div className="text-[10px] text-slate-300 font-mono">
-                                                            {seat?.price != null ? `${seat.price.toLocaleString()}원` : '가격 미설정'}
+                                                        <div className="flex flex-col items-center justify-center gap-0.5 px-2">
+                                                            {group ? (
+                                                                <div className="text-[13px] font-black text-orange-700 dark:text-orange-300 mb-0.5 drop-shadow-sm">{group.name}</div>
+                                                            ) : (
+                                                                <div className="text-[10px] font-medium text-slate-300 dark:text-slate-600 italic mb-0.5">미배정</div>
+                                                            )}
+                                                            <div className={`text-[10px] font-mono ${group ? 'text-slate-500 dark:text-slate-400 font-bold' : 'text-slate-400'}`}>
+                                                                {seat?.price != null ? `${seat.price.toLocaleString()}원` : <span className="text-[9px] opacity-60">가격 미설정</span>}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>

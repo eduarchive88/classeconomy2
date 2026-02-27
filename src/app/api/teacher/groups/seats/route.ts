@@ -64,11 +64,11 @@ export async function POST(request: Request) {
                 const data: any = {
                     class_id: classId,
                     row_idx: s.row_idx,
-                    col_idx: s.col_idx,
-                    price: s.price,
-                    group_id: s.group_id,
-                    is_locked: s.is_locked
+                    col_idx: s.col_idx
                 };
+                if (s.price !== undefined) data.price = s.price;
+                if (s.group_id !== undefined) data.group_id = s.group_id;
+                if (s.is_locked !== undefined) data.is_locked = s.is_locked;
                 if (s.id) data.id = s.id;
                 return data;
             });
