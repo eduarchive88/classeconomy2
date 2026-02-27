@@ -92,6 +92,7 @@ export default function GroupActivityManagement() {
 
     const addGroup = () => {
         const newGroup = {
+            id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             name: `${groups.length + 1}모둠`,
             leader_id: null,
             memberIds: []
@@ -146,6 +147,56 @@ export default function GroupActivityManagement() {
             fetchData();
         } catch (e: any) {
             alert(e.message);
+        }
+    };
+
+    // 기본 가격 자동 적용 (인플레이션 규칙)
+    const applyDefaultPrices = async () => {
+        if (!confirm('현재 모둠 자리 가격을 인플레이션 규칙((학급 총 자산 * 60%) / 모둠 수)으로 일괄 적용하시겠습니까?')) return;
+
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return;
+
+        setLoading(true);
+        try {
+            const totalAssets = students.reduce((sum, s) => sum + (s.balance || 0), 0) || 0;
+            const groupCount = groups.length || 1;
+
+            const basePrice = Math.floor((totalAssets * 0.6) / groupCount);
+            const finalBasePrice = Math.max(100, basePrice);
+
+            const updates = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const variation = Math.floor(finalBasePrice * 0.1);
+                    const rowFactor = r - Math.floor(rows / 2);
+                    const price = Math.max(100, finalBasePrice + (rowFactor * variation));
+
+                    const existingSeat = seats.find(s => s.row_idx === r && s.col_idx === c);
+                    let updateData: any = {
+                        row_idx: r,
+                        col_idx: c,
+                        price: Math.floor(price / 10) * 10
+                    };
+                    if (existingSeat) updateData.id = existingSeat.id;
+                    updates.push(updateData);
+                }
+            }
+
+            const res = await fetch('/api/teacher/groups/seats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ classId: selectedClassId, seats: updates })
+            });
+
+            if (!res.ok) throw new Error('가격 적용 실패');
+
+            fetchData();
+            alert('가격이 적용되었습니다.');
+        } catch (e: any) {
+            alert('오류: ' + e.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -476,15 +527,28 @@ export default function GroupActivityManagement() {
                                 )}
 
                                 {seatMode === 'price' && (
-                                    <div className="mt-6">
-                                        <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">적용할 가격 (원)</label>
-                                        <input
-                                            type="number" value={priceInput}
-                                            onChange={(e) => setPriceInput(Number(e.target.value))}
-                                            className="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700 mb-2 font-mono"
-                                            step={100}
-                                        />
-                                        <p className="text-[10px] text-slate-400">* 클릭 시 해당 가격으로 변경됩니다.</p>
+                                    <div className="mt-6 space-y-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">적용할 가격 (원)</label>
+                                            <input
+                                                type="number" value={priceInput}
+                                                onChange={(e) => setPriceInput(Number(e.target.value))}
+                                                className="w-full p-2 rounded-lg border dark:bg-slate-800 dark:border-slate-700 mb-2 font-mono"
+                                                step={100}
+                                            />
+                                            <p className="text-[10px] text-slate-400">* 클릭 시 해당 가격으로 변경됩니다.</p>
+                                        </div>
+                                        <hr className="border-slate-200 dark:border-slate-700" />
+                                        <button
+                                            onClick={applyDefaultPrices}
+                                            className="w-full py-2 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors text-sm"
+                                        >
+                                            <Wand2 className="w-4 h-4" />
+                                            기본 규칙 자동 적용
+                                        </button>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500">
+                                            * 인플레이션 규칙으로 자동 책정됩니다. (총 자산의 60% / 모둠 수)
+                                        </p>
                                     </div>
                                 )}
                             </div>
