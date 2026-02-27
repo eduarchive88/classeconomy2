@@ -59,6 +59,7 @@ export default function StudentGroupsPage() {
     const [submitting, setSubmitting] = useState(false);
     const [selectedSeat, setSelectedSeat] = useState<GroupSeat | null>(null);
     const [pendingTrades, setPendingTrades] = useState<any[]>([]);
+    const [lastApprovedSeatId, setLastApprovedSeatId] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -83,6 +84,7 @@ export default function StudentGroupsPage() {
                 setSettings(data.settings || { group_rows: 4, group_cols: 4 });
                 setSeats(data.seats || []);
                 setPendingTrades(data.pendingTrades || []);
+                setLastApprovedSeatId(data.lastApprovedSeatId || null);
             } else {
                 console.error('API error:', await response.text());
             }
@@ -195,14 +197,26 @@ export default function StudentGroupsPage() {
 
     // 우리 모둠이 소유한 모든 자리
     const myGroupSeats = seats.filter(s => s.group_id === group.id);
-    // 가장 최근에 구매한 자리가 현재 우리 모둠 자리
-    const currentGroupSeat = myGroupSeats.length > 0
-        ? myGroupSeats.reduce((latest, s) => {
+
+    // 현재 우리 모둠 자리 선정 로직:
+    // 1. 가장 최근에 승인(Approved)된 좌석이 있다면 그것을 현재 자리로 간주
+    // 2. 승인된 정보가 없다면 타임스탬프가 가장 최신인 좌석을 현재 자리로 간주
+    const currentGroupSeat = (() => {
+        if (myGroupSeats.length === 0) return null;
+
+        // 최근 승인된 좌석 확인
+        if (lastApprovedSeatId) {
+            const approved = myGroupSeats.find(s => s.id === lastApprovedSeatId);
+            if (approved) return approved;
+        }
+
+        // 없을 경우 타임스탬프 기준
+        return myGroupSeats.reduce((latest, s) => {
             const latestTime = new Date(latest.updated_at || latest.created_at || 0).getTime();
             const sTime = new Date(s.updated_at || s.created_at || 0).getTime();
             return sTime > latestTime ? s : latest;
-        })
-        : null;
+        });
+    })();
 
     const isLeader = group.leader_id === student.id;
 

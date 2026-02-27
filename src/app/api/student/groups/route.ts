@@ -80,7 +80,30 @@ export async function GET(request: Request) {
             .eq('class_id', classId)
             .eq('status', 'pending');
 
-        return NextResponse.json({ group, settings, seats, pendingTrades: pendingTrades || [] });
+        // 5. Get last approved seat for the group
+        let lastApprovedSeatId = null;
+        if (group) {
+            const { data: lastApprovedTrade } = await supabase
+                .from('group_seat_trades')
+                .select('seat_id')
+                .eq('group_id', group.id)
+                .eq('status', 'approved')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (lastApprovedTrade) {
+                lastApprovedSeatId = lastApprovedTrade.seat_id;
+            }
+        }
+
+        return NextResponse.json({
+            group,
+            settings,
+            seats,
+            pendingTrades: pendingTrades || [],
+            lastApprovedSeatId
+        });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
