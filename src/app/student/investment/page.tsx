@@ -223,7 +223,7 @@ export default function InvestmentPage() {
                 <ul className="list-disc ml-5 space-y-1">
                     <li>주식은 <strong>소수점 단위</strong>로도 구매 가능합니다. (예: 0.5주)</li>
                     <li>실시간 가격 변동에 따라 수익률이 달라질 수 있습니다.</li>
-                    <li>가격은 Yahoo Finance에서 실시간 연동됩니다. 네트워크 상황에 따라 지연될 수 있습니다.</li>
+                    <li>가격은 Yahoo Finance에서 실시간 연동됩니다. 선생님의 설정에 따라 매주 1회 또는 매정각마다 변동되도록 변경도 가능합니다. 네트워크 상황에 따라 지연될 수 있습니다.</li>
                 </ul>
             </div>
 
