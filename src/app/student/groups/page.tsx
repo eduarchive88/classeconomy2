@@ -58,6 +58,7 @@ export default function StudentGroupsPage() {
     const [donationAmount, setDonationAmount] = useState<string>('');
     const [submitting, setSubmitting] = useState(false);
     const [selectedSeat, setSelectedSeat] = useState<GroupSeat | null>(null);
+    const [pendingTrades, setPendingTrades] = useState<any[]>([]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -81,6 +82,7 @@ export default function StudentGroupsPage() {
                 setGroup(data.group || null);
                 setSettings(data.settings || { group_rows: 4, group_cols: 4 });
                 setSeats(data.seats || []);
+                setPendingTrades(data.pendingTrades || []);
             } else {
                 console.error('API error:', await response.text());
             }
@@ -354,6 +356,10 @@ export default function StudentGroupsPage() {
                                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">판매 중</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
+                                        <div className="w-3 h-3 rounded bg-amber-400"></div>
+                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">승인 대기중</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
                                         <div className="w-3 h-3 rounded bg-slate-300 dark:bg-slate-700"></div>
                                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">구매 불가</span>
                                     </div>
@@ -376,6 +382,8 @@ export default function StudentGroupsPage() {
                                         const isOtherGroup = seat?.group_id && seat.group_id !== group.id;
                                         const isSelected = selectedSeat?.id === seat?.id && seat !== undefined;
                                         const canAfford = group.balance >= (seat?.price || 0);
+                                        const pendingTrade = pendingTrades.find(t => t.seat_id === seat?.id);
+                                        const isPending = !!pendingTrade;
 
                                         return (
                                             <button
@@ -386,13 +394,15 @@ export default function StudentGroupsPage() {
                                                     ? 'bg-transparent border border-dashed border-slate-200 dark:border-slate-800 opacity-20 cursor-not-allowed'
                                                     : isMyCurrent
                                                         ? 'bg-orange-500 text-white shadow-orange-500/20 transform scale-105 z-10'
-                                                        : isMyOther
-                                                            ? 'bg-emerald-100 dark:bg-emerald-900/20 border-2 border-emerald-400 text-emerald-600 shadow-sm'
-                                                            : seat.is_locked
-                                                                ? 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 opacity-50 cursor-not-allowed'
-                                                                : isSelected
-                                                                    ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500 text-orange-600 ring-4 ring-orange-500/10 scale-110 z-20'
-                                                                    : 'bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-blue-400 dark:hover:border-blue-700/50 hover:bg-blue-50/50'
+                                                        : isPending
+                                                            ? 'bg-amber-400 border-2 border-amber-500 text-amber-900 shadow-amber-400/20'
+                                                            : isMyOther
+                                                                ? 'bg-emerald-100 dark:bg-emerald-900/20 border-2 border-emerald-400 text-emerald-600 shadow-sm'
+                                                                : seat.is_locked
+                                                                    ? 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 opacity-50 cursor-not-allowed'
+                                                                    : isSelected
+                                                                        ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500 text-orange-600 ring-4 ring-orange-500/10 scale-110 z-20'
+                                                                        : 'bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-blue-400 dark:hover:border-blue-700/50 hover:bg-blue-50/50'
                                                     }`}
                                             >
                                                 {seat?.is_locked && (
@@ -405,6 +415,11 @@ export default function StudentGroupsPage() {
                                                     <div className="flex flex-col items-center gap-1">
                                                         <CheckCircle2 className="w-6 h-6" />
                                                         <span className="text-[10px] font-black uppercase text-orange-100">Mine</span>
+                                                    </div>
+                                                ) : isPending ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className="text-lg">⏳</span>
+                                                        <span className="text-[9px] font-bold text-amber-900">승인대기중</span>
                                                     </div>
                                                 ) : isMyOther ? (
                                                     <div className="flex flex-col items-center gap-1">

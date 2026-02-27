@@ -73,7 +73,14 @@ export async function GET(request: Request) {
             group_name: s.groups?.name
         }));
 
-        return NextResponse.json({ group, settings, seats });
+        // 4. Get pending trades
+        const { data: pendingTrades } = await supabase
+            .from('group_seat_trades')
+            .select('seat_id, group_id')
+            .eq('class_id', classId)
+            .eq('status', 'pending');
+
+        return NextResponse.json({ group, settings, seats, pendingTrades: pendingTrades || [] });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
