@@ -91,7 +91,7 @@ export async function POST(request: Request) {
             console.error('Class config fetch error:', classConfigError);
         }
 
-        // 즉시 구매 허용 기본값을 false(비허용)로 설정하여 보수적으로 처리
+        // 즉시 구매 허용 여부 확인 (캐시 방지를 위해 DB에서 직접 확인 권장하나 현재 구조 유지하며 검증 강화)
         const isAutoAllowed = classData?.is_auto_real_estate === true;
 
         // 즉시 구매 비허용인 경우 → pending 요청으로 전환 (잔액 선만 후 승인 대기)

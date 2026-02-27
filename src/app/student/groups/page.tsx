@@ -14,7 +14,8 @@ import {
     Unlock,
     AlertCircle,
     Info,
-    ArrowRight
+    ArrowRight,
+    Grid
 } from 'lucide-react';
 
 import { getStudentInfo } from '@/utils/student-auth';
@@ -195,28 +196,41 @@ export default function StudentGroupsPage() {
         );
     }
 
-    // 우리 모둠이 소유한 모든 자리
-    const myGroupSeats = seats.filter(s => s.group_id === group.id);
-
-    // 현재 우리 모둠 자리 선정 로직:
-    // 1. 가장 최근에 승인(Approved)된 좌석이 있다면 그것을 현재 자리로 간주
-    // 2. 승인된 정보가 없다면 타임스탬프가 가장 최신인 좌석을 현재 자리로 간주
-    const currentGroupSeat = (() => {
-        if (myGroupSeats.length === 0) return null;
-
-        // 최근 승인된 좌석 확인
-        if (lastApprovedSeatId) {
-            const approved = myGroupSeats.find(s => s.id === lastApprovedSeatId);
-            if (approved) return approved;
-        }
-
-        // 없을 경우 타임스탬프 기준
-        return myGroupSeats.reduce((latest, s) => {
-            const latestTime = new Date(latest.updated_at || latest.created_at || 0).getTime();
-            const sTime = new Date(s.updated_at || s.created_at || 0).getTime();
-            return sTime > latestTime ? s : latest;
-        });
-    })();
+    // 모둠이 없는 경우 처리
+    if (!group) {
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
+                <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => router.push('/student')}
+                                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                            >
+                                <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                            </button>
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">
+                                모둠 활동
+                            </h1>
+                        </div>
+                    </div>
+                </header>
+                <main className="max-w-7xl mx-auto px-4 py-20 flex flex-col items-center justify-center text-center">
+                    <div className="w-20 h-20 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                        <Users className="w-10 h-10 text-slate-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">모둠에 소속되어 있지 않습니다.</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8">선생님께 모둠 배정을 요청해 주세요.</p>
+                    <button
+                        onClick={() => router.push('/student')}
+                        className="px-8 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors"
+                    >
+                        홈으로 돌아가기
+                    </button>
+                </main>
+            </div>
+        );
+    }
 
     const isLeader = group.leader_id === student.id;
 
@@ -377,6 +391,12 @@ export default function StudentGroupsPage() {
                                         <div className="w-3 h-3 rounded bg-slate-300 dark:bg-slate-700"></div>
                                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">구매 불가</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-center mb-6">
+                                <div className="bg-slate-800 text-white px-10 py-3 rounded-xl shadow-lg font-bold text-sm tracking-widest flex items-center justify-center gap-2">
+                                    <Grid className="w-4 h-4 text-orange-400" /> 교탁 (칠판)
                                 </div>
                             </div>
 

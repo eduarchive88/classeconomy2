@@ -254,21 +254,22 @@ export default function StudentBank() {
                                                             tx.type === 'deposit' ? '저축 가입' :
                                                                 tx.type === 'withdraw' ? '저축 만기 출금' :
                                                                     tx.type === 'allowance' ? '용돈' :
-                                                                        tx.type === 'special_allowance' ? '특별 용돈' :
+                                                                        tx.type === 'special_allowance' ? '특별 보너스' :
                                                                             tx.type === 'fine' ? '벌금' :
                                                                                 tx.type === 'quiz_reward' ? '퀴즈 상금' :
                                                                                     tx.type === 'stock_profit' ? '투자 수익' :
                                                                                         tx.type === 'stock_loss' ? '투자 손실' :
-                                                                                            tx.type === 'market_purchase' ? '상품 구입' :
-                                                                                                tx.type === 'real_estate_purchase' ? '부동산 구입' :
+                                                                                            tx.type === 'market_purchase' ? '상점 구매' :
+                                                                                                tx.type === 'real_estate_purchase' ? '부동산 구매' :
                                                                                                     tx.type === 'stock_buy' ? '주식 매수' :
                                                                                                         tx.type === 'stock_sell' ? '주식 매도' :
                                                                                                             tx.type === 'investment_buy' ? '주식 매수' :
                                                                                                                 tx.type === 'investment_sell' ? '주식 매도' :
                                                                                                                     tx.type === 'real_estate_income' ? '임대/매각 수익' :
-                                                                                                                        tx.type === 'real_estate_pending' ? '부동산(승인대기)' :
-                                                                                                                            tx.type === 'real_estate_refund' ? '부동산(환불)' :
-                                                                                                                                tx.type === 'tax' ? '세금' : tx.type}
+                                                                                                                        tx.type === 'real_estate_pending' ? '부동산 (승인 대기)' :
+                                                                                                                            tx.type === 'real_estate_refund' ? '부동산 (환불)' :
+                                                                                                                                tx.type === 'group_donation' ? '모둠 기부' :
+                                                                                                                                    tx.type === 'tax' ? '세금' : tx.type}
                                                 </div>
                                                 <div className="text-sm text-slate-500 dark:text-slate-400">
                                                     {new Date(tx.created_at).toLocaleDateString()} {tx.description && `• ${tx.description}`}
@@ -444,12 +445,7 @@ export default function StudentBank() {
 
             {/* Footer */}
             <footer className="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
-                <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
-                <p className="mt-1">
-                    문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">카카오톡 오픈채팅</a>
-                    <span className="mx-2">|</span>
-                    블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a>
-                </p>
+                <p>만든 사람: 경기도 지구과학 교사 뀨짱, 문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">카카오톡 오픈채팅</a>, 블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a></p>
             </footer>
         </div>
     );

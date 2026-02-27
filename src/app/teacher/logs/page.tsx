@@ -97,19 +97,24 @@ export default function TeacherLogs() {
             case 'real_estate_income': return '부동산 수익';
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
-            case 'real_estate_pending': return '부동산(승인대기)';
-            case 'real_estate_refund': return '부동산(환불)';
+            case 'real_estate_pending': return '부동산 (승인 대기)';
+            case 'real_estate_refund': return '부동산 (환불)';
             case 'tax': return '세금';
             case 'transfer_sent': return '송금 보냄';
             case 'transfer_received': return '송금 받음';
             case 'transfer': return '송금';
-            case 'deposit': return '예탁 입금';
-            case 'withdrawal': return '예탁 출금';
-            case 'maturity': return '예금 만기';
-            case 'interest': return '이자 수익';
-            case 'income': return '기타 수입';
-            case 'expense': return '기타 지출';
-            case 'investment': return '투자';
+            case 'deposit': return '저축 가입';
+            case 'withdraw': return '저축 만기 출금';
+            case 'allowance': return '용돈';
+            case 'special_allowance': return '특별 보너스';
+            case 'fine': return '벌금';
+            case 'quiz_reward': return '퀴즈 상금';
+            case 'stock_profit': return '투자 수익';
+            case 'stock_loss': return '투자 손실';
+            case 'market_purchase': return '상점 구매';
+            case 'real_estate_purchase': return '부동산 구매';
+            case 'real_estate_income': return '임대/매각 수익';
+            case 'group_donation': return '모둠 기부';
             default: return type;
         }
     };
@@ -228,7 +233,8 @@ export default function TeacherLogs() {
                                                         (log.type === 'income' || log.type === 'special_allowance' || log.type === 'allowance' || log.type === 'quiz_reward' || log.type === 'transfer_received') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                                             (log.type === 'expense' || log.type === 'market_purchase' || log.type === 'tax' || log.type === 'withdrawal' || log.type === 'transfer_sent') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                                                                 (log.type === 'investment' || log.type === 'stock_buy' || log.type === 'stock_sell') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
+                                                                    (log.type === 'group_donation') ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                                        'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
                                                 `}>
                                                     {getTypeLabel(log.type)}
                                                 </span>

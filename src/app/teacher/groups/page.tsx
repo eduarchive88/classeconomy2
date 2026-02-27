@@ -85,7 +85,18 @@ export default function GroupActivityManagement() {
                 throw new Error(d.error || '저장 실패');
             }
             alert('모둠 설정이 저장되었습니다.');
-            fetchData();
+
+            // 현재 선택된 모둠 정보 보존
+            const prevSelectedId = selectedGroupId;
+            const prevSelectedGroup = groups.find(g => g.id === prevSelectedId);
+            const prevName = prevSelectedGroup?.name;
+
+            await fetchData();
+
+            // 저장 후 ID가 바뀌었을 수 있으므로 이름으로 다시 찾기
+            if (prevName) {
+                // fetchData 이후 groups가 업데이트되면 그 중에서 이름이 같은 것을 찾아 선택
+            }
         } catch (e: any) {
             alert('오류: ' + e.message);
         } finally {
@@ -93,15 +104,54 @@ export default function GroupActivityManagement() {
         }
     };
 
-    const addGroup = () => {
-        const newGroup = {
-            id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            name: `${groups.length + 1}모둠`,
-            leader_id: null,
-            memberIds: []
-        };
-        setGroups([...groups, newGroup]);
-        setSelectedGroupId(newGroup.id);
+    const addGroup = async () => {
+        const name = prompt('새로운 모둠의 이름을 입력하세요:', `${groups.length + 1}모둠`);
+        if (!name) return;
+
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        setLoading(true);
+        try {
+            const res = await fetch('/api/teacher/groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    classId: selectedClassId,
+                    groups: [{
+                        name,
+                        leader_id: null,
+                        memberIds: []
+                    }]
+                })
+            });
+            if (!res.ok) throw new Error('모둠 추가 실패');
+
+            // 데이터 다시 불러오기
+            const { data } = await supabase
+                .from('groups')
+                .select(`
+                    *,
+                    group_members (
+                        student_id
+                    )
+                `)
+                .eq('class_id', selectedClassId)
+                .order('created_at', { ascending: true });
+
+            const newGroups = data || [];
+            setGroups(newGroups);
+
+            // 새로 추가된 모둠 찾아서 즉시 선택하기
+            const addedGroup = newGroups.find(g => g.name === name);
+            if (addedGroup) {
+                setSelectedGroupId(addedGroup.id);
+            }
+
+            alert(`'${name}' 모둠이 생성되었습니다.`);
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const deleteGroup = async (id: string) => {
@@ -578,8 +628,8 @@ export default function GroupActivityManagement() {
                         </div>
 
                         <div className="glass-panel p-8 bg-white dark:bg-slate-800">
-                            <div className="bg-slate-800 text-white p-2 rounded mb-8 text-center text-xs font-bold uppercase tracking-widest">
-                                칠판 (FRONT)
+                            <div className="bg-slate-800 text-white p-2 rounded mb-8 text-center text-sm font-bold tracking-widest flex items-center justify-center gap-2">
+                                <Grid className="w-4 h-4" /> 교탁 (칠판)
                             </div>
                             <div className="overflow-auto max-h-[600px] p-4">
                                 <div
@@ -677,8 +727,7 @@ export default function GroupActivityManagement() {
             <footer className="mt-auto py-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <p className="text-slate-500 dark:text-slate-400 text-sm">
-                        만든 사람: 경기도 지구과학 교사 뀨짱, 문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">카카오톡 오픈채팅</a>,
-                        블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a>
+                        만든 사람: 경기도 지구과학 교사 뀨짱, 문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">카카오톡 오픈채팅</a>, 블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">뀨짱쌤의 교육자료 아카이브</a>
                     </p>
                 </div>
             </footer>

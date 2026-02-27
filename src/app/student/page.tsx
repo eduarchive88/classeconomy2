@@ -148,14 +148,14 @@ export default function StudentDashboard() {
                             <h2 className="text-lg font-bold mb-1 text-slate-800 dark:text-white">
                                 {student?.name || '학생'}님 👋
                             </h2>
-                            <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-3">오늘도 현명한 경제 생활을 해보세요.</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-3">오늘도 현명한 경제 생활을 해보세요.</p>
 
                             <div>
-                                <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-1">나의 현재 잔액</p>
-                                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{balance.toLocaleString()} <span className="text-sm font-normal text-slate-400">원</span></h2>
+                                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1">나의 현재 잔액</p>
+                                <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400">{balance.toLocaleString()} <span className="text-sm font-normal text-slate-500">원</span></h2>
                             </div>
                         </div>
-                        <div className="absolute right-[-15px] bottom-[-15px] text-slate-100 dark:text-slate-700/30 rotate-12">
+                        <div className="absolute right-[-15px] bottom-[-15px] text-blue-100 dark:text-blue-900/20 rotate-12">
                             <Wallet className="w-24 h-24" />
                         </div>
                     </div>
@@ -163,13 +163,13 @@ export default function StudentDashboard() {
                     {/* 2번: 저축 + 투자 위젯 (중앙) */}
                     <div className="flex flex-col gap-3">
                         {/* 저축 현황 */}
-                        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center flex-1 transition-all hover:shadow-md">
-                            <div className="flex items-center gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-2xl shadow-lg shadow-blue-500/20 flex flex-col justify-center flex-1 transition-all hover:scale-[1.02] hover:shadow-xl">
+                            <div className="flex items-center gap-2 mb-2 text-blue-100">
                                 <Landmark className="w-4 h-4" />
-                                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">나의 총 저축액</p>
+                                <p className="text-xs font-bold uppercase tracking-wider">나의 총 저축액</p>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-                                {savingsTotal.toLocaleString()} <span className="text-sm font-normal text-slate-500">원</span>
+                            <h3 className="text-2xl font-black text-white">
+                                {savingsTotal.toLocaleString()} <span className="text-sm font-normal opacity-80">원</span>
                             </h3>
                         </div>
                         {/* 투자 현황 */}
@@ -302,6 +302,16 @@ export default function StudentDashboard() {
                         <ArrowRight className="w-5 h-5 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-orange-500" />
                     </Link>
                 </div>
+
+                {/* Footer */}
+                <footer className="mt-12 py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500">
+                    <p>만든 사람: 경기도 지구과학 교사 뀨짱</p>
+                    <p className="mt-1">
+                        문의: <a href="https://open.kakao.com/o/s7hVU65h" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-medium">카카오톡 오픈채팅</a>
+                        <span className="mx-2">|</span>
+                        블로그: <a href="https://eduarchive.tistory.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-medium">뀨짱쌤의 교육자료 아카이브</a>
+                    </p>
+                </footer>
             </div>
         </div>
     );
