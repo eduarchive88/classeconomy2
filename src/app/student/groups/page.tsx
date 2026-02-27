@@ -139,13 +139,8 @@ export default function StudentGroupsPage() {
 
     const handleBuySeat = async () => {
         if (!group || !selectedSeat) return;
-        if (group.leader_id !== student.id) {
-            alert('모둠장만 자리를 구매할 수 있습니다.');
-            return;
-        }
-
-        if (selectedSeat.group_id) {
-            alert('이미 주인이 있는 자리입니다.');
+        if (selectedSeat.group_id === group.id) {
+            alert('이미 우리 모둠의 자리입니다.');
             return;
         }
 
@@ -196,23 +191,16 @@ export default function StudentGroupsPage() {
         );
     }
 
-    if (!group) {
-        return (
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-8">
-                <div className="max-w-xl mx-auto text-center py-20">
-                    <Users className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-700 mb-6" />
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">소속된 모둠이 없습니다</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8">선생님이 학생을 모둠에 편성해 주셔야 활동에 참여할 수 있습니다.</p>
-                    <button
-                        onClick={() => router.push('/student')}
-                        className="flex items-center gap-2 mx-auto px-6 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
-                    >
-                        <ChevronLeft className="w-4 h-4" /> 대시보드로 돌아가기
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    // 우리 모둠이 소유한 모든 자리
+    const myGroupSeats = seats.filter(s => s.group_id === group.id);
+    // 가장 최근에 구매한 자리가 현재 우리 모둠 자리
+    const currentGroupSeat = myGroupSeats.length > 0
+        ? myGroupSeats.reduce((latest, s) => {
+            const latestTime = new Date(latest.updated_at || latest.created_at || 0).getTime();
+            const sTime = new Date(s.updated_at || s.created_at || 0).getTime();
+            return sTime > latestTime ? s : latest;
+        })
+        : null;
 
     const isLeader = group.leader_id === student.id;
 
@@ -358,12 +346,16 @@ export default function StudentGroupsPage() {
                                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">우리 모둠</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <div className="w-3 h-3 rounded bg-slate-200 dark:bg-slate-700"></div>
-                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">구매 가능</span>
+                                        <div className="w-3 h-3 rounded bg-blue-500"></div>
+                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">인수 가능</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <div className="w-3 h-3 rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800"></div>
-                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">타모둠</span>
+                                        <div className="w-3 h-3 rounded bg-emerald-400"></div>
+                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">판매 중</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-3 h-3 rounded bg-slate-300 dark:bg-slate-700"></div>
+                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic">구매 불가</span>
                                     </div>
                                 </div>
                             </div>
@@ -379,9 +371,11 @@ export default function StudentGroupsPage() {
                                         const r = Math.floor(idx / settings.group_cols);
                                         const c = idx % settings.group_cols;
                                         const seat = seats.find(s => s.row_idx === r && s.col_idx === c);
-                                        const isMyGroup = seat?.group_id === group.id;
+                                        const isMyCurrent = currentGroupSeat && seat?.id === currentGroupSeat.id;
+                                        const isMyOther = seat?.group_id != null && seat.group_id === group.id && !isMyCurrent;
                                         const isOtherGroup = seat?.group_id && seat.group_id !== group.id;
                                         const isSelected = selectedSeat?.id === seat?.id && seat !== undefined;
+                                        const canAfford = group.balance >= (seat?.price || 0);
 
                                         return (
                                             <button
@@ -390,35 +384,47 @@ export default function StudentGroupsPage() {
                                                 disabled={!seat}
                                                 className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex flex-col items-center justify-center transition-all shadow-sm ${!seat
                                                     ? 'bg-transparent border border-dashed border-slate-200 dark:border-slate-800 opacity-20 cursor-not-allowed'
-                                                    : isMyGroup
+                                                    : isMyCurrent
                                                         ? 'bg-orange-500 text-white shadow-orange-500/20 transform scale-105 z-10'
-                                                        : isOtherGroup
-                                                            ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-red-500'
-                                                            : isSelected
-                                                                ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500 text-orange-600 ring-4 ring-orange-500/10 scale-110 z-20'
-                                                                : 'bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-slate-400 hover:border-orange-300 dark:hover:border-orange-700/50 hover:bg-orange-50/50 dark:hover:bg-orange-900/10'
+                                                        : isMyOther
+                                                            ? 'bg-emerald-100 dark:bg-emerald-900/20 border-2 border-emerald-400 text-emerald-600 shadow-sm'
+                                                            : seat.is_locked
+                                                                ? 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 opacity-50 cursor-not-allowed'
+                                                                : isSelected
+                                                                    ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500 text-orange-600 ring-4 ring-orange-500/10 scale-110 z-20'
+                                                                    : 'bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-blue-400 dark:hover:border-blue-700/50 hover:bg-blue-50/50'
                                                     }`}
                                             >
-                                                {seat?.is_locked && !isMyGroup && (
+                                                {seat?.is_locked && (
                                                     <div className="absolute -top-1.5 -right-1.5 p-1 bg-slate-900 dark:bg-slate-700 rounded-lg shadow-lg">
                                                         <Lock className="w-2.5 h-2.5 text-white" />
                                                     </div>
                                                 )}
 
-                                                {isMyGroup ? (
+                                                {isMyCurrent ? (
                                                     <div className="flex flex-col items-center gap-1">
                                                         <CheckCircle2 className="w-6 h-6" />
                                                         <span className="text-[10px] font-black uppercase text-orange-100">Mine</span>
                                                     </div>
-                                                ) : isOtherGroup ? (
-                                                    <div className="flex flex-col items-center gap-1 truncate w-full px-1">
-                                                        <Users className="w-5 h-5 opacity-40" />
-                                                        <span className="text-[9px] font-bold truncate max-w-full italic">{seat.group_name}</span>
+                                                ) : isMyOther ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className="text-lg">🏷️</span>
+                                                        <span className="text-[9px] font-bold text-emerald-600">판매 중</span>
+                                                    </div>
+                                                ) : seat?.is_locked ? (
+                                                    <div className="flex flex-col items-center">
+                                                        <Lock className="w-4 h-4 opacity-40 mb-1" />
+                                                        <span className="text-[9px] font-bold opacity-60">구매 불가</span>
                                                     </div>
                                                 ) : (
                                                     <div className="flex flex-col items-center">
                                                         <span className="text-[10px] font-bold opacity-60 italic mb-0.5">{r + 1}-{c + 1}</span>
-                                                        <span className="text-xs font-bold">{Math.floor(seat?.price || 0 / 10000)}만</span>
+                                                        <div className={`text-xs font-bold ${!canAfford ? 'text-red-500' : 'text-blue-600'}`}>
+                                                            {seat.price.toLocaleString()}
+                                                        </div>
+                                                        <div className={`text-[8px] px-1 py-0.5 rounded font-bold mt-1 ${!canAfford ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-700'}`}>
+                                                            인수 가능
+                                                        </div>
                                                     </div>
                                                 )}
                                             </button>
@@ -448,30 +454,33 @@ export default function StudentGroupsPage() {
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                                        {selectedSeat?.group_id ? (
+                                        {selectedSeat?.group_id === group.id ? (
                                             <div className="px-6 py-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold rounded-xl flex items-center gap-2">
                                                 <Users className="w-5 h-5" />
-                                                {selectedSeat.group_id === group.id ? '우리 모둠 소유 자리' : `'${selectedSeat.group_name}' 소유 자리`}
+                                                우리 모둠 소유 자리
                                             </div>
-                                        ) : selectedSeat?.is_locked ? (
+                                        ) : (selectedSeat?.is_locked || selectedSeat?.group_id === group.id) ? (
                                             <div className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold rounded-xl flex items-center gap-2 italic">
-                                                <Lock className="w-5 h-5" /> 선생님이 잠금 처리한 자리
+                                                <Lock className="w-5 h-5" /> 구매 불가
                                             </div>
                                         ) : isLeader ? (
                                             <button
                                                 onClick={handleBuySeat}
-                                                disabled={submitting}
-                                                className="w-full sm:w-auto px-8 py-4 bg-orange-600 text-white font-black rounded-2xl shadow-lg shadow-orange-600/20 hover:bg-orange-700 transition-all flex items-center justify-center gap-2 group whitespace-nowrap"
+                                                disabled={submitting || group.balance < (selectedSeat?.price || 0)}
+                                                className="w-full sm:w-auto px-8 py-4 bg-orange-600 text-white font-black rounded-2xl shadow-lg shadow-orange-600/20 hover:bg-orange-700 disabled:bg-slate-300 disabled:shadow-none transition-all flex items-center justify-center gap-2 group whitespace-nowrap"
                                             >
                                                 {submitting ? (
                                                     <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin rounded-full" />
                                                 ) : (
-                                                    <>자리 구매하기 <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform" /></>
+                                                    <>
+                                                        {selectedSeat?.group_id ? '자리 인수하기' : '자리 구매하기'}
+                                                        <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+                                                    </>
                                                 )}
                                             </button>
                                         ) : (
                                             <div className="px-6 py-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center gap-2 text-sm italic">
-                                                <Info className="w-5 h-5" /> 구매 가능 (모둠장만 구매 가능)
+                                                <Info className="w-5 h-5" /> 인수 가능 (모둠장만 가능)
                                             </div>
                                         )}
                                         <button
@@ -508,7 +517,7 @@ export default function StudentGroupsPage() {
                                     <li className="flex gap-2">
                                         <span className="text-orange-500 font-bold flex-shrink-0">•</span>
                                         <span className="flex-1">
-                                            <b>모둠장</b>은 모려진 자금으로 모둠 자리를 구매할 수 있습니다.
+                                            <b>모둠장</b>은 모여진 자금으로 모둠 자리를 구매할 수 있습니다.
                                         </span>
                                     </li>
                                 </ul>
