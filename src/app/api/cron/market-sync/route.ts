@@ -16,13 +16,13 @@ export async function GET(request: Request) {
 
     for (const item of INVESTMENT_SYMBOLS) {
         try {
-            const price = await fetchLivePrice(item.symbol);
-            if (price !== null) {
+            const liveData = await fetchLivePrice(item.symbol);
+            if (liveData !== null) {
                 // 1. 항상 'hourly' 스냅샷 업데이트
                 updates.push({
                     symbol: item.symbol,
                     type: item.type,
-                    price: price,
+                    price: liveData.price,
                     price_mode: 'hourly',
                     updated_at: now.toISOString()
                 });
@@ -33,13 +33,13 @@ export async function GET(request: Request) {
                     updates.push({
                         symbol: item.symbol,
                         type: item.type,
-                        price: price,
+                        price: liveData.price,
                         price_mode: 'weekly',
                         updated_at: now.toISOString()
                     });
                 }
 
-                logs.push(`${item.name}: ${price.toLocaleString()}원 업데이트 완료`);
+                logs.push(`${item.name}: ${liveData.price.toLocaleString()}원 업데이트 완료`);
             }
         } catch (e: any) {
             console.error(`Failed to sync ${item.symbol}:`, e.message);
