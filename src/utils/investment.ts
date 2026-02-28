@@ -1,4 +1,4 @@
-import { createClient } from './supabase/server';
+import { createAdminClient } from './supabase/server';
 import { PriceMode } from '@/lib/constants';
 
 /**
@@ -38,7 +38,7 @@ export async function fetchLivePrice(symbol: string): Promise<{ price: number; p
  * 교사의 설정에 따라 주식/코인의 현재 가격 또는 스냅샷 가격을 반환합니다.
  */
 export async function getInvestmentPrice(symbol: string, classId: string): Promise<{ price: number; previousClose: number; mode: PriceMode }> {
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     // 1. 학급에 연결된 교사의 설정(price_mode) 가져오기
     const { data: classData } = await supabase
