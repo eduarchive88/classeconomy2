@@ -12,8 +12,8 @@ const STOCKS = [
     { symbol: '000660.KS', name: 'SK하이닉스' },
     { symbol: '005380.KS', name: '현대차' },
     { symbol: '035420.KS', name: 'NAVER' },
-    { symbol: 'BTC-USD', name: '비트코인 (Bitcoin)' },
-    { symbol: 'ETH-USD', name: '이더리움 (Ethereum)' }
+    { symbol: 'BTC-KRW', name: '비트코인 (Bitcoin)' },
+    { symbol: 'ETH-KRW', name: '이더리움 (Ethereum)' }
 ];
 
 export default function InvestmentPage() {

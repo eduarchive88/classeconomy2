@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/server';
 
-// 종목명 매핑 (DB에 stock_name 컬럼이 없으므로 코드에서 매핑)
+// 종목명 매핑 (투자 종목명이 필요한 경우)
 const STOCK_NAME_MAP: Record<string, string> = {
     'AAPL': '애플 (Apple)',
     'TSLA': '테슬라 (Tesla)',
@@ -9,8 +9,8 @@ const STOCK_NAME_MAP: Record<string, string> = {
     '000660.KS': 'SK하이닉스',
     '005380.KS': '현대차',
     '035420.KS': 'NAVER',
-    'BTC-USD': '비트코인 (Bitcoin)',
-    'ETH-USD': '이더리움 (Ethereum)',
+    'BTC-KRW': '비트코인 (Bitcoin)',
+    'ETH-KRW': '이더리움 (Ethereum)',
 };
 
 // Yahoo Finance에서 현재가 조회
