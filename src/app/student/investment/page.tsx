@@ -53,11 +53,20 @@ export default function InvestmentPage() {
 
     // 시세 가져오기
     const fetchQuotes = async () => {
+        // 상태가 아직 업데이트되지 않았거나 클로저 문제로 null인 경우를 대비해 로컬스토리지 직접 확인
+        let currentStudentId = studentId;
+        if (!currentStudentId) {
+            const sessionStr = localStorage.getItem('student_session');
+            if (sessionStr) {
+                currentStudentId = JSON.parse(sessionStr)?.student?.id;
+            }
+        }
+
         const newQuotes: any = {};
         const errors: Record<string, boolean> = {};
         for (const stock of STOCKS) {
             try {
-                const res = await fetch(`/api/student/investment/quote?symbol=${stock.symbol}${studentId ? `&studentId=${studentId}` : ''}`);
+                const res = await fetch(`/api/student/investment/quote?symbol=${stock.symbol}${currentStudentId ? `&studentId=${currentStudentId}` : ''}`);
                 const data = await res.json();
                 if (res.ok && !data.isError) {
                     newQuotes[stock.symbol] = data;
