@@ -310,7 +310,10 @@ export default function StudentBank() {
                                                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'
                                                     }`}
                                             >
-                                                {mate.name}
+                                                <div className={`text-xs font-normal mb-1 ${isSelected ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                    {mate.grade}-{mate.class_info}
+                                                </div>
+                                                <div>{mate.name}</div>
                                             </button>
                                         );
                                     })}

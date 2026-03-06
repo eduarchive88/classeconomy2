@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     // 1. Get student info (class info for finding mates)
     const { data: student, error: studentError } = await supabase
         .from('student_roster')
-        .select('id, name, grade, class_info, balance')
+        .select('id, name, grade, class_info, balance, class_id')
         .eq('id', studentId)
         .single();
 
@@ -22,12 +22,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // 2. Get classmates (for transfer target list)
+    // 2. Get classmates (for transfer target list: same session)
     const { data: classmates, error: matesError } = await supabase
         .from('student_roster')
-        .select('id, name')
-        .eq('grade', student.grade)
-        .eq('class_info', student.class_info)
+        .select('id, name, grade, class_info')
+        .eq('class_id', student.class_id)
         .neq('id', studentId); // Exclude self
 
     // 3. Get my bank accounts (savings)
