@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { ShoppingBag, Plus, Save, Trash2, ArrowLeft, Edit2, Check, X } from 'lucide-react';
+import { ShoppingBag, Plus, Save, Trash2, ArrowLeft, Edit2, Check, X, Copy } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -12,6 +12,10 @@ export default function MarketManagement() {
     // 인라인 편집 상태
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValues, setEditValues] = useState({ price: 0, stock: 0, description: '' });
+    // 다른 학급에서 복사 상태
+    const [showCopyModal, setShowCopyModal] = useState(false);
+    const [otherClasses, setOtherClasses] = useState<any[]>([]);
+    const [copyLoading, setCopyLoading] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -106,6 +110,76 @@ export default function MarketManagement() {
         setEditValues({ price: item.price, stock: item.stock, description: item.description || '' });
     };
 
+    // 다른 학급 목록 불러오기 (복사용)
+    const openCopyModal = async () => {
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return alert('반을 먼저 선택해주세요.');
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 교사의 모든 학급 조회 (현재 선택한 학급 제외)
+        const { data: classes } = await supabase
+            .from('classes')
+            .select('id, name')
+            .eq('teacher_id', user.id)
+            .neq('id', selectedClassId)
+            .order('name', { ascending: true });
+
+        if (!classes || classes.length === 0) {
+            return alert('복사할 수 있는 다른 학급이 없습니다.');
+        }
+
+        setOtherClasses(classes);
+        setShowCopyModal(true);
+    };
+
+    // 선택한 학급의 상품을 현재 학급으로 복사
+    const handleCopyFromClass = async (sourceClassId: string, sourceClassName: string) => {
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return;
+
+        if (!confirm(`"${sourceClassName}"의 상품 메뉴를 현재 학급으로 복사하시겠습니까?\n(기존 상품은 그대로 유지되고, 새로 추가됩니다.)`)) return;
+
+        setCopyLoading(true);
+        try {
+            // 1. 원본 학급의 상품 조회
+            const { data: sourceItems, error: fetchError } = await supabase
+                .from('market_items')
+                .select('name, price, stock, description')
+                .eq('class_id', sourceClassId);
+
+            if (fetchError) throw fetchError;
+            if (!sourceItems || sourceItems.length === 0) {
+                alert('해당 학급에 등록된 상품이 없습니다.');
+                return;
+            }
+
+            // 2. 현재 학급으로 복사 (class_id만 변경)
+            const newItems = sourceItems.map(item => ({
+                name: item.name,
+                price: item.price,
+                stock: item.stock,
+                description: item.description,
+                class_id: selectedClassId
+            }));
+
+            const { error: insertError } = await supabase
+                .from('market_items')
+                .insert(newItems);
+
+            if (insertError) throw insertError;
+
+            alert(`${sourceItems.length}개의 상품이 성공적으로 복사되었습니다!`);
+            setShowCopyModal(false);
+            fetchItems();
+        } catch (e: any) {
+            alert('복사 실패: ' + e.message);
+        } finally {
+            setCopyLoading(false);
+        }
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto">
             <div className="flex items-center gap-4 mb-8">
@@ -119,7 +193,15 @@ export default function MarketManagement() {
                     <ShoppingBag className="w-8 h-8 text-purple-600" />
                     학급 마켓 관리
                 </h1>
-                <div className="ml-auto">
+                <div className="ml-auto flex items-center gap-2">
+                    <button
+                        onClick={openCopyModal}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                        title="다른 학급에서 상품 복사"
+                    >
+                        <Copy className="w-4 h-4" />
+                        다른 학급에서 복사
+                    </button>
                     <ClassSelector onClassChange={fetchItems} />
                 </div>
             </div>
@@ -280,6 +362,47 @@ export default function MarketManagement() {
                     </div>
                 </div>
             </div>
+
+            {/* 다른 학급에서 복사 모달 */}
+            {showCopyModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <Copy className="w-5 h-5 text-purple-600" />
+                                다른 학급에서 상품 복사
+                            </h3>
+                            <button
+                                onClick={() => setShowCopyModal(false)}
+                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            복사할 학급을 선택하면 해당 학급의 모든 상품(이름, 가격, 재고, 설명)이 현재 학급에 추가됩니다.
+                        </p>
+                        <div className="space-y-2">
+                            {otherClasses.map((cls) => (
+                                <button
+                                    key={cls.id}
+                                    onClick={() => handleCopyFromClass(cls.id, cls.name)}
+                                    disabled={copyLoading}
+                                    className="w-full p-3 text-left border rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 transition-all flex items-center justify-between dark:border-slate-700"
+                                >
+                                    <span className="font-medium text-slate-800 dark:text-white">{cls.name}</span>
+                                    <Copy className="w-4 h-4 text-slate-400" />
+                                </button>
+                            ))}
+                        </div>
+                        {copyLoading && (
+                            <div className="mt-4 text-center text-sm text-purple-600 dark:text-purple-400 font-medium">
+                                복사 중...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

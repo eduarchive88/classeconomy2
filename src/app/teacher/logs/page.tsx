@@ -10,11 +10,42 @@ export default function TeacherLogs() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all');
+    // 학급 필터 상태
+    const [classes, setClasses] = useState<any[]>([]);
+    const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+    const [studentClassMap, setStudentClassMap] = useState<Record<string, string>>({});
     const supabase = createClient();
 
     useEffect(() => {
-        fetchLogs();
+        fetchClasses();
     }, []);
+
+    useEffect(() => {
+        if (classes.length > 0) {
+            fetchLogs();
+        }
+    }, [classes, selectedClassFilter]);
+
+    // 교사의 학급 목록 불러오기
+    const fetchClasses = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase
+            .from('classes')
+            .select('id, name')
+            .eq('teacher_id', user.id)
+            .order('name', { ascending: true });
+
+        if (data) {
+            setClasses(data);
+            // localStorage에 저장된 선택 학급이 있으면 기본값으로 설정
+            const saved = localStorage.getItem('selected_class_id');
+            if (saved && data.find(c => c.id === saved)) {
+                setSelectedClassFilter(saved);
+            }
+        }
+    };
 
     const fetchLogs = async () => {
         setLoading(true);
@@ -22,24 +53,20 @@ export default function TeacherLogs() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Get current class ID (assuming selected in dashboard or context)
-            // For now, fetch all logs for students in teacher's classes
-            // Ideally we should filter by selected class, but let's fetch recent 1000 logs first.
+            // 필터에 따라 학급 ID 결정
+            let classIds: string[];
+            if (selectedClassFilter === 'all') {
+                classIds = classes.map(c => c.id);
+            } else {
+                classIds = [selectedClassFilter];
+            }
 
-            // First get teacher's classes to filter students
-            const { data: classes } = await supabase
-                .from('classes')
-                .select('id')
-                .eq('teacher_id', user.id);
-
-            if (!classes?.length) {
+            if (classIds.length === 0) {
                 setLogs([]);
                 return;
             }
 
-            const classIds = classes.map(c => c.id);
-
-            // Fetch students in these classes
+            // 해당 학급의 학생 조회
             const { data: students } = await supabase
                 .from('student_roster')
                 .select('id, name, number, class_id')
@@ -56,13 +83,21 @@ export default function TeacherLogs() {
                 return acc;
             }, {});
 
-            // Fetch transactions
+            // 학생 -> 학급 매핑 저장
+            const classMap: Record<string, string> = {};
+            students.forEach(s => {
+                const cls = classes.find(c => c.id === s.class_id);
+                classMap[s.id] = cls?.name || '';
+            });
+            setStudentClassMap(classMap);
+
+            // 거래 내역 조회
             const { data: transactions, error } = await supabase
                 .from('transactions')
                 .select('*')
                 .in('student_id', studentIds)
                 .order('created_at', { ascending: false })
-                .limit(500); // Limit potentially large query
+                .limit(500);
 
             if (error) throw error;
 
@@ -70,6 +105,7 @@ export default function TeacherLogs() {
                 ...t,
                 student_name: studentMap[t.student_id]?.name || 'Unknown',
                 student_number: studentMap[t.student_id]?.number || '',
+                class_name: classMap[t.student_id] || '',
             }));
 
             setLogs(enrichedLogs);
@@ -87,14 +123,14 @@ export default function TeacherLogs() {
             case 'allowance': return '용돈';
             case 'special_allowance': return '특별 보너스';
             case 'fine': return '벌금';
-            case 'quiz_reward': return '상금';
+            case 'quiz_reward': return '퀴즈 상금';
             case 'stock_buy': return '주식 매수';
             case 'stock_sell': return '주식 매도';
             case 'investment_buy': return '주식 매수';
             case 'investment_sell': return '주식 매도';
-            case 'stock_profit': return '주식 수익';
-            case 'stock_loss': return '주식 손실';
-            case 'real_estate_income': return '부동산 수익';
+            case 'stock_profit': return '투자 수익';
+            case 'stock_loss': return '투자 손실';
+            case 'real_estate_income': return '임대/매각 수익';
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
             case 'real_estate_pending': return '부동산 (승인 대기)';
@@ -105,23 +141,15 @@ export default function TeacherLogs() {
             case 'transfer': return '송금';
             case 'deposit': return '저축 가입';
             case 'withdraw': return '저축 만기 출금';
-            case 'allowance': return '용돈';
-            case 'special_allowance': return '특별 보너스';
-            case 'fine': return '벌금';
-            case 'quiz_reward': return '퀴즈 상금';
-            case 'stock_profit': return '투자 수익';
-            case 'stock_loss': return '투자 손실';
-            case 'market_purchase': return '상점 구매';
-            case 'real_estate_purchase': return '부동산 구매';
-            case 'real_estate_income': return '임대/매각 수익';
             case 'group_donation': return '모둠 기부';
             default: return type;
         }
     };
 
     const handleExport = () => {
-        const dataToExport = logs.map(log => ({
+        const dataToExport = filteredLogs.map(log => ({
             '일시': new Date(log.created_at).toLocaleString(),
+            '학급': log.class_name,
             '이름': log.student_name,
             '번호': log.student_number,
             '유형': getTypeLabel(log.type),
@@ -158,7 +186,18 @@ export default function TeacherLogs() {
 
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                            {/* 학급 필터 */}
+                            <select
+                                value={selectedClassFilter}
+                                onChange={(e) => setSelectedClassFilter(e.target.value)}
+                                className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-medium"
+                            >
+                                <option value="all">전체 학급</option>
+                                {classes.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
                             <div className="relative">
                                 <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                 <input
@@ -198,6 +237,9 @@ export default function TeacherLogs() {
                             <thead>
                                 <tr className="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
                                     <th className="p-4 border-b dark:border-slate-700">일시</th>
+                                    {selectedClassFilter === 'all' && (
+                                        <th className="p-4 border-b dark:border-slate-700">학급</th>
+                                    )}
                                     <th className="p-4 border-b dark:border-slate-700">학생</th>
                                     <th className="p-4 border-b dark:border-slate-700">유형</th>
                                     <th className="p-4 border-b dark:border-slate-700">내용</th>
@@ -207,13 +249,13 @@ export default function TeacherLogs() {
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-slate-500">
+                                        <td colSpan={selectedClassFilter === 'all' ? 6 : 5} className="p-8 text-center text-slate-500">
                                             로그를 불러오는 중...
                                         </td>
                                     </tr>
                                 ) : filteredLogs.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-slate-500">
+                                        <td colSpan={selectedClassFilter === 'all' ? 6 : 5} className="p-8 text-center text-slate-500">
                                             기록된 로그가 없습니다.
                                         </td>
                                     </tr>
@@ -223,6 +265,11 @@ export default function TeacherLogs() {
                                             <td className="p-4 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                                 {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </td>
+                                            {selectedClassFilter === 'all' && (
+                                                <td className="p-4 text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                                    {log.class_name}
+                                                </td>
+                                            )}
                                             <td className="p-4 font-medium text-slate-800 dark:text-slate-200">
                                                 {log.student_number} {log.student_name}
                                             </td>
