@@ -170,7 +170,7 @@ export async function POST(request: Request) {
     } else if (action === 'withdraw') {
         if (!accountId) return NextResponse.json({ error: 'Account ID required' }, { status: 400 });
 
-        const { data: account, error: accError } = await supabase
+        const { data: account, error: accError } = await adminSupabase
             .from('bank_accounts')
             .select('*')
             .eq('id', accountId)

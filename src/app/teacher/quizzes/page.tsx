@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import * as XLSX from 'xlsx';
-import { Loader2, Plus, Upload, Wand2, Save, Trash2, FileText, BarChart2, X, RefreshCw, Users, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2, Plus, Upload, Wand2, Save, Trash2, FileText, BarChart2, X, RefreshCw, Users, ArrowLeft, CheckCircle2, Copy } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 import Footer from '@/components/Footer';
@@ -28,6 +28,9 @@ export default function QuizManagement() {
     const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
     const [stats, setStats] = useState<any>(null);
     const [statsLoading, setStatsLoading] = useState(false);
+    const [showCopyModal, setShowCopyModal] = useState(false);
+    const [otherClasses, setOtherClasses] = useState<any[]>([]);
+    const [copyLoading, setCopyLoading] = useState(false);
 
     const [manualQuiz, setManualQuiz] = useState({
         question: '',
@@ -97,6 +100,72 @@ export default function QuizManagement() {
             alert('삭제 실패: ' + error.message);
         } else {
             fetchQuizzes();
+        }
+    };
+
+    const openCopyModal = async () => {
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return alert('반을 먼저 선택해주세요.');
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: classes } = await supabase
+            .from('classes')
+            .select('id, name')
+            .eq('teacher_id', user.id)
+            .neq('id', selectedClassId)
+            .order('name', { ascending: true });
+
+        if (!classes || classes.length === 0) {
+            return alert('복사할 수 있는 다른 학급이 없습니다.');
+        }
+
+        setOtherClasses(classes);
+        setShowCopyModal(true);
+    };
+
+    const handleCopyFromClass = async (sourceClassId: string, sourceClassName: string) => {
+        const selectedClassId = localStorage.getItem('selected_class_id');
+        if (!selectedClassId) return;
+
+        if (!confirm(`"${sourceClassName}"의 퀴즈 라이브러리를 현재 학급으로 복사하시겠습니까?\n(기존 퀴즈는 그대로 유지되고, 새로 추가됩니다.)`)) return;
+
+        setCopyLoading(true);
+        try {
+            const { data: sourceQuizzes, error: fetchError } = await supabase
+                .from('quizzes')
+                .select('question, options, answer, explanation, reward')
+                .eq('class_id', sourceClassId);
+
+            if (fetchError) throw fetchError;
+            if (!sourceQuizzes || sourceQuizzes.length === 0) {
+                alert('해당 학급에 등록된 퀴즈가 없습니다.');
+                return;
+            }
+
+            const newQuizzes = sourceQuizzes.map(quiz => ({
+                question: quiz.question,
+                options: quiz.options,
+                answer: quiz.answer,
+                explanation: quiz.explanation,
+                reward: quiz.reward,
+                class_id: selectedClassId
+            }));
+
+            const { error: insertError } = await supabase
+                .from('quizzes')
+                .insert(newQuizzes);
+
+            if (insertError) throw insertError;
+
+            alert(`${sourceQuizzes.length}개의 퀴즈가 성공적으로 복사되었습니다!`);
+            setShowCopyModal(false);
+            fetchQuizzes();
+        } catch (e: any) {
+            alert('복사 실패: ' + e.message);
+        } finally {
+            setCopyLoading(false);
         }
     };
 
@@ -411,6 +480,13 @@ export default function QuizManagement() {
 
                 <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                     <ClassSelector onClassChange={fetchData} />
+                    <button
+                        onClick={openCopyModal}
+                        className="bg-purple-600 hover:bg-purple-700 text-white py-2.5 px-5 lg:px-6 rounded-2xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm font-black"
+                    >
+                        <Copy className="w-5 h-5" />
+                        <span className="hidden md:inline">가져오기</span>
+                    </button>
                     <button
                         onClick={() => setShowRegistrationModal(true)}
                         className="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm font-black"
@@ -919,6 +995,52 @@ export default function QuizManagement() {
                             ) : (
                                 <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/40 rounded-[2.5rem]">
                                     <p className="text-slate-400 font-black uppercase text-xs tracking-widest">No analytics database found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showCopyModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-slate-800 rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl border border-white/20">
+                        <div className="p-10">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                                    <Copy className="w-6 h-6 text-purple-600" />
+                                    다른 학급에서 복사
+                                </h3>
+                                <button
+                                    onClick={() => setShowCopyModal(false)}
+                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                                >
+                                    <X className="w-6 h-6 text-slate-400" />
+                                </button>
+                            </div>
+                            <p className="text-slate-600 dark:text-slate-400 mb-6">
+                                어느 학급의 퀴즈를 가져올까요? (현재 학급에 추가됩니다)
+                            </p>
+                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                                {otherClasses.map((cls) => (
+                                    <button
+                                        key={cls.id}
+                                        onClick={() => handleCopyFromClass(cls.id, cls.name)}
+                                        disabled={copyLoading}
+                                        className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-left transition-colors flex justify-between items-center group disabled:opacity-50"
+                                    >
+                                        <span className="font-bold text-slate-800 dark:text-white text-lg">{cls.name}</span>
+                                        <div className="flex items-center gap-2 text-sm text-purple-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Copy className="w-4 h-4" />
+                                            복사하기
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            {copyLoading && (
+                                <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 rounded-xl flex items-center justify-center gap-2 font-bold animate-pulse">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    복사 중입니다...
                                 </div>
                             )}
                         </div>
