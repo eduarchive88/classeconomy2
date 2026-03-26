@@ -11,6 +11,8 @@ export default function SettingsPage() {
     const [classes, setClasses] = useState<any[]>([]);
     const [newClassName, setNewClassName] = useState('');
     const [newSessionCode, setNewSessionCode] = useState('');
+    const [editingClassId, setEditingClassId] = useState<string | null>(null);
+    const [editSessionCode, setEditSessionCode] = useState('');
     const [priceMode, setPriceMode] = useState('realtime');
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState<any>(null);
@@ -128,6 +130,31 @@ export default function SettingsPage() {
 
             if (error) throw error;
             setClasses(classes.filter(c => c.id !== id));
+        } catch (e: any) {
+            alert('오류: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateSessionCode = async (id: string) => {
+        if (!editSessionCode.trim()) return alert('새로운 세션 코드를 입력해주세요.');
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('classes')
+                .update({ session_code: editSessionCode })
+                .eq('id', id);
+
+            if (error) {
+                if (error.code === '23505') throw new Error('중복된 세션 코드입니다. 다른 코드를 사용해주세요.');
+                throw error;
+            }
+
+            setClasses(classes.map(c => c.id === id ? { ...c, session_code: editSessionCode } : c));
+            setEditingClassId(null);
+            setEditSessionCode('');
+            alert('세션 코드가 수정되었습니다.');
         } catch (e: any) {
             alert('오류: ' + e.message);
         } finally {
@@ -374,17 +401,44 @@ export default function SettingsPage() {
                     <div className="space-y-4">
                         <h3 className="font-medium text-slate-700 dark:text-slate-300">운영 중인 학급 ({classes.length})</h3>
                         {classes.map(c => (
-                            <div key={c.id} className="flex justify-between items-center p-4 border dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                <div>
-                                    <div className="font-bold text-slate-800 dark:text-white">{c.name}</div>
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">코드: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">{c.session_code}</code></div>
+                            <div key={c.id} className="flex flex-col gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex-1">
+                                        <div className="font-bold text-slate-800 dark:text-white mb-1">{c.name}</div>
+                                        {editingClassId === c.id ? (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <input 
+                                                    type="text" 
+                                                    value={editSessionCode} 
+                                                    onChange={e => setEditSessionCode(e.target.value)}
+                                                    className="p-1 border rounded text-sm bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white"
+                                                    placeholder="새 세션 코드"
+                                                />
+                                                <button onClick={() => handleUpdateSessionCode(c.id)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">저장</button>
+                                                <button onClick={() => setEditingClassId(null)} className="text-xs px-2 py-1 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300">취소</button>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                                코드: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">{c.session_code}</code>
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingClassId(c.id);
+                                                        setEditSessionCode(c.session_code);
+                                                    }} 
+                                                    className="text-xs text-blue-500 hover:text-blue-700 underline"
+                                                >
+                                                    수정
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => handleDeleteClass(c.id)}
+                                        className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors ml-4"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleDeleteClass(c.id)}
-                                    className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
                             </div>
                         ))}
                         {classes.length === 0 && (

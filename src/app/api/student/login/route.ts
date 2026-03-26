@@ -9,14 +9,22 @@ export async function POST(request: Request) {
     const password = body.password;
     const supabase = createClient();
 
-    // 1. 세션코드로 학급 찾기
-    const { data: classData, error: classError } = await supabase
+    // 1. 세션코드로 학급 찾기 (유연한 비교를 위해 전체 조회 후 정규화 매칭)
+    const { data: allClasses, error: classError } = await supabase
         .from('classes')
-        .select('id, name')
-        .ilike('session_code', sessionCode)
-        .single();
+        .select('id, name, session_code');
 
-    if (classError || !classData) {
+    if (classError || !allClasses) {
+        return NextResponse.json({ error: '학급 정보를 불러올 수 없습니다.' }, { status: 500 });
+    }
+
+    // 공백, 하이픈, 언더바 등 제거 후 소문자로 비교
+    const normalizeCode = (code: string) => code ? code.replace(/[\s\-_\W]/g, '').toLowerCase() : '';
+    const targetSessionCode = normalizeCode(sessionCode);
+
+    const classData = allClasses.find((c: any) => normalizeCode(c.session_code) === targetSessionCode);
+
+    if (!classData) {
         console.warn(`Login failed: Invalid session code '${sessionCode}'`);
         return NextResponse.json({ error: '유효하지 않은 세션코드입니다.' }, { status: 400 });
     }
