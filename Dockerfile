@@ -26,15 +26,7 @@ ENV SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-placeholder}
 ENV GEMINI_API_KEY=${GEMINI_API_KEY:-placeholder}
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# next.config.js에 output: 'standalone'가 있는지 확인
-RUN cat next.config.js && echo "--- Config check done ---"
-
-# 빌드 실행 및 standalone 폴더 확인
-RUN npm run build && \
-    echo "=== Build completed ===" && \
-    ls -la .next/ && \
-    echo "=== Checking standalone ===" && \
-    ls -la .next/standalone/ || (echo "STANDALONE NOT FOUND - listing .next contents:" && find .next -maxdepth 2 -type d && exit 1)
+RUN npm run build
 
 # Runner
 FROM node:20-alpine AS runner
