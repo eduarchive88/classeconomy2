@@ -13,20 +13,28 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 빌드 시점에 필요한 환경변수를 ARG로 선언
+# 빌드 시점에 필요한 환경변수를 ARG로 선언 (Coolify가 자동 전달)
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG SUPABASE_SERVICE_ROLE_KEY
 ARG GEMINI_API_KEY
 
 # ARG를 ENV로 전달하여 next build가 인식하도록 설정
-ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-ENV SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-ENV GEMINI_API_KEY=${GEMINI_API_KEY}
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-placeholder}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder}
+ENV SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-placeholder}
+ENV GEMINI_API_KEY=${GEMINI_API_KEY:-placeholder}
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+# next.config.js에 output: 'standalone'가 있는지 확인
+RUN cat next.config.js && echo "--- Config check done ---"
+
+# 빌드 실행 및 standalone 폴더 확인
+RUN npm run build && \
+    echo "=== Build completed ===" && \
+    ls -la .next/ && \
+    echo "=== Checking standalone ===" && \
+    ls -la .next/standalone/ || (echo "STANDALONE NOT FOUND - listing .next contents:" && find .next -maxdepth 2 -type d && exit 1)
 
 # Runner
 FROM node:20-alpine AS runner
