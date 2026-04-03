@@ -102,10 +102,16 @@ export default function InvestmentPage() {
         }
     };
 
-    // 뉴스 가져오기
+    // 뉴스 가져오기 (교사별 개인 API 키 사용을 위해 class_id 전달)
     const fetchNews = async () => {
         try {
-            const res = await fetch('/api/student/investment/news');
+            // 학생 세션에서 class_id 추출
+            let classId = '';
+            const sessionStr = localStorage.getItem('student_session');
+            if (sessionStr) {
+                classId = JSON.parse(sessionStr)?.student?.class_id || '';
+            }
+            const res = await fetch(`/api/student/investment/news${classId ? `?classId=${classId}` : ''}`);
             const data = await res.json();
             if (res.ok) {
                 setNews(data.news);
