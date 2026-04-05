@@ -17,6 +17,9 @@ const getSupabaseAdmin = () => {
         auth: {
             autoRefreshToken: false,
             persistSession: false
+        },
+        db: {
+            schema: 'economy'
         }
     })
 }
@@ -25,5 +28,10 @@ const getSupabaseAdmin = () => {
 export const supabaseAdmin = {
     get auth() {
         return getSupabaseAdmin().auth
+    },
+    // DB 테이블 접근을 위한 from 메서드 노출 (교사 데이터 매핑에 사용)
+    from(table: string) {
+        return getSupabaseAdmin().from(table)
     }
 }
+

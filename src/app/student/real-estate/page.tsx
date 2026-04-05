@@ -54,6 +54,9 @@ export default function StudentRealEstate() {
 
     useEffect(() => {
         fetchData();
+        // 30초마다 데이터 자동 갱신
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     // 자리 구매/인수 처리
@@ -138,7 +141,16 @@ export default function StudentRealEstate() {
         : null;
 
     return (
-        <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto relative">
+            {/* Submitting Loading Overlay */}
+            {submitting && (
+                <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center animate-in fade-in duration-300">
+                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="text-blue-600 font-bold text-lg">처리 중입니다...</p>
+                    <p className="text-slate-400 text-sm">잠시만 기다려주세요.</p>
+                </div>
+            )}
+
             <div className="flex items-center gap-4 mb-8">
                 <Link
                     href="/student"

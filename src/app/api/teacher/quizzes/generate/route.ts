@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     try {
         const genAI = new GoogleGenerativeAI(finalApiKey);
-        // 모델을 gemini-2.5-flash로 변경하여 속도 및 성능 최적화
+        // 뀨짱쌤 요청에 따라 gemini-2.5-flash 모델로 원복합니다.
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             generationConfig: {
@@ -70,11 +70,24 @@ export async function POST(request: Request) {
         const response = await result.response;
         const text = response.text();
 
-        // Clean up markdown if present
-        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const quizzes = JSON.parse(cleanText);
+        // JSON 추출 로직 강화 (마크다운 블록 및 불필요한 텍스트 제거)
+        let cleanText = text.trim();
+        if (cleanText.includes('```json')) {
+            cleanText = cleanText.split('```json')[1].split('```')[0].trim();
+        } else if (cleanText.includes('```')) {
+            cleanText = cleanText.split('```')[1].split('```')[0].trim();
+        }
 
-        return NextResponse.json({ quizzes });
+        try {
+            const quizzes = JSON.parse(cleanText);
+            return NextResponse.json({ quizzes });
+        } catch (parseError) {
+            console.error('JSON Parse Error. Cleaned text:', cleanText);
+            return NextResponse.json({ 
+                error: 'AI가 생성한 데이터 형식이 올바르지 않습니다.',
+                rawResponse: text // 디버깅을 위해 원본 포함
+            }, { status: 500 });
+        }
     } catch (error: any) {
         console.error('AI Quiz Generation Error:', error);
         return NextResponse.json({ error: 'AI Error: ' + error.message }, { status: 500 });

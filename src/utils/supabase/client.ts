@@ -11,5 +11,9 @@ export function createClient() {
         // This will fail at runtime if not fixed
     }
 
-    return createBrowserClient(supabaseUrl || '', supabaseKey || '')
+    return createBrowserClient(supabaseUrl || '', supabaseKey || '', {
+        db: {
+            schema: 'economy'
+        }
+    })
 }
