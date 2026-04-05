@@ -241,6 +241,11 @@ export default function LoginPage() {
                     >
                       {isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
                     </button>
+                    {isSignUp && (
+                      <p className="text-xs text-orange-600 mt-3 bg-orange-50 p-2 rounded-lg border border-orange-100">
+                        * 데이터 이전 안내: 기존에 사용하시던 이메일로 가입하시면, 기존 학급 및 데이터가 자동으로 연결됩니다.
+                      </p>
+                    )}
                   </div>
                 </form>
               ) : (
