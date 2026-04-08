@@ -17,6 +17,7 @@ export function createClient() {
         supabaseUrl || '',
         supabaseKey || '',
         {
+            db: { schema: 'economy' },
             cookies: {
                 getAll() {
                     return cookieStore.getAll()
@@ -51,6 +52,7 @@ export function createAdminClient() {
         supabaseUrl || '',
         supabaseServiceKey || '',
         {
+            db: { schema: 'economy' },
             cookies: {
                 getAll() { return [] },
                 setAll() { },

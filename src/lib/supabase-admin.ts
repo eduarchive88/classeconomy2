@@ -18,9 +18,7 @@ const getSupabaseAdmin = () => {
             autoRefreshToken: false,
             persistSession: false
         },
-        db: {
-            schema: 'economy'
-        }
+        db: { schema: 'economy' }
     })
 }
 
