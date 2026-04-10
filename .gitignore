@@ -42,3 +42,12 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# migration dumps & scripts (DB data - may contain sensitive info)
+/temp-migration/
+/scripts/
+/coolify_auth_migration.sql
+/old_users_dump.json
+/db_old_tables.txt
+/db_old_tables_utf8.txt
+/fix_log.txt
