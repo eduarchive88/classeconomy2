@@ -40,17 +40,10 @@ export async function POST(request: Request) {
         }, { status: 400 });
     }
 
-    try {
-        const genAI = new GoogleGenerativeAI(finalApiKey);
-        // 뀨짱쌤 요청에 따라 gemini-2.5-flash 모델로 원복합니다.
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            generationConfig: {
-                responseMimeType: "application/json",
-            },
-        });
+    const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 
-        const countNum = count || 5; // 기본 5문제
+    try {
+        const countNum = count || 5;
 
         const systemPrompt = `
       You are an economics teacher. Create ${countNum} multiple choice quizzes about the following topic: "${prompt}".
@@ -66,9 +59,26 @@ export async function POST(request: Request) {
       Language: Korean.
     `;
 
-        const result = await model.generateContent(systemPrompt);
-        const response = await result.response;
-        const text = response.text();
+        const genAI = new GoogleGenerativeAI(finalApiKey);
+        let text = '';
+        for (const modelName of MODELS) {
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    generationConfig: { responseMimeType: "application/json" },
+                });
+                const result = await model.generateContent(systemPrompt);
+                text = result.response.text();
+                break;
+            } catch (err: any) {
+                const is503 = err.message?.includes('503') || err.message?.includes('Service Unavailable') || err.message?.includes('overloaded');
+                if (!is503) throw err;
+                console.warn(`Model ${modelName} overloaded, trying next...`);
+                if (modelName === MODELS[MODELS.length - 1]) {
+                    throw new Error('모든 AI 모델이 현재 과부하 상태입니다. 잠시 후 다시 시도해주세요.');
+                }
+            }
+        }
 
         // JSON 추출 로직 강화 (마크다운 블록 및 불필요한 텍스트 제거)
         let cleanText = text.trim();

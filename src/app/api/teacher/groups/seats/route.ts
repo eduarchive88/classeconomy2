@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         if (seats && seats.length > 0) {
             const seatData = seats.map((s: any) => {
                 const data: any = {
+                    id: s.id || crypto.randomUUID(), // id 없으면 신규 생성
                     class_id: classId,
                     row_idx: s.row_idx,
                     col_idx: s.col_idx
@@ -69,12 +70,11 @@ export async function POST(request: Request) {
                 if (s.price !== undefined) data.price = s.price;
                 if (s.group_id !== undefined) data.group_id = s.group_id;
                 if (s.is_locked !== undefined) data.is_locked = s.is_locked;
-                if (s.id) data.id = s.id;
                 return data;
             });
             const { error: seatsError } = await supabase
                 .from('group_seats')
-                .upsert(seatData, { onConflict: 'class_id, row_idx, col_idx' });
+                .upsert(seatData, { onConflict: 'class_id,row_idx,col_idx' });
             if (seatsError) throw seatsError;
         }
 
