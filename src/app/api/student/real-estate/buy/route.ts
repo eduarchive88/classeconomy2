@@ -154,12 +154,7 @@ export async function POST(request: Request) {
         // === 즉시 구매 로직 ===
         const isOccupied = !!seat.student_id;
 
-        // 5-1. 구매자의 기존 자리 전부 판매중(student_id=null)으로 전환 (새 자리 제외)
-        await supabaseAdmin.from('seats')
-            .update({ student_id: null })
-            .eq('student_id', buyer.id)
-            .eq('class_id', classId)
-            .neq('id', seat.id);
+        // 5-1. 기존 자리는 student_id 유지(판매중 표시) — updated_at은 그대로
 
         // 6. 구매자 잔액 차감
         const { error: deductError } = await supabaseAdmin.from('student_roster')
@@ -196,13 +191,14 @@ export async function POST(request: Request) {
             }
         }
 
-        // 8. 자리 소유권 업데이트 + 가격 인상
+        // 8. 자리 소유권 업데이트 + 가격 인상 + updated_at = NOW() (내 자리 판정 기준)
         const nextPrice = Math.floor(seat.price * 1.1) + 100;
 
         const { error: updateSeatError } = await supabaseAdmin.from('seats')
             .update({
                 student_id: buyer.id,
-                price: nextPrice
+                price: nextPrice,
+                updated_at: new Date().toISOString()
             })
             .eq('id', seat.id);
 

@@ -48,12 +48,8 @@ export async function POST(request: Request) {
             const buyer = trade.buyer;
             const isOccupied = !!seat.student_id;
 
-            // 0. 구매자의 기존 자리 전부 판매중(student_id=null)으로 전환 (새 자리 제외)
-            await supabaseAdmin.from('seats')
-                .update({ student_id: null })
-                .eq('student_id', buyer.id)
-                .eq('class_id', trade.class_id)
-                .neq('id', seat.id);
+            // 0. 기존 자리의 updated_at을 과거로 밀어서 새 자리가 currentSeat이 되도록 처리
+            // (student_id는 유지 → 판매중 표시 유지)
 
             // 1. 기존 소유자가 있으면 판매 대금 지급 (85%)
             if (isOccupied) {
@@ -89,10 +85,10 @@ export async function POST(request: Request) {
                 }
             }
 
-            // 2. 자리 소유권 이전 + 가격 10% 상승
+            // 2. 자리 소유권 이전 + 가격 10% 상승 + updated_at = NOW() (내 자리 판정 기준)
             const nextPrice = Math.floor(trade.price * 1.1) + 100;
             await supabaseAdmin.from('seats')
-                .update({ student_id: buyer.id, price: nextPrice })
+                .update({ student_id: buyer.id, price: nextPrice, updated_at: new Date().toISOString() })
                 .eq('id', seat.id);
 
             // 3. 거래 상태 승인으로 업데이트
