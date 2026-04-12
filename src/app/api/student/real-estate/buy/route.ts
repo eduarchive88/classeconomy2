@@ -154,6 +154,21 @@ export async function POST(request: Request) {
         // === 즉시 구매 로직 ===
         const isOccupied = !!seat.student_id;
 
+        // 5-1. 구매자가 기존에 보유한 자리가 있으면 판매중(student_id=null)으로 전환
+        const { data: buyerPrevSeat } = await supabaseAdmin
+            .from('seats')
+            .select('id, row_idx, col_idx')
+            .eq('student_id', buyer.id)
+            .eq('class_id', classId)
+            .neq('id', seat.id)
+            .maybeSingle();
+
+        if (buyerPrevSeat) {
+            await supabaseAdmin.from('seats')
+                .update({ student_id: null })
+                .eq('id', buyerPrevSeat.id);
+        }
+
         // 6. 구매자 잔액 차감
         const { error: deductError } = await supabaseAdmin.from('student_roster')
             .update({ balance: buyer.balance - seat.price })
