@@ -3,11 +3,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-    // Vercel 배포에서는 이전 안내 페이지만 표시
-    if (process.env.VERCEL === '1' && request.nextUrl.pathname !== '/moved') {
-        return NextResponse.redirect(new URL('/moved', request.url))
-    }
-
     let response = NextResponse.next({
         request: {
             headers: request.headers,
