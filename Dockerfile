@@ -5,7 +5,7 @@ WORKDIR /app
 
 # package.json과 lockfile 복사 후 의존성 설치
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Builder
 FROM node:20-alpine AS builder
