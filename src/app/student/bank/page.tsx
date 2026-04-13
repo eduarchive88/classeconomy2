@@ -159,6 +159,7 @@ export default function StudentBank() {
     const student = data?.student || { balance: 0 };
     const classmates = data?.classmates || [];
     const accounts = data?.accounts || [];
+    const withdrawnAccounts = data?.withdrawnAccounts || [];
     const transactions = data?.transactions || [];
     const totalSavings = accounts.reduce((sum: number, acc: any) => sum + acc.amount, 0);
 
@@ -442,6 +443,34 @@ export default function StudentBank() {
                                 )}
                             </div>
                         </div>
+
+                        {/* Withdrawn Accounts History */}
+                        {withdrawnAccounts.length > 0 && (
+                            <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                                <h3 className="font-bold text-lg mb-4 text-slate-600 dark:text-slate-400">출금 완료 내역 ({withdrawnAccounts.length})</h3>
+                                <div className="space-y-2">
+                                    {withdrawnAccounts.map((acc: any) => {
+                                        const interest = Math.floor(acc.amount * acc.interest_rate);
+                                        return (
+                                            <div key={acc.id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
+                                                <div>
+                                                    <div className="font-medium text-slate-700 dark:text-slate-300">
+                                                        원금 {acc.amount.toLocaleString()}원 + 이자 {interest.toLocaleString()}원
+                                                    </div>
+                                                    <div className="text-xs text-slate-400 mt-0.5">
+                                                        가입일 {new Date(acc.created_at).toLocaleDateString()} → 출금일 {acc.withdrawn_at ? new Date(acc.withdrawn_at).toLocaleDateString() : '-'}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-slate-500">{(acc.amount + interest).toLocaleString()}원</div>
+                                                    <div className="text-xs text-slate-400">수령 완료</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

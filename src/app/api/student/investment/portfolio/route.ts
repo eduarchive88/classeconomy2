@@ -26,7 +26,8 @@ export async function GET(request: Request) {
         const { data: investments, error } = await supabase
             .from('investments')
             .select('*')
-            .eq('student_id', studentId);
+            .eq('student_id', studentId)
+            .gt('quantity', 0);
 
         if (error) throw error;
 

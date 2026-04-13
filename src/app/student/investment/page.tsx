@@ -179,6 +179,15 @@ export default function InvestmentPage() {
                 </button>
             </div>
 
+            {/* ===== 0. 사용 가능 잔액 카드 ===== */}
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-2xl shadow-lg mb-4 flex items-center justify-between">
+                <div>
+                    <div className="text-sm font-medium opacity-80 mb-1">사용 가능 잔액</div>
+                    <div className="text-3xl font-bold">{balance.toLocaleString()} <span className="text-base font-normal opacity-80">원</span></div>
+                </div>
+                <DollarSign className="w-10 h-10 opacity-30" />
+            </div>
+
             {/* ===== 1. 나의 투자 현황 (포트폴리오) - 최상단 ===== */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">

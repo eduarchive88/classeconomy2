@@ -29,15 +29,25 @@ export async function GET(request: Request) {
         .eq('class_id', student.class_id)
         .neq('id', studentId); // Exclude self
 
-    // 3. Get my bank accounts (savings)
-    const { data: accounts, error: accountsError } = await adminSupabase
+    // 3. Get my bank accounts (active savings)
+    const { data: accounts } = await adminSupabase
         .from('bank_accounts')
         .select('*')
         .eq('student_id', studentId)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+    // 3b. Get withdrawn accounts for history view
+    const { data: withdrawnAccounts } = await adminSupabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('status', 'withdrawn')
+        .order('withdrawn_at', { ascending: false })
+        .limit(10);
 
     // 4. Get recent transactions
-    const { data: transactions, error: txError } = await adminSupabase
+    const { data: transactions } = await adminSupabase
         .from('transactions')
         .select('*')
         .eq('student_id', studentId)
@@ -48,6 +58,7 @@ export async function GET(request: Request) {
         student,
         classmates: classmates || [],
         accounts: accounts || [],
+        withdrawnAccounts: withdrawnAccounts || [],
         transactions: transactions || []
     });
 }

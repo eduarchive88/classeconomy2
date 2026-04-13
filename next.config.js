@@ -6,6 +6,7 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    instrumentationHook: true,
     webpack: (config) => {
         config.resolve.alias = {
             ...config.resolve.alias,
