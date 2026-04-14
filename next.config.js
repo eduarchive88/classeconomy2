@@ -8,6 +8,7 @@ const nextConfig = {
     },
     experimental: {
         instrumentationHook: true,
+        serverComponentsExternalPackages: ['node-cron'],
     },
     webpack: (config) => {
         config.resolve.alias = {
