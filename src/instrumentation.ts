@@ -43,11 +43,11 @@ export async function register() {
         callCron('/api/cron/weekly-salary');
     }, { timezone: 'UTC' });
 
-    // 매일 자정 KST (전날 15:00 UTC): 시장 시세 동기화
-    cron.default.schedule('0 15 * * *', () => {
+    // 매 시간: 시장 시세 동기화 (hourly 모드용 스냅샷 + 월요일 9시 UTC에 weekly 스냅샷도 업데이트)
+    cron.default.schedule('0 * * * *', () => {
         console.log('[cron] market-sync triggered');
         callCron('/api/cron/market-sync');
     }, { timezone: 'UTC' });
 
-    console.log('[cron] Scheduled: daily-quiz(23:00 UTC), weekly-salary(Sun 23:00 UTC), market-sync(15:00 UTC)');
+    console.log('[cron] Scheduled: daily-quiz(23:00 UTC), weekly-salary(Sun 23:00 UTC), market-sync(every hour)');
 }
