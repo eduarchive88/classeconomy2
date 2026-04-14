@@ -1,6 +1,8 @@
 export async function register() {
-    // Only run in Node.js runtime (not Edge), and only in the server process
-    if (process.env.NEXT_RUNTIME !== 'nodejs') return;
+    // Edge 런타임에서는 node-cron 사용 불가 → skip
+    // Node.js standalone 모드에서 NEXT_RUNTIME이 undefined일 수 있으므로
+    // 'edge'가 아닌 경우에만 실행 (undefined 포함)
+    if (process.env.NEXT_RUNTIME === 'edge') return;
 
     // Avoid double-registration in dev hot-reload: use a global flag
     const g = global as any;
