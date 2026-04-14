@@ -27,9 +27,8 @@ export async function GET(request: Request) {
                     updated_at: now.toISOString()
                 });
 
-                // 2. 월요일 오전 9시경인 경우 'weekly' 스냅샷 업데이트
-                // (크론 잡이 정확히 9시에 한번만 실행된다고 가정하거나, 9시 범위 내에서 계속 업데이트)
-                if (day === 1 && hours === 9) {
+                // 2. 월요일 오전 9시 KST (= UTC 0시) 인 경우 'weekly' 스냅샷 업데이트
+                if (day === 1 && hours === 0) {
                     updates.push({
                         symbol: item.symbol,
                         type: item.type,
