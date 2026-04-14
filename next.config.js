@@ -10,7 +10,12 @@ const nextConfig = {
         instrumentationHook: true,
         serverComponentsExternalPackages: ['node-cron'],
     },
-    webpack: (config) => {
+    webpack: (config, { isServer }) => {
+        if (isServer) {
+            // node-cron은 Node.js 내장 모듈(path 등) 사용 → webpack 번들 제외
+            const existing = Array.isArray(config.externals) ? config.externals : (config.externals ? [config.externals] : []);
+            config.externals = [...existing, 'node-cron'];
+        }
         config.resolve.alias = {
             ...config.resolve.alias,
             "@std/testing/mock": false,
