@@ -37,17 +37,12 @@ export async function register() {
         callCron('/api/cron/daily-quiz');
     }, { timezone: 'UTC' });
 
-    // 매주 월요일 오전 8시 KST (일요일 23:00 UTC): 주급 지급
-    cron.default.schedule('0 23 * * 0', () => {
-        console.log('[cron] weekly-salary triggered');
-        callCron('/api/cron/weekly-salary');
-    }, { timezone: 'UTC' });
-
     // 매 시간: 시장 시세 동기화 (hourly 모드용 스냅샷 + 월요일 9시 UTC에 weekly 스냅샷도 업데이트)
     cron.default.schedule('0 * * * *', () => {
         console.log('[cron] market-sync triggered');
         callCron('/api/cron/market-sync');
     }, { timezone: 'UTC' });
 
-    console.log('[cron] Scheduled: daily-quiz(23:00 UTC), weekly-salary(Sun 23:00 UTC), market-sync(every hour)');
+    console.log('[cron] Scheduled: daily-quiz(23:00 UTC), market-sync(every hour)');
+    console.log('[cron] weekly-salary is handled by Coolify Scheduled Task only');
 }
