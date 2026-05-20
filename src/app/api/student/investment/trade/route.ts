@@ -73,9 +73,14 @@ export async function POST(request: Request) {
             }
 
             // 잔액 차감
-            await adminSupabase.from('student_roster')
+            const { error: balanceDeductError } = await adminSupabase.from('student_roster')
                 .update({ balance: student.balance - cost })
                 .eq('id', studentId);
+
+            if (balanceDeductError) {
+                console.error('잔액 차감 실패:', balanceDeductError);
+                return NextResponse.json({ error: '잔액 처리에 실패했습니다.' }, { status: 500 });
+            }
 
             const newTotalQty = totalQuantity + quantity;
             const newAvgPrice = totalQuantity > 0
@@ -112,13 +117,18 @@ export async function POST(request: Request) {
             const revenue = Math.floor(currentPrice * quantity);
             const newQty = totalQuantity - quantity;
 
-            // 중복 행 정리하면서 수량 업데이트
-            await consolidate(newQty, weightedAvgPrice);
-
             // 잔액 추가
-            await adminSupabase.from('student_roster')
+            const { error: balanceAddError } = await adminSupabase.from('student_roster')
                 .update({ balance: student.balance + revenue })
                 .eq('id', studentId);
+
+            if (balanceAddError) {
+                console.error('잔액 추가 실패:', balanceAddError);
+                return NextResponse.json({ error: '잔액 처리에 실패했습니다.' }, { status: 500 });
+            }
+
+            // 중복 행 정리하면서 수량 업데이트
+            await consolidate(newQty, weightedAvgPrice);
 
             await adminSupabase.from('transactions').insert({
                 student_id: studentId,
