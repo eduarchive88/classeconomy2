@@ -11,7 +11,10 @@ export async function register() {
 
     const cron = await import('node-cron');
 
-    const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // NAT Loopback이 차단된 사설망/도커 컨테이너 환경에서 안정적인 내부 통신을 보장하기 위해,
+    // 외부 FQDN 도메인 주소(NEXT_PUBLIC_APP_URL) 대신 127.0.0.1 루프백 주소를 강제 사용합니다.
+    const port = process.env.PORT || '3000';
+    const BASE_URL = `http://127.0.0.1:${port}`;
     const CRON_SECRET = process.env.CRON_SECRET;
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
