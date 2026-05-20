@@ -1,10 +1,11 @@
 
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
     const { studentIds, amount, type, description } = await request.json();
     const supabase = createClient();
+    const adminSupabase = createAdminClient();
 
     // 1. Check Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -18,22 +19,22 @@ export async function POST(request: Request) {
 
     // 2. Process Transactions (Update Balance & Log)
     const transactions: any[] = [];
-    const updateResults: any[] = [];
     let successCount = 0;
     let failCount = 0;
 
     for (const studentId of studentIds) {
         try {
             // Fetch current balance
-            // balance 컬럼으로 잔액 조회 (DB 스키마에 맞춤)
-            const { data: roster, error: rosterError } = await supabase
+            // balance 컬럼으로 잔액 조회 (교사 본인의 학생인지 검증하기 위해 teacher_id 필터 추가)
+            const { data: roster, error: rosterError } = await adminSupabase
                 .from('student_roster')
                 .select('balance, name')
                 .eq('id', studentId)
+                .eq('teacher_id', user.id)
                 .single();
 
             if (rosterError || !roster) {
-                console.error(`Student ${studentId} not found:`, rosterError);
+                console.error(`Student ${studentId} not found or not managed by teacher ${user.id}:`, rosterError);
                 failCount++;
                 continue;
             }
@@ -49,11 +50,12 @@ export async function POST(request: Request) {
             const newBalance = (roster.balance || 0) + amountChange;
 
             // Update Balance
-            // balance 컬럼으로 잔액 업데이트
-            const { error: updateError } = await supabase
+            // balance 컬럼으로 잔액 업데이트 (교사 본인의 학생인지 다시 한번 체크)
+            const { error: updateError } = await adminSupabase
                 .from('student_roster')
                 .update({ balance: newBalance })
-                .eq('id', studentId);
+                .eq('id', studentId)
+                .eq('teacher_id', user.id);
 
             if (updateError) {
                 console.error(`Failed to update student ${studentId}:`, updateError);
@@ -65,10 +67,10 @@ export async function POST(request: Request) {
             successCount++;
 
             // Prepare Transaction Log
-            // Prepare Transaction Log
+            // 벌금인 경우 마이너스 금액이 transactions에 기록되도록 -amount 적용
             transactions.push({
                 student_id: studentId,
-                amount: amount,
+                amount: type === 'fine' ? -amount : amount,
                 type: type,
                 description: description || (type === 'special_allowance' ? '특별 수당' : '벌금')
             });
@@ -78,9 +80,9 @@ export async function POST(request: Request) {
         }
     }
 
-    // Insert transaction logs
+    // Insert transaction logs using adminSupabase to bypass RLS policies safely
     if (transactions.length > 0) {
-        const { error: transactionError } = await supabase.from('transactions').insert(transactions);
+        const { error: transactionError } = await adminSupabase.from('transactions').insert(transactions);
         if (transactionError) {
             console.error('Transaction log error:', transactionError);
             return NextResponse.json({
@@ -98,3 +100,4 @@ export async function POST(request: Request) {
         message: `${successCount}명 처리 완료${failCount > 0 ? `, ${failCount}명 실패` : ''}`
     });
 }
+
