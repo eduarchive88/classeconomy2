@@ -59,6 +59,17 @@ export async function GET(request: Request) {
         }, { status: 401 });
     }
 
+    // 2.5 Lazy Trigger 안전망 기동
+    // 백그라운드 크론이 컨테이너 절전 모드 등의 원인으로 누락되었더라도,
+    // 학생이 퀴즈를 조회하는 첫 진입 시점에 퀴즈 배포 및 주급 지급을 동적 검사하여 자동 대행합니다.
+    try {
+        const { triggerDailyQuizDistribution, triggerWeeklySalaryDistribution } = await import('@/utils/api/cron-helper');
+        await triggerDailyQuizDistribution(classId);
+        await triggerWeeklySalaryDistribution(classId);
+    } catch (lazyErr) {
+        console.error('Lazy trigger cron helper error:', lazyErr);
+    }
+
     // 3. Fetch Daily Quizzes for this Class
     // 사용자 요청: 오늘 날짜 퀴즈만 표시
     console.log(`Fetching quizzes for class ${classId} on date: ${today}`);
