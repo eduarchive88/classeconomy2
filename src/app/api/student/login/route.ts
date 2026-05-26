@@ -81,40 +81,33 @@ export async function POST(request: Request) {
     const fakeEmail = `${sessionCode}_${studentId}@student.local`.toLowerCase();
     const authPassword = `pwd_${sessionCode}_${studentId}`; // 가상 계정용 고정 비밀번호
 
-    // 먼저 로그인 시도
-    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // 먼저 로그인 시도 (기존 계정 존재 시 빠르게 처리)
+    let authData: any = null;
+    const { data: signInFirst, error: signInFirstError } = await supabase.auth.signInWithPassword({
         email: fakeEmail,
         password: authPassword,
     });
 
-    if (authError) {
-        // 로그인 실패 시(계정 없음) 회원가입 시도
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    if (!signInFirstError && signInFirst?.session) {
+        // 기존 계정 로그인 성공 → 메타데이터 최신화만 비동기로 수행 (응답 속도 영향 없음)
+        authData = signInFirst;
+        // 메타데이터가 오래된 경우 백그라운드에서 갱신
+        createAdminClient().auth.admin.updateUserById(signInFirst.user!.id, {
+            user_metadata: {
+                role: 'student',
+                roster_id: student.id,
+                class_id: classData.id,
+                name: student.name,
+                student_id: studentId
+            }
+        }).catch(e => console.warn('[login] metadata update failed (non-critical):', e.message));
+    } else {
+        // 계정이 없는 경우: admin.createUser로 한 번에 계정 생성 + 이메일 확인 우회
+        const adminSupabase = createAdminClient();
+        const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
             email: fakeEmail,
             password: authPassword,
-            options: {
-                data: {
-                    role: 'student',
-                    roster_id: student.id,
-                    class_id: classData.id,
-                    name: student.name,
-                    student_id: studentId
-                }
-            }
-        });
-
-        if (!signUpError) {
-            // 회원가입 성공 시 다시 로그인하여 쿠키 생성
-            const { data: retryData } = await supabase.auth.signInWithPassword({
-                email: fakeEmail,
-                password: authPassword,
-            });
-            authData = retryData;
-        }
-    } else {
-        // 이미 계정이 있는 경우, 메타데이터 업데이트 (최신 정보 유지)
-        const adminSupabase = createAdminClient();
-        await adminSupabase.auth.admin.updateUserById(authData.user!.id, {
+            email_confirm: true, // 이메일 확인 우회 - 즐시 로그인 가능
             user_metadata: {
                 role: 'student',
                 roster_id: student.id,
@@ -123,6 +116,44 @@ export async function POST(request: Request) {
                 student_id: studentId
             }
         });
+
+        if (createError) {
+            console.error('[login] createUser failed:', createError.message);
+            // 생성 실패 시 fallback: 기존 signUp 방식 시도
+            await supabase.auth.signUp({
+                email: fakeEmail,
+                password: authPassword,
+                options: { data: { role: 'student', roster_id: student.id, class_id: classData.id, name: student.name, student_id: studentId } }
+            });
+        }
+
+        // 생성 후 로그인 1회만 수행
+        const { data: finalSignIn, error: finalSignInError } = await supabase.auth.signInWithPassword({
+            email: fakeEmail,
+            password: authPassword,
+        });
+
+        if (finalSignInError || !finalSignIn?.session) {
+            console.error('[login] signIn after createUser failed:', finalSignInError?.message);
+            // 로그인 실패해도 학생 정보는 반환 (제한적 서비스 가능)
+            return NextResponse.json({
+                success: true,
+                session: null,
+                student: {
+                    id: student.id,
+                    name: student.name,
+                    grade: student.grade,
+                    class_info: student.class_info,
+                    number: student.number,
+                    balance: student.balance || 0,
+                    class_id: classData.id,
+                    class_name: classData.name,
+                },
+                message: '로그인 성공 (세션 제한적)'
+            });
+        }
+
+        authData = finalSignIn;
     }
 
     // 5. 세션 정보를 로컬스토리지에 저장하도록 클라이언트에 반환

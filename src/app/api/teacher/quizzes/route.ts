@@ -1,16 +1,16 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { verifyTeacher } from '@/utils/teacher-auth';
 
 export async function POST(request: Request) {
     const { quizzes, class_id } = await request.json();
     const supabase = createClient();
 
-    // 1. Check auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.user_metadata.role !== 'teacher') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // 1. DB 기반 교사 여부 확인 (user_metadata.role 대신 안정적인 DB 검증)
+    const auth = await verifyTeacher(supabase);
+    if (!auth.ok) return auth.errorResponse!;
+    const user = auth.user;
 
     // 2. Insert into quizzes (Question Bank)
     const { data: newQuizzes, error } = await supabase

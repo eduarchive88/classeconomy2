@@ -1,15 +1,16 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { verifyTeacher } from '@/utils/teacher-auth';
 
 // GET: 학급 전체 학생의 저축 현황 조회 (데이터 이전 검증 및 현황 파악용)
 export async function GET(request: Request) {
     const supabase = createClient();
     const adminSupabase = createAdminClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.user_metadata?.role !== 'teacher') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // DB 기반 교사 여부 확인
+    const auth = await verifyTeacher(supabase);
+    if (!auth.ok) return auth.errorResponse!;
+    const user = auth.user;
 
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('classId');
@@ -83,10 +84,10 @@ export async function POST(request: Request) {
     const supabase = createClient();
     const adminSupabase = createAdminClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.user_metadata?.role !== 'teacher') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // DB 기반 교사 여부 확인
+    const auth = await verifyTeacher(supabase);
+    if (!auth.ok) return auth.errorResponse!;
+    const user = auth.user;
 
     const body = await request.json();
     const { studentId, amount, lockedUntil, interestRate, deductBalance } = body;

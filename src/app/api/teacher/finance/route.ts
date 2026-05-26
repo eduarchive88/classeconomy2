@@ -7,10 +7,24 @@ export async function POST(request: Request) {
     const supabase = createClient();
     const adminSupabase = createAdminClient();
 
-    // 1. Check Auth
+    // 1. Check Auth (user_metadata.role은 일부 계정에서 누락될 수 있으므로
+    //    DB의 classes 테이블에서 teacher_id로 교사 여부를 판별합니다)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.user_metadata.role !== 'teacher') {
+    if (authError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // DB 기반 교사 여부 확인: 해당 user.id가 적어도 1개 이상의 학급을 담당하는지 체크
+    const { data: teacherClass, error: classCheckError } = await adminSupabase
+        .from('classes')
+        .select('id')
+        .eq('teacher_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+    if (classCheckError || !teacherClass) {
+        console.warn(`Finance API: user ${user.id} (${user.email}) is not a teacher or has no class.`);
+        return NextResponse.json({ error: 'Unauthorized: 교사 계정이 아니거나 담당 학급이 없습니다.' }, { status: 401 });
     }
 
     if (!studentIds || studentIds.length === 0 || amount <= 0) {
