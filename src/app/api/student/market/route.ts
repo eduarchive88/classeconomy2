@@ -55,19 +55,23 @@ export async function POST(request: Request) {
     }
 
     // 4. Execute Transaction (Ideally in a transaction block, but Supabase HTTP limit)
-    // 4.1 Deduct Balance
+    // 4.1 Deduct Balance — 잔액 차감을 먼저 처리 (서버 장애 시 유령 거래 기록 방지)
     const newBalance = (student.balance || 0) - totalCost;
 
+    const { error: balanceError } = await supabase.from('student_roster').update({ balance: newBalance }).eq('id', rosterId);
+    if (balanceError) {
+        return NextResponse.json({ error: '잌액 차감 실패. 다시 시도해주세요.' }, { status: 500 });
+    }
+
+    // 4.2 거래 기록 저장 (잔액 차감 이후)
     await supabase.from('transactions').insert({
         student_id: rosterId,
         amount: -totalCost, // Negative for expense
-        type: 'purchase',
+        type: 'market_purchase',
         description: `마켓 구매: ${item.name}`
     });
 
-    await supabase.from('student_roster').update({ balance: newBalance }).eq('id', rosterId);
-
-    // 4.2 Update Stock
+    // 4.3 Update Stock
     if (item.stock !== -1) {
         await supabase.from('market_items').update({ stock: item.stock - quantity }).eq('id', itemId);
     }

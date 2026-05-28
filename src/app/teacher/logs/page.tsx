@@ -124,13 +124,16 @@ export default function TeacherLogs() {
             case 'special_allowance': return '특별 보너스';
             case 'fine': return '벌금';
             case 'quiz_reward': return '퀴즈 상금';
-            case 'stock_buy': return '주식 매수';
-            case 'stock_sell': return '주식 매도';
+            // 주식/투자 — 구버전(stock_*)과 신버전(investment_*) 모두 지원
+            case 'stock_buy':
             case 'investment_buy': return '주식 매수';
+            case 'stock_sell':
             case 'investment_sell': return '주식 매도';
             case 'stock_profit': return '투자 수익';
             case 'stock_loss': return '투자 손실';
             case 'real_estate_income': return '임대/매각 수익';
+            // 상점 구매 — purchase, market_purchase 모두 지원
+            case 'purchase':
             case 'market_purchase': return '상점 구매';
             case 'real_estate_purchase': return '부동산 구매';
             case 'real_estate_pending': return '부동산 (승인 대기)';
@@ -163,11 +166,19 @@ export default function TeacherLogs() {
         XLSX.writeFile(wb, `경제활동_로그_${new Date().toLocaleDateString()}.xlsx`);
     };
 
+    // 주식 매매 필터: stock_buy와 investment_buy를 동일하게 취급
+    const normalizeFilterType = (type: string) => {
+        if (type === 'stock_buy' || type === 'investment_buy') return 'investment_buy';
+        if (type === 'stock_sell' || type === 'investment_sell') return 'investment_sell';
+        if (type === 'purchase' || type === 'market_purchase') return 'market_purchase';
+        return type;
+    };
+
     const filteredLogs = logs.filter(log => {
         const matchesSearch =
             log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             log.student_name?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = filterType === 'all' || log.type === filterType;
+        const matchesFilter = filterType === 'all' || normalizeFilterType(log.type) === normalizeFilterType(filterType);
         return matchesSearch && matchesFilter;
     });
 
@@ -225,10 +236,12 @@ export default function TeacherLogs() {
                                 <option value="transfer">송금</option>
                                 <option value="transfer_sent">송금 보냄</option>
                                 <option value="transfer_received">송금 받음</option>
-                                <option value="stock_buy">주식 매수</option>
-                                <option value="stock_sell">주식 매도</option>
+                                {/* 주식 매수/매도: investment_buy/sell (신버전) 기준으로 필터, stock_buy/sell(구버전)도 함께 매칭 */}
+                                <option value="investment_buy">주식 매수</option>
+                                <option value="investment_sell">주식 매도</option>
                                 <option value="real_estate_purchase">부동산 구매</option>
                                 <option value="real_estate_income">부동산/투자 수익</option>
+                                <option value="group_donation">모둠 기부</option>
                             </select>
                         </div>
 
@@ -288,11 +301,12 @@ export default function TeacherLogs() {
                                                 <span className={`
                                                     inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
                                                     ${log.type === 'fine' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                        (log.type === 'income' || log.type === 'special_allowance' || log.type === 'allowance' || log.type === 'quiz_reward' || log.type === 'transfer_received') ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                            (log.type === 'expense' || log.type === 'market_purchase' || log.type === 'tax' || log.type === 'withdrawal' || log.type === 'transfer_sent') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                                                (log.type === 'investment' || log.type === 'stock_buy' || log.type === 'stock_sell') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                    (log.type === 'group_donation') ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                                        'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
+                                                        (['income', 'special_allowance', 'allowance', 'quiz_reward', 'transfer_received'].includes(log.type)) ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                            (['expense', 'market_purchase', 'purchase', 'tax', 'withdrawal', 'transfer_sent', 'deposit'].includes(log.type)) ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                                                (['investment', 'stock_buy', 'stock_sell', 'investment_buy', 'investment_sell', 'stock_profit', 'stock_loss'].includes(log.type)) ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                                                                    (['group_donation'].includes(log.type)) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                                        (['real_estate_purchase', 'real_estate_pending', 'real_estate_refund', 'real_estate_income'].includes(log.type)) ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                                            'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}
                                                 `}>
                                                     {getTypeLabel(log.type)}
                                                 </span>
