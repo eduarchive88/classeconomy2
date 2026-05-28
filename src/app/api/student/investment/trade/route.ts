@@ -56,6 +56,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: result.error }, { status: 400 });
         }
 
+        // RPC 내부 한글 인코딩 깨짐 교정:
+        // PostgreSQL 함수 안의 한글 리터럴(개, 매수, 단가, 원 등)이 ?로 깨지는 문제를
+        // RPC 성공 직후 앱 레벨에서 올바른 한글 description으로 덮어씁니다.
+        const actionLabel = action === 'buy' ? '매수' : '매도';
+        const correctDescription = `${stockName} ${quantity}개 ${actionLabel} (단가: ${currentPrice.toLocaleString()}원)`;
+        const txType = action === 'buy' ? 'investment_buy' : 'investment_sell';
+        const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
+
+        await adminSupabase
+            .from('transactions')
+            .update({ description: correctDescription })
+            .eq('student_id', studentId)
+            .in('type', [txType, action === 'buy' ? 'stock_buy' : 'stock_sell'])
+            .gte('created_at', fiveSecondsAgo);
+
         return NextResponse.json({ success: true, message: `${action === 'buy' ? 'Bought' : 'Sold'} ${symbol}` });
 
     } catch (error) {
