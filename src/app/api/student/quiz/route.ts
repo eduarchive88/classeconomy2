@@ -59,7 +59,18 @@ export async function GET(request: Request) {
         }, { status: 401 });
     }
 
-    // 2.5 Lazy Trigger 안전망 기동
+    // 2.5 방학 여부 확인 - 방학 중이면 퀴즈 미제공
+    const { data: classInfo } = await adminSupabase
+        .from('classes')
+        .select('is_on_vacation')
+        .eq('id', classId)
+        .single();
+
+    if (classInfo?.is_on_vacation) {
+        return NextResponse.json({ vacation: true, quizzes: [] });
+    }
+
+    // 2.6 Lazy Trigger 안전망 기동
     // 백그라운드 크론이 컨테이너 절전 모드 등의 원인으로 누락되었더라도,
     // 학생이 퀴즈를 조회하는 첫 진입 시점에 퀴즈 배포 및 주급 지급을 동적 검사하여 자동 대행합니다.
     try {
@@ -208,11 +219,24 @@ export async function POST(request: Request) {
     // 3. Verify Quiz & Answer
     const { data: dq } = await dbClient
         .from('daily_quizzes')
-        .select('*, quizzes(answer, reward)')
+        .select('*, class_id, quizzes(answer, reward)')
         .eq('id', dailyQuizId)
         .single();
 
     if (!dq || !dq.quizzes) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
+
+    // 방학 여부 확인 - 방학 중에는 제출 차단
+    if (dq.class_id) {
+        const adminSupa = createAdminClient();
+        const { data: classCheck } = await adminSupa
+            .from('classes')
+            .select('is_on_vacation')
+            .eq('id', dq.class_id)
+            .single();
+        if (classCheck?.is_on_vacation) {
+            return NextResponse.json({ error: '방학 기간에는 퀴즈를 제출할 수 없습니다.' }, { status: 403 });
+        }
+    }
 
     const quiz: any = dq.quizzes;
     const correctAnswer = quiz.answer;

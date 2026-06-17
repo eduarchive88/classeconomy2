@@ -137,6 +137,22 @@ export default function SettingsPage() {
         }
     };
 
+    const handleToggleVacation = async (classId: string, current: boolean) => {
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('classes')
+                .update({ is_on_vacation: !current })
+                .eq('id', classId);
+            if (error) throw error;
+            setClasses(classes.map((c: any) => c.id === classId ? { ...c, is_on_vacation: !current } : c));
+        } catch (e: any) {
+            alert('오류: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleUpdateSessionCode = async (id: string) => {
         if (!editSessionCode.trim()) return alert('새로운 세션 코드를 입력해주세요.');
         setLoading(true);
@@ -400,16 +416,16 @@ export default function SettingsPage() {
 
                     <div className="space-y-4">
                         <h3 className="font-medium text-slate-700 dark:text-slate-300">운영 중인 학급 ({classes.length})</h3>
-                        {classes.map(c => (
+                        {classes.map((c: any) => (
                             <div key={c.id} className="flex flex-col gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                 <div className="flex justify-between items-center">
                                     <div className="flex-1">
                                         <div className="font-bold text-slate-800 dark:text-white mb-1">{c.name}</div>
                                         {editingClassId === c.id ? (
                                             <div className="flex items-center gap-2 mt-2">
-                                                <input 
-                                                    type="text" 
-                                                    value={editSessionCode} 
+                                                <input
+                                                    type="text"
+                                                    value={editSessionCode}
                                                     onChange={e => setEditSessionCode(e.target.value)}
                                                     className="p-1 border rounded text-sm bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white"
                                                     placeholder="새 세션 코드"
@@ -420,11 +436,11 @@ export default function SettingsPage() {
                                         ) : (
                                             <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                                 코드: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">{c.session_code}</code>
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         setEditingClassId(c.id);
                                                         setEditSessionCode(c.session_code);
-                                                    }} 
+                                                    }}
                                                     className="text-xs text-blue-500 hover:text-blue-700 underline"
                                                 >
                                                     수정
@@ -437,6 +453,25 @@ export default function SettingsPage() {
                                         className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors ml-4"
                                     >
                                         <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                {/* 방학 모드 토글 */}
+                                <div className={`flex items-center justify-between mt-2 pt-3 border-t ${c.is_on_vacation ? 'border-amber-200 dark:border-amber-800' : 'border-slate-100 dark:border-slate-700'}`}>
+                                    <div>
+                                        <span className={`text-sm font-medium ${c.is_on_vacation ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                            🏖️ 방학 모드 {c.is_on_vacation && <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full ml-1">ON</span>}
+                                        </span>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                            {c.is_on_vacation ? '주급 지급 및 퀴즈 배포가 중단되어 있습니다.' : '활성화하면 주급·퀴즈가 자동 중단됩니다.'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleToggleVacation(c.id, !!c.is_on_vacation)}
+                                        disabled={loading}
+                                        className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${c.is_on_vacation ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                    >
+                                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${c.is_on_vacation ? 'translate-x-6' : 'translate-x-0'}`} />
                                     </button>
                                 </div>
                             </div>

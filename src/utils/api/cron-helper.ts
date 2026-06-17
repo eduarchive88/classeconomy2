@@ -9,6 +9,17 @@ export async function triggerDailyQuizDistribution(classId: string) {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
     try {
+        // 0. 방학 여부 확인 - 방학 중이면 퀴즈 배포 중단
+        const { data: classInfo } = await supabase
+            .from('classes')
+            .select('is_on_vacation')
+            .eq('id', classId)
+            .single();
+        if (classInfo?.is_on_vacation) {
+            console.log(`[lazy-cron] 퀴즈 배포 건너뜀 (방학 중) - 학급: ${classId}`);
+            return { status: 'vacation' };
+        }
+
         // 1. 오늘 이미 이 학급에 배포된 퀴즈가 있는지 검사
         const { data: existingDaily } = await supabase
             .from('daily_quizzes')
@@ -95,6 +106,17 @@ export async function triggerWeeklySalaryDistribution(classId: string) {
     const supabase = createAdminClient();
 
     try {
+        // 0. 방학 여부 확인 - 방학 중이면 주급 지급 중단
+        const { data: classInfo } = await supabase
+            .from('classes')
+            .select('is_on_vacation')
+            .eq('id', classId)
+            .single();
+        if (classInfo?.is_on_vacation) {
+            console.log(`[lazy-cron] 주급 지급 건너뜀 (방학 중) - 학급: ${classId}`);
+            return { status: 'vacation' };
+        }
+
         // 1. 이번 주 월요일 08:00 KST 기준 시점 계산
         const now = new Date();
         const kstOffset = 9 * 60 * 60 * 1000;

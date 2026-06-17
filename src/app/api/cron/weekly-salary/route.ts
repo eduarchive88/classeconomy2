@@ -15,7 +15,14 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
 
     try {
-        // 1. 주급(allowance)이 설정된 모든 학생 조회
+        // 1. 방학 중인 학급 ID 목록 조회
+        const { data: vacationClasses } = await supabase
+            .from('classes')
+            .select('id')
+            .eq('is_on_vacation', true);
+        const vacationClassIds = new Set((vacationClasses || []).map((c: any) => c.id));
+
+        // 2. 주급(allowance)이 설정된 모든 학생 조회
         const { data: students, error: rosterError } = await supabase
             .from('student_roster')
             .select('id, name, number, balance, allowance, class_id')
@@ -31,14 +38,20 @@ export async function GET(request: Request) {
             });
         }
 
-        // 2. 학생별로 잔액 업데이트 + 거래 기록 생성
+        // 3. 학생별로 잔액 업데이트 + 거래 기록 생성
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
         const transactions: any[] = [];
         let successCount = 0;
         let failCount = 0;
+        let skippedVacation = 0;
 
         for (const student of students) {
+            // 방학 중인 학급은 주급 지급 건너뜀
+            if (vacationClassIds.has(student.class_id)) {
+                skippedVacation++;
+                continue;
+            }
             try {
                 const currentBalance = student.balance || 0;
                 const newBalance = currentBalance + student.allowance;
@@ -87,7 +100,8 @@ export async function GET(request: Request) {
             success: true,
             distributed_to: successCount,
             failed: failCount,
-            message: `주급 지급 완료: ${successCount}명 성공${failCount > 0 ? `, ${failCount}명 실패` : ''}`
+            skipped_vacation: skippedVacation,
+            message: `주급 지급 완료: ${successCount}명 성공${failCount > 0 ? `, ${failCount}명 실패` : ''}${skippedVacation > 0 ? `, ${skippedVacation}명 방학으로 건너뜀` : ''}`
         });
 
     } catch (error: any) {

@@ -47,6 +47,10 @@ next-env.d.ts
 /temp-migration/
 /scripts/
 /coolify_auth_migration.sql
+
+# Windows thumbnail cache
+desktop.ini
+Thumbs.db
 /old_users_dump.json
 /db_old_tables.txt
 /db_old_tables_utf8.txt

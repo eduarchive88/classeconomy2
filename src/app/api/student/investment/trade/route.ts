@@ -25,9 +25,24 @@ export async function POST(request: Request) {
         }
 
         // 현재 시세 조회
-        const { price: currentPrice } = await getInvestmentPrice(symbol, student.class_id);
+        let { price: currentPrice } = await getInvestmentPrice(symbol, student.class_id);
+
+        // 시세를 가져오지 못한 경우: 매도는 보유 평단가를 fallback으로 사용, 매수는 차단
         if (!currentPrice || currentPrice <= 0) {
-            return NextResponse.json({ error: '현재 시세를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
+            if (action === 'sell') {
+                const { data: holding } = await adminSupabase
+                    .from('investments')
+                    .select('average_price')
+                    .eq('student_id', studentId)
+                    .eq('symbol', symbol)
+                    .gt('quantity', 0)
+                    .limit(1)
+                    .single();
+                currentPrice = holding?.average_price || 0;
+            }
+            if (!currentPrice || currentPrice <= 0) {
+                return NextResponse.json({ error: '현재 시세를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
+            }
         }
 
         const stockInfo = INVESTMENT_SYMBOLS.find(s => s.symbol === symbol);

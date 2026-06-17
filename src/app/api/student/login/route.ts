@@ -78,8 +78,10 @@ export async function POST(request: Request) {
     }
 
     // 4. Supabase Auth 세션 생성 (다른 API와의 호환성을 위해)
-    const fakeEmail = `${sessionCode}_${studentId}@student.local`.toLowerCase();
-    const authPassword = `pwd_${sessionCode}_${studentId}`; // 가상 계정용 고정 비밀번호
+    // DB 세션코드를 정규화하여 이메일 생성 (사용자 입력값 대신 DB값 사용 → 특수문자/한글 제거 & 입력 형식 불일치 방지)
+    const canonicalCode = normalizeCode(classData.session_code);
+    const fakeEmail = `${canonicalCode}_${studentId}@student.local`;
+    const authPassword = `pwd_${canonicalCode}_${studentId}`; // 가상 계정용 고정 비밀번호
 
     // 먼저 로그인 시도 (기존 계정 존재 시 빠르게 처리)
     let authData: any = null;

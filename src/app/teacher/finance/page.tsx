@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Coins, AlertTriangle, Check, ArrowLeft, Edit2, Save, X } from 'lucide-react';
+import { Coins, AlertTriangle, Check, ArrowLeft, Edit2, Save, X, Landmark, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -16,6 +16,7 @@ export default function FinanceManagement() {
     const [activeTab, setActiveTab] = useState<'finance' | 'salary'>('finance');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<number>(0);
+    const [wealthMap, setWealthMap] = useState<Record<string, { total_savings: number; investment_cost: number }>>({});
     const supabase = createClient();
 
     useEffect(() => {
@@ -39,12 +40,25 @@ export default function FinanceManagement() {
         }
 
         // balance 필드를 잔액으로 직접 사용 (finance API와 동일)
-        const mapped = (roster || []).map(r => ({
+        const mapped = (roster || []).map((r: any) => ({
             ...r,
             money: r.balance || 0,  // balance 필드를 money로 매핑
         }));
 
         setStudents(mapped);
+
+        // 저축·투자 총액 로딩
+        try {
+            const wealthRes = await fetch(`/api/teacher/finance/wealth?classId=${selectedClassId}`);
+            if (wealthRes.ok) {
+                const wealthData = await wealthRes.json();
+                const map: Record<string, { total_savings: number; investment_cost: number }> = {};
+                (wealthData.wealth || []).forEach((w: any) => { map[w.student_id] = w; });
+                setWealthMap(map);
+            }
+        } catch (e) {
+            console.error('Wealth fetch error:', e);
+        }
     };
 
     // 지급/차감 또는 주급 설정 처리
@@ -262,6 +276,16 @@ export default function FinanceManagement() {
                                 <div className="flex flex-col gap-1 ml-7">
                                     <div className="text-sm text-slate-600 dark:text-slate-400">
                                         현재 잔액: <span className="font-medium text-slate-800 dark:text-white">{student.money?.toLocaleString()}원</span>
+                                    </div>
+                                    <div className="flex gap-3 text-xs">
+                                        <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                            <Landmark className="w-3 h-3" />
+                                            저축: <span className="font-bold">{(wealthMap[student.id]?.total_savings || 0).toLocaleString()}원</span>
+                                        </span>
+                                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                            <TrendingUp className="w-3 h-3" />
+                                            투자: <span className="font-bold">{(wealthMap[student.id]?.investment_cost || 0).toLocaleString()}원</span>
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm text-blue-600 dark:text-blue-400 group">
                                         <div className="flex items-center gap-1">

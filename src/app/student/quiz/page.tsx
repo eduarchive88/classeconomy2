@@ -12,6 +12,7 @@ export default function StudentQuiz() {
     const [submitting, setSubmitting] = useState<{ [key: string]: boolean }>({});
 
     const [debugInfo, setDebugInfo] = useState<any>(null);
+    const [isVacation, setIsVacation] = useState(false);
 
     useEffect(() => {
         fetchDailyQuizzes();
@@ -38,10 +39,15 @@ export default function StudentQuiz() {
                 setDebugInfo(data.debug);
             }
 
+            if (data.vacation) {
+                setIsVacation(true);
+                setLoading(false);
+                return;
+            }
+
             if (data.error) {
                 console.error('Quiz fetch error:', data.error);
-                // Set plain error for now, or use debug info
-                setDebugInfo(prev => ({ ...prev, error: data.error }));
+                setDebugInfo((prev: any) => ({ ...prev, error: data.error }));
                 return;
             }
 
@@ -131,7 +137,14 @@ export default function StudentQuiz() {
                 </h1>
             </div>
 
-            {quizzes.length === 0 ? (
+            {isVacation ? (
+                <div className="text-center py-16 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800">
+                    <div className="text-6xl mb-4">🏖️</div>
+                    <h2 className="text-2xl font-bold text-amber-700 dark:text-amber-400 mb-2">방학 중입니다</h2>
+                    <p className="text-amber-600 dark:text-amber-500">방학 기간에는 퀴즈가 제공되지 않습니다.</p>
+                    <p className="text-sm text-amber-500 dark:text-amber-600 mt-1">개학 후 다시 이용해주세요! 😊</p>
+                </div>
+            ) : quizzes.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
                     <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-slate-500">아직 도착한 퀴즈가 없습니다.</p>

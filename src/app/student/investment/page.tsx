@@ -357,9 +357,10 @@ export default function InvestmentPage() {
                 const currentQuantity = portfolio.find(p => p.symbol === selectedStock.symbol)?.quantity || 0;
                 const expectedAmount = Number(quantity) * selectedStock.price;
 
-                // 구매/판매 가능 여부 검증
-                const isBuyDisabled = tradeAction === 'buy' && expectedAmount > balance;
-                const isSellDisabled = tradeAction === 'sell' && Number(quantity) > currentQuantity;
+                // 구매/판매 가능 여부 검증 (부동소수 오차 허용: 1e-6)
+                const EPSILON = 1e-6;
+                const isBuyDisabled = tradeAction === 'buy' && expectedAmount > balance + EPSILON;
+                const isSellDisabled = tradeAction === 'sell' && Number(quantity) > currentQuantity + EPSILON;
                 const isSubmitDisabled = tradeLoading || isBuyDisabled || isSellDisabled || Number(quantity) <= 0;
 
                 return (
