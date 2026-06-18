@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Coins, AlertTriangle, Check, ArrowLeft, Edit2, Save, X, Landmark, TrendingUp } from 'lucide-react';
+import { Coins, AlertTriangle, Check, ArrowLeft, Edit2, X, Landmark, TrendingUp, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import ClassSelector from '@/components/teacher/ClassSelector';
 
@@ -135,6 +135,35 @@ export default function FinanceManagement() {
         }
     };
 
+    // 주급 1회 회수
+    const handleSalaryRecall = async () => {
+        if (selectedStudents.length === 0) return alert('학생을 선택해주세요.');
+
+        const targetStudents = students.filter(s => selectedStudents.includes(s.id) && (s.allowance || 0) > 0);
+        if (targetStudents.length === 0) return alert('선택한 학생 중 주급이 설정된 학생이 없습니다.');
+
+        const preview = targetStudents.map(s => `${s.name}: -${(s.allowance || 0).toLocaleString()}원`).join('\n');
+        if (!confirm(`아래 학생들의 주급을 1회 회수합니다.\n잔액이 부족하면 마이너스가 됩니다.\n\n${preview}\n\n계속하시겠습니까?`)) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/teacher/finance/salary-recall', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentIds: selectedStudents }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '회수 실패');
+            alert(data.message);
+            setSelectedStudents([]);
+            fetchStudents();
+        } catch (e: any) {
+            alert('오류: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // 학생 선택/해제 토글
     const toggleStudent = (id: string) => {
         if (selectedStudents.includes(id)) {
@@ -237,6 +266,17 @@ export default function FinanceManagement() {
                         >
                             {loading ? '처리중...' : (activeTab === 'salary' ? '선택 학생 주급 수정' : type === 'special_allowance' ? '지급하기' : '부과하기')}
                         </button>
+
+                        {activeTab === 'salary' && (
+                            <button
+                                onClick={handleSalaryRecall}
+                                disabled={loading}
+                                className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-orange-400 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium transition-colors disabled:opacity-50"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                주급 1회 회수
+                            </button>
+                        )}
                     </div>
                 </div>
 

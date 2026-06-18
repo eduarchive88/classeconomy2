@@ -74,6 +74,7 @@ export default function TeacherLogs() {
     const getTypeLabel = (type: string) => {
         switch (type) {
             case 'allowance': return '주급/용돈';
+            case 'allowance_recall': return '주급 회수';
             case 'special_allowance': return '특별 보너스';
             case 'fine': return '벌금';
             case 'quiz_reward': return '퀴즈 상금';
