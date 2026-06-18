@@ -15,14 +15,37 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
 
     try {
-        // 1. 방학 중인 학급 ID 목록 조회
+        // 1. 이중 실행 방지: 이번 주 월요일 08:00 KST 이후 allowance 트랜잭션이 이미 있으면 중단
+        const nowForCheck = new Date();
+        const kstOffset = 9 * 60 * 60 * 1000;
+        const kstNow = new Date(nowForCheck.getTime() + kstOffset);
+        const dayOfWeek = kstNow.getUTCDay(); // 0=일, 1=월
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const thisMonday = new Date(kstNow);
+        thisMonday.setUTCDate(kstNow.getUTCDate() + diffToMonday);
+        thisMonday.setUTCHours(8, 0, 0, 0); // 월요일 08:00 KST
+        const thisMondayUTC = new Date(thisMonday.getTime() - kstOffset);
+
+        const { data: existingTx } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('type', 'allowance')
+            .gt('created_at', thisMondayUTC.toISOString())
+            .limit(1);
+
+        if (existingTx && existingTx.length > 0) {
+            console.log('[weekly-salary] 이미 이번 주 주급 지급 완료 - 중복 실행 차단');
+            return NextResponse.json({ success: true, message: '이미 이번 주 주급이 지급되었습니다.', skipped: true });
+        }
+
+        // 2. 방학 중인 학급 ID 목록 조회
         const { data: vacationClasses } = await supabase
             .from('classes')
             .select('id')
             .eq('is_on_vacation', true);
         const vacationClassIds = new Set((vacationClasses || []).map((c: any) => c.id));
 
-        // 2. 주급(allowance)이 설정된 모든 학생 조회
+        // 3. 주급(allowance)이 설정된 모든 학생 조회
         const { data: students, error: rosterError } = await supabase
             .from('student_roster')
             .select('id, name, number, balance, allowance, class_id')
@@ -38,7 +61,7 @@ export async function GET(request: Request) {
             });
         }
 
-        // 3. 학생별로 잔액 업데이트 + 거래 기록 생성
+        // 4. 학생별로 잔액 업데이트 + 거래 기록 생성
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
         const transactions: any[] = [];
@@ -84,7 +107,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // 3. 거래 기록 일괄 삽입
+        // 5. 거래 기록 일괄 삽입
         if (transactions.length > 0) {
             const { error: insertError } = await supabase
                 .from('transactions')

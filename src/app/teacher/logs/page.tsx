@@ -13,7 +13,7 @@ export default function TeacherLogs() {
     // 학급 필터 상태
     const [classes, setClasses] = useState<any[]>([]);
     const [selectedClassFilter, setSelectedClassFilter] = useState('all');
-    const [studentClassMap, setStudentClassMap] = useState<Record<string, string>>({});
+    const [studentClassMap, setStudentClassMap] = useState<Record<string, string>>({}); // unused, kept for compat
     const supabase = createClient();
 
     useEffect(() => {
@@ -53,60 +53,13 @@ export default function TeacherLogs() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 필터에 따라 학급 ID 결정
-            let classIds: string[];
-            if (selectedClassFilter === 'all') {
-                classIds = classes.map(c => c.id);
-            } else {
-                classIds = [selectedClassFilter];
-            }
+            // 서버사이드 API를 통해 조회 (RLS 우회, admin client 사용)
+            const classParam = selectedClassFilter !== 'all' ? `?classId=${selectedClassFilter}` : '';
+            const res = await fetch(`/api/teacher/logs${classParam}`);
+            if (!res.ok) throw new Error('로그 조회 실패');
+            const json = await res.json();
 
-            if (classIds.length === 0) {
-                setLogs([]);
-                return;
-            }
-
-            // 해당 학급의 학생 조회
-            const { data: students } = await supabase
-                .from('student_roster')
-                .select('id, name, number, class_id')
-                .in('class_id', classIds);
-
-            if (!students?.length) {
-                setLogs([]);
-                return;
-            }
-
-            const studentIds = students.map(s => s.id);
-            const studentMap = students.reduce((acc: any, s) => {
-                acc[s.id] = s;
-                return acc;
-            }, {});
-
-            // 학생 -> 학급 매핑 저장
-            const classMap: Record<string, string> = {};
-            students.forEach(s => {
-                const cls = classes.find(c => c.id === s.class_id);
-                classMap[s.id] = cls?.name || '';
-            });
-            setStudentClassMap(classMap);
-
-            // 거래 내역 조회
-            const { data: transactions, error } = await supabase
-                .from('transactions')
-                .select('*')
-                .in('student_id', studentIds)
-                .order('created_at', { ascending: false })
-                .limit(5000);
-
-            if (error) throw error;
-
-            const enrichedLogs = transactions.map(t => ({
-                ...t,
-                student_name: studentMap[t.student_id]?.name || 'Unknown',
-                student_number: studentMap[t.student_id]?.number || '',
-                class_name: classMap[t.student_id] || '',
-            }));
+            const enrichedLogs = json.data || [];
 
             setLogs(enrichedLogs);
 
@@ -120,7 +73,7 @@ export default function TeacherLogs() {
 
     const getTypeLabel = (type: string) => {
         switch (type) {
-            case 'allowance': return '용돈';
+            case 'allowance': return '주급/용돈';
             case 'special_allowance': return '특별 보너스';
             case 'fine': return '벌금';
             case 'quiz_reward': return '퀴즈 상금';
@@ -225,7 +178,7 @@ export default function TeacherLogs() {
                                 className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700"
                             >
                                 <option value="all">모든 유형</option>
-                                <option value="allowance">용돈</option>
+                                <option value="allowance">주급/용돈</option>
                                 <option value="special_allowance">특별 보너스</option>
                                 <option value="quiz_reward">퀴즈 상금</option>
                                 <option value="market_purchase">상점 구매</option>
