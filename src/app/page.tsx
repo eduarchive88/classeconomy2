@@ -102,7 +102,8 @@ export default function LoginPage() {
       localStorage.setItem('student_session', JSON.stringify({
         student: data.student,
         sessionToken: data.sessionToken || data.session?.access_token,
-        expiresAt: data.expiresAt || data.session?.expires_at
+        // expires_at은 Supabase가 Unix 초(seconds)로 반환 → ms로 변환해 저장
+        expiresAt: data.expiresAt || (data.session?.expires_at ? data.session.expires_at * 1000 : undefined)
       }))
 
       router.push('/student')

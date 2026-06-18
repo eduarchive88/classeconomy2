@@ -29,8 +29,8 @@ export default function StudentDashboard() {
             try {
                 const session = JSON.parse(sessionStr);
 
-                // 세션 만료 확인
-                if (new Date(session.expiresAt) < new Date()) {
+                // 세션 만료 확인 (expiresAt은 ms 단위로 저장됨)
+                if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
                     localStorage.removeItem('student_session');
                     router.push('/');
                     return;
