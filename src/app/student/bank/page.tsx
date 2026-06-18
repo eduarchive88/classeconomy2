@@ -254,7 +254,8 @@ export default function StudentBank() {
                                                         tx.type === 'transfer_received' ? '송금 받음' :
                                                             tx.type === 'deposit' ? '저축 가입' :
                                                                 tx.type === 'withdraw' ? '저축 만기 출금' :
-                                                                    tx.type === 'allowance' ? '용돈' :
+                                                                    tx.type === 'allowance' ? '주급/용돈' :
+                                                                        tx.type === 'allowance_recall' ? '주급 회수' :
                                                                         tx.type === 'special_allowance' ? '특별 보너스' :
                                                                             tx.type === 'fine' ? '벌금' :
                                                                                 tx.type === 'quiz_reward' ? '퀴즈 상금' :

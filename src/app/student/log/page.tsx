@@ -35,7 +35,8 @@ export default function StudentLog() {
 
     const getTypeLabel = (type: string) => {
         switch (type) {
-            case 'allowance': return '용돈';
+            case 'allowance': return '주급/용돈';
+            case 'allowance_recall': return '주급 회수';
             case 'transfer_sent': return '송금 보냄';
             case 'transfer_received': return '송금 받음';
             case 'deposit': return '저축 가입';
