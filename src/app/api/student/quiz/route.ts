@@ -59,17 +59,6 @@ export async function GET(request: Request) {
         }, { status: 401 });
     }
 
-    // 2.5 방학 여부 확인 - 방학 중이면 퀴즈 미제공
-    const { data: classInfo } = await adminSupabase
-        .from('classes')
-        .select('is_on_vacation')
-        .eq('id', classId)
-        .single();
-
-    if (classInfo?.is_on_vacation) {
-        return NextResponse.json({ vacation: true, quizzes: [] });
-    }
-
     // 2.6 Lazy Trigger 안전망 기동
     // 백그라운드 크론이 컨테이너 절전 모드 등의 원인으로 누락되었더라도,
     // 학생이 퀴즈를 조회하는 첫 진입 시점에 퀴즈 배포 및 주급 지급을 동적 검사하여 자동 대행합니다.
@@ -88,6 +77,17 @@ export async function GET(request: Request) {
     // Use Admin Client to bypass RLS on 'quizzes' table
     // Sometimes 'anon' user or partial auth cannot read 'quizzes' depending on strict policies.
     const adminSupabase = createAdminClient();
+
+    // 2.5 방학 여부 확인 - 방학 중이면 퀴즈 미제공 (adminSupabase 선언 후에 실행해야 함)
+    const { data: classInfo } = await adminSupabase
+        .from('classes')
+        .select('is_on_vacation')
+        .eq('id', classId)
+        .single();
+
+    if (classInfo?.is_on_vacation) {
+        return NextResponse.json({ vacation: true, quizzes: [] });
+    }
 
     const { data: dailyQuizzes, error: dqError } = await adminSupabase
         .from('daily_quizzes')
