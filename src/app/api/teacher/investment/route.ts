@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { QTY_EPSILON } from '@/lib/constants';
 
 // 종목명 매핑 (DB에 stock_name 컬럼이 없으므로 코드에서 매핑)
 const STOCK_NAME_MAP: Record<string, string> = {
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
             .from('investments')
             .select('student_id, symbol, quantity, average_price')
             .in('student_id', studentIds)
-            .gt('quantity', 0);
+            .gte('quantity', QTY_EPSILON);
 
         // 모든 학생의 투자 관련 거래 한 번에 조회 (벌크 쿼리)
         const investmentTypes = ['investment_buy', 'investment_sell', 'stock_buy', 'stock_sell', 'stock_profit', 'stock_loss'];

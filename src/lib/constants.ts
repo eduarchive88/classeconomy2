@@ -24,3 +24,19 @@ export const INVESTMENT_SYMBOLS = [
 ];
 
 export type PriceMode = 'realtime' | 'hourly' | 'weekly';
+
+// 투자 수량 정밀도: FLOAT 컬럼의 부동소수 오차(예: 2.22e-16주)를 정리하기 위한 기준
+export const QTY_DECIMALS = 6;
+// 이 값보다 작은 보유량은 오차 찌꺼기로 보고 0으로 취급
+export const QTY_EPSILON = 1e-6;
+
+// 수량을 QTY_DECIMALS 자리로 반올림 (부동소수 오차 제거)
+export function roundQuantity(qty: number): number {
+    const factor = 10 ** QTY_DECIMALS;
+    return Math.round(qty * factor) / factor;
+}
+
+// 화면 표시용 수량 문자열 (지수 표기/긴 소수 방지)
+export function formatQuantity(qty: number): string {
+    return roundQuantity(qty).toLocaleString('ko-KR', { maximumFractionDigits: QTY_DECIMALS });
+}

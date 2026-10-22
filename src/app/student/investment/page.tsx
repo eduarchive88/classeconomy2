@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, TrendingUp, TrendingDown, RefreshCcw, Newspaper, DollarSign, PieChart, Wallet, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { QTY_EPSILON, formatQuantity } from '@/lib/constants';
 
 // 거래 가능한 종목 목록
 const STOCKS = [
@@ -220,7 +221,7 @@ export default function InvestmentPage() {
                                                 {stockName}
                                                 <div className="text-xs text-slate-400 font-normal">{item.symbol}</div>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-mono">{item.quantity}주</td>
+                                            <td className="px-4 py-3 text-right font-mono">{formatQuantity(item.quantity)}주</td>
                                             <td className="px-4 py-3 text-right font-mono text-slate-500">{Math.floor(item.average_price).toLocaleString()}</td>
                                             <td className="px-4 py-3 text-right font-mono font-bold">{item.currentPrice?.toLocaleString()}</td>
                                             <td className={`px-4 py-3 text-right font-mono font-bold ${isProfitable ? 'text-red-500' : 'text-blue-500'}`}>
@@ -357,10 +358,9 @@ export default function InvestmentPage() {
                 const currentQuantity = portfolio.find(p => p.symbol === selectedStock.symbol)?.quantity || 0;
                 const expectedAmount = Number(quantity) * selectedStock.price;
 
-                // 구매/판매 가능 여부 검증 (부동소수 오차 허용: 1e-6)
-                const EPSILON = 1e-6;
-                const isBuyDisabled = tradeAction === 'buy' && expectedAmount > balance + EPSILON;
-                const isSellDisabled = tradeAction === 'sell' && Number(quantity) > currentQuantity + EPSILON;
+                // 구매/판매 가능 여부 검증 (부동소수 오차 허용)
+                const isBuyDisabled = tradeAction === 'buy' && expectedAmount > balance + QTY_EPSILON;
+                const isSellDisabled = tradeAction === 'sell' && Number(quantity) > currentQuantity + QTY_EPSILON;
                 const isSubmitDisabled = tradeLoading || isBuyDisabled || isSellDisabled || Number(quantity) <= 0;
 
                 return (
@@ -377,7 +377,7 @@ export default function InvestmentPage() {
                                     {tradeAction === 'buy' ? (
                                         <p className="text-indigo-600 dark:text-indigo-400 font-medium">보유 자금: {balance.toLocaleString()}원</p>
                                     ) : (
-                                        <p className="text-emerald-600 dark:text-emerald-400 font-medium">보유 주식: {currentQuantity}주</p>
+                                        <p className="text-emerald-600 dark:text-emerald-400 font-medium">보유 주식: {formatQuantity(currentQuantity)}주</p>
                                     )}
                                 </div>
                             </div>
@@ -390,7 +390,7 @@ export default function InvestmentPage() {
                                     <div className="relative">
                                         <input
                                             type="number"
-                                            min="0.0001"
+                                            min="0.000001"
                                             step="any"
                                             value={quantity}
                                             onChange={(e) => setQuantity(e.target.value)}
@@ -405,6 +405,15 @@ export default function InvestmentPage() {
                                             주
                                         </div>
                                     </div>
+                                    {tradeAction === 'sell' && currentQuantity > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setQuantity(String(currentQuantity))}
+                                            className="mt-2 px-3 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                        >
+                                            전량 ({formatQuantity(currentQuantity)}주)
+                                        </button>
+                                    )}
                                     <div className="flex justify-between items-center mt-2">
                                         <div className="text-xs text-red-500 font-medium">
                                             {isBuyDisabled && '보유 자금이 부족합니다.'}

@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { QTY_EPSILON } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
         .from('investments')
         .select('student_id, quantity, average_price')
         .in('student_id', studentIds)
-        .gt('quantity', 0);
+        .gte('quantity', QTY_EPSILON);
 
     const investMap: Record<string, number> = {};
     for (const inv of investments || []) {

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, TrendingUp, Trophy, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
+import { formatQuantity } from '@/lib/constants';
 
 export default function TeacherInvestmentPage() {
     const [students, setStudents] = useState<any[]>([]);
@@ -204,7 +205,7 @@ export default function TeacherInvestmentPage() {
                                                 <div key={pidx} className="flex items-center justify-between bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-lg">
                                                     <div>
                                                         <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{p.stock_name}</span>
-                                                        <span className="text-xs text-slate-400 ml-2">{p.quantity}주</span>
+                                                        <span className="text-xs text-slate-400 ml-2">{formatQuantity(p.quantity)}주</span>
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="text-xs text-slate-500 tabular-nums block">현재가 {p.current_price?.toLocaleString()}원</span>

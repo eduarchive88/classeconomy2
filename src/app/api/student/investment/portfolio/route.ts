@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import { getInvestmentPrice } from '@/utils/investment';
+import { QTY_EPSILON, roundQuantity } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,12 +25,20 @@ export async function GET(request: Request) {
 
         if (studentError || !student) throw new Error('Student not found');
 
+        // 과거 매도로 남은 부동소수 오차 찌꺼기(예: 2.22e-16주)는 0으로 정리
+        await adminSupabase
+            .from('investments')
+            .update({ quantity: 0 })
+            .eq('student_id', studentId)
+            .gt('quantity', 0)
+            .lt('quantity', QTY_EPSILON);
+
         // adminSupabase로 조회 (RLS 우회, 중복 행 포함)
         const { data: investments, error } = await adminSupabase
             .from('investments')
             .select('*')
             .eq('student_id', studentId)
-            .gt('quantity', 0);
+            .gte('quantity', QTY_EPSILON);
 
         if (error) throw error;
 
@@ -54,7 +63,7 @@ export async function GET(request: Request) {
 
             return {
                 symbol: inv.symbol,
-                quantity: inv.quantity,
+                quantity: roundQuantity(inv.quantity),
                 average_price: inv.average_price,
                 currentPrice: actualPrice,
                 marketValue: actualPrice * inv.quantity,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/server';
+import { QTY_EPSILON } from '@/lib/constants';
 
 // 종목명 매핑 (투자 종목명이 필요한 경우)
 const STOCK_NAME_MAP: Record<string, string> = {
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
             .from('investments')
             .select('student_id, symbol, quantity, average_price')
             .in('student_id', studentIds)
-            .gt('quantity', 0);
+            .gte('quantity', QTY_EPSILON);
 
         if (!allInvestments || allInvestments.length === 0) {
             return NextResponse.json({ ranking: [] });
