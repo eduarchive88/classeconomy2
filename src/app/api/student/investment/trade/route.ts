@@ -1,7 +1,7 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import { getInvestmentPrice } from '@/utils/investment';
-import { INVESTMENT_SYMBOLS, QTY_EPSILON, roundQuantity } from '@/lib/constants';
+import { INVESTMENT_SYMBOLS, QTY_EPSILON, roundQuantity, normalizeStoredQuantity } from '@/lib/constants';
 
 export async function POST(request: Request) {
     const { action, studentId, symbol, quantity: rawQuantity } = await request.json();
@@ -41,7 +41,8 @@ export async function POST(request: Request) {
             if (held < QTY_EPSILON || quantity > held + QTY_EPSILON) {
                 return NextResponse.json({ error: '보유 수량이 부족합니다.' }, { status: 400 });
             }
-            if (Math.abs(held - quantity) <= QTY_EPSILON) {
+            // 남는 수량이 최소 단위 미만이면 전량 매도로 처리 (찌꺼기 방지)
+            if (held - quantity < QTY_EPSILON) {
                 quantity = held;
             }
         }
@@ -90,17 +91,28 @@ export async function POST(request: Request) {
         }
 
         if (result?.error) {
-            return NextResponse.json({ error: result.error }, { status: 400 });
+            // RPC 내부 한글 에러 메시지가 ?로 깨져 오므로 앱에서 대체
+            const message = String(result.error).includes('?')
+                ? (action === 'buy' ? '잔액이 부족합니다.' : '보유 수량이 부족합니다.')
+                : result.error;
+            return NextResponse.json({ error: message }, { status: 400 });
         }
 
-        // 매매 후 남은 부동소수 오차 찌꺼기(예: 2.22e-16주)는 0으로 정리
-        await adminSupabase
+        // 매매 후 보유량 정규화: RPC의 FLOAT 연산 오차(예: 1.6641-1.6641=2.22e-16)를 제거
+        // 소수 8자리로 반올림하고, 찌꺼기만 남으면 0으로 정리
+        const { data: rows } = await adminSupabase
             .from('investments')
-            .update({ quantity: 0 })
+            .select('id, quantity')
             .eq('student_id', studentId)
             .eq('symbol', symbol)
-            .gt('quantity', 0)
-            .lt('quantity', QTY_EPSILON);
+            .gt('quantity', 0);
+        for (const row of rows || []) {
+            const q = Number(row.quantity);
+            const normalized = q < QTY_EPSILON ? 0 : normalizeStoredQuantity(q);
+            if (normalized !== q) {
+                await adminSupabase.from('investments').update({ quantity: normalized }).eq('id', row.id);
+            }
+        }
 
         // RPC 내부 한글 인코딩 깨짐 교정:
         // PostgreSQL 함수 안의 한글 리터럴(개, 매수, 단가, 원 등)이 ?로 깨지는 문제를

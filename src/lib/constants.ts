@@ -36,6 +36,11 @@ export function roundQuantity(qty: number): number {
     return Math.round(qty * factor) / factor;
 }
 
+// DB 저장값 정규화 (소수 8자리: 과거 8자리 코인 수량을 보존하면서 FLOAT 오차만 제거)
+export function normalizeStoredQuantity(qty: number): number {
+    return Math.round(qty * 1e8) / 1e8;
+}
+
 // 화면 표시용 수량 문자열 (지수 표기/긴 소수 방지)
 export function formatQuantity(qty: number): string {
     return roundQuantity(qty).toLocaleString('ko-KR', { maximumFractionDigits: QTY_DECIMALS });
